@@ -1,0 +1,7 @@
+{
+  "schema": "flintnde_qnm_convention_v1",
+  "ConventionName": "u-unified-connection-it0-3-it1-minus1",
+  "it0": 3,
+  "it1": -1,
+  "EnergyCondition": "EC"
+}

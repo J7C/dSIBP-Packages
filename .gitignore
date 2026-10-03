@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Wolfram / package run output
+results/
+results_temp/
+results_test/
+*.wl.tmp
+
+# LaTeX intermediates
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.toc
+*.xdv
+
+# Editors and OS
+.DS_Store
+*.swp
+*~

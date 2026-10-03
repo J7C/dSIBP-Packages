@@ -1,0 +1,1870 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=2.35cm]{geometry}
+\usepackage{amsmath,amssymb,mathtools,bm}
+\usepackage{booktabs,array}
+\usepackage{enumitem}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+\setlength{\emergencystretch}{2em}
+\sloppy
+
+\newcommand{\dd}{\mathrm d}
+\newcommand{\ii}{\mathrm i}
+\newcommand{\Id}{\mathbb I}
+\newcommand{\cV}{\mathcal V}
+\newcommand{\cE}{\mathcal E}
+\newcommand{\cH}{\mathcal H}
+\newcommand{\cM}{\mathcal M}
+\newcommand{\cB}{\mathcal B}
+\newcommand{\cR}{\mathcal R}
+\newcommand{\cN}{\mathcal N}
+\newcommand{\Emb}{\operatorname{Emb}}
+
+\title{MadStree: tree formula}
+\author{\texttt{MadStree} formula handbook}
+\date{2026-08-21}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This handbook corresponds to \texttt{MadStree}; time-only sectors continue to be identified by fixed-length strings in the order of the root propagators.
+This document is the formula handbook of \texttt{MadStree}. The package targets arbitrary massive/massless mixed dS tree graphs. It does not generate a general system of IBP equations; instead, it assembles the master integrals, the iterative reduction and the block-triangular dlog-form differential equation directly from the topology, and a concrete usage guide will be added after the public interface stabilizes. This document rederives the required formulas from the tensor-product structure of the local function systems. The purely massive formulas of Chen--Feng can be understood uniformly as Kronecker sums of several one-dimensional theta-free exponential systems and two-dimensional Hankel systems; each $\ii\chi_bq_b$ is the tensor product of a one-dimensional exponential generator with the identity on all the remaining factors. A massless full propagator containing theta cannot be identified with a single theta-free exponential factor: before reduction, it has $2\otimes2=4$ Hankel states at its two endpoints; after using the massless $00/11$ and $10/01$ relations, these four states are compressed by a constant projection into a two-dimensional state shared by the whole edge. This two-dimensional factor enters the time-IBPs of both endpoints, so a vertex-by-vertex tensor factorization fails, but the tensor-product/Kronecker-sum construction on the full graph still holds. All regular IBPs, iteration matrices and dlog diagonal blocks can therefore be written directly from the topology; theta derivatives only add fixed off-diagonal blocks connecting edge-contracted sectors, without first generating a large IBP system and then extracting the formulas from it.
+\end{abstract}
+
+\tableofcontents
+
+\section{Topology input convention}
+
+Every vertex explicitly sets its Schwinger--Keldysh contour branch through
+\texttt{vertexType -> "+"|"-"}. A propagator no longer repeats \texttt{skType},
+\texttt{sigma}, or endpoint signs; public \texttt{type} accepts only \texttt{"massive"}
+or \texttt{"massless"}. A three-vertex chain is entered as
+\begin{verbatim}
+<|
+ "vertices" -> {
+   <|"id"->1,"externalLegEnergy"->k1,"timePower"->a1,"vertexType"->"+"|>,
+   <|"id"->2,"externalLegEnergy"->k2,"timePower"->a2,"vertexType"->"+"|>,
+   <|"id"->3,"externalLegEnergy"->k3,"timePower"->a3,"vertexType"->"-"|>
+ },
+ "lines" -> {
+   <|"type"->"massless","endpoints"->{1,2},"momentum"->q12|>,
+   <|"type"->"massive","endpoints"->{2,3},"momentum"->q23,"nu"->nu23|>
+ }
+|>
+\end{verbatim}
+The ordered endpoint vertex types determine Full/Cross/External, the
+\texttt{++/--/+-/-+} label, the Full sign, endpoint signs, and default Hankel branches.
+Names such as \texttt{masslessFull} and $\sigma_e$ in formulas are derived internal physical
+data, not duplicated user fields. Vertex IDs may be integers. The public propagator interface neither defines nor reads an ID and
+are always numbered internally by their exact \texttt{lines} input positions; only an explicit
+\texttt{thetaBundles} declaration uses these position numbers.
+
+The field \texttt{externalLegEnergy} is the theta-free external-leg exponent parameter
+attached to vertex $v$; it does not mean that the vertex itself owns an energy.
+\texttt{vertexType=+} gives $\exp(-\ii k_v\tau_v)$ and \texttt{vertexType=-} gives
+$\exp(+\ii k_v\tau_v)$. The SK contour sign and this exponent sign are stored separately
+internally, but both are derived uniquely from the same \texttt{vertexType}.
+For a vertex without a physical external leg, \texttt{externalLegEnergy} may be omitted or
+set explicitly to zero.  Both forms normalize to zero in the topology; the boundary producer
+uses a private auxiliary damping energy to construct the infinity boundary and transports that
+auxiliary coordinate back to the user-specified zero.
+
+\subsection{Loading and citation notice}
+
+The standard Wolfram entry point prints one citation notice per kernel only after every module
+has loaded successfully. The arXiv labels are clickable in a notebook, while a headless kernel
+keeps the complete URLs. The Python file protocol does not mix a text notice into JSON stdout;
+it stores the same MadStree citation list in response metadata, while direct adapter CLI use
+prints the complete text. When MadStree supports research, please cite:
+\begin{enumerate}
+  \item Jiaqi Chen and Bo Feng, ``Towards Systematic Evaluation of de Sitter Correlators via Generalized Integration-By-Parts Relations'', \href{https://arxiv.org/abs/2401.00129}{arXiv:2401.00129}.
+  \item Jiaqi Chen, Bo Feng and Yi-Xiao Tao, ``Multivariate hypergeometric solutions of cosmological (dS) correlators by d log-form differential equations'', \href{https://arxiv.org/abs/2411.03088}{arXiv:2411.03088}.
+  \item MadStree package paper, arXiv identifier pending.
+\end{enumerate}
+No arXiv identifier has yet been provided for the package paper, so this handbook does not
+invent a link or bibliographic metadata for it.
+
+\section{Scope, reference conventions and conclusions}
+
+This document takes as its formula sources Eqs.~(3.1)--(3.5), (3.37), (3.47), (3.50), (3.54)--(3.55) and (3.64)--(3.68) of \cite{Chen:2023eic}. That reference uses $\tau^{\nu_0}$ and
+\begin{equation}
+ h(\nu,0;z)=z^{-\nu}H_{\nu}(z),
+ \qquad
+ h(\nu,1;z)=\partial_z h(\nu,0;z),
+ \qquad z=-k\tau,
+ \label{eq:paper-h-definition}
+\end{equation}
+as well as the natural binary basis. MadStree always sets $\nu=|\nu|$, uses a single function name $h$, and defines
+\begin{equation}
+ \boxed{h(\nu,0;z)=z^{s_\nu\nu}H_\nu(z)},
+ \qquad s_\nu\in\{+1,-1\}.
+ \label{eq:positive-order-h}
+\end{equation}
+The default \texttt{NuConvention -> "Positive"} corresponds to $s_\nu=+1$; \texttt{"Negative"} corresponds to $s_\nu=-1$, which is the convention of the paper. The two definitions do not differ merely by a constant; they differ by $z^{2\nu}$. Since the Hankel equation contains only $\nu^2$, the two sets of dimensionless equations of motion read respectively
+\begin{equation}
+ h''+\frac{1-2\nu}{z}h'+h=0\quad(s_\nu=+1),
+ \qquad
+ h''+\frac{1+2\nu}{z}h'+h=0\quad(s_\nu=-1).
+\end{equation}
+Thus all their formulas differ strictly by $\nu\to-\nu$. One may also compare the positive-prefactor basis with the same function $h(-\nu,0;z)=z^\nu H_{-\nu}(z)$ of the 2401 convention with a negative parameter; $H_{-\nu}$ and $H_\nu$ differ only by a kinematics-independent branch phase. When the matrix formulas of 2401 are quoted below, the parameter inside them is still written as $\nu$; the positive-prefactor default implementation of MadStree uniformly performs
+\begin{equation}
+ \boxed{\left.\nu\right|_{2401}\longrightarrow-\nu}.
+ \label{eq:paper-to-positive-order}
+\end{equation}
+This is not merely a replacement of the Hankel subscripts; every $\nu$ in the equations of motion, the Wronskian, $M_1$, the contact powers, the recurrences and the dlog must be replaced simultaneously. The last section additionally gives the adaptation to the package's $(-\tau)^A$, normalized-$J$ and sector normalization.
+
+Two kinds of objects must first be distinguished:
+\begin{itemize}
+  \item a pure exponential whose direction has already been chosen in an external leg or in $G^{+-}/G^{-+}$ carries no theta and is only a one-dimensional function system;
+  \item the massless full propagator in $G^{++}/G^{--}$ contains two terms and a theta. Before reduction, like the massive full propagator, it has one two-dimensional $h$ state at each endpoint, four states in total.
+\end{itemize}
+The core result of this document is that the massless extra relations compress the four states of the second kind into one shared two-dimensional factor, rather than mistreating it as two independent one-dimensional exponentials.
+
+The conclusions at the formula level are organized in two tiers. The regular matrices of a fixed sector, the four-to-two-state projection and the common diagonalization are direct algebraic conclusions; the injection structure of contact into each lower sector can likewise be written directly, but the constant-residue dlog and flatness under arbitrary mixed/common-theta normalization still have to be verified independently. This document therefore does not automatically unlock the \texttt{PendingRederivation} of the existing package.
+
+\section{Local function systems: one-dimensional exponentials and two-dimensional h}
+\label{sec:local-function-system}
+
+\subsection{One-dimensional systems of theta-free exponentials}
+
+Not every vertex is restricted to a single fixed-name $k_0$. For each exponential building block $b$ without theta, record
+\begin{equation}
+ E_b(\tau_{v(b)})
+ =\exp\!\left(\ii\chi_bq_b\tau_{v(b)}\right),
+ \qquad \chi_b\in\{+1,-1\},
+ \label{eq:phase-exponent-block}
+\end{equation}
+where $q_b$ keeps the user-supplied name and definition. A theta-free exponential parameter attached to a vertex and a massless cross/external branch can both be such a block; the same vertex can be associated with several $b$. Viewing $E_b$ as a vector in the one-dimensional space $\cE_b\simeq\mathbb C$, its time generator is
+\begin{equation}
+ Q_b=[\ii\chi_bq_b],
+ \qquad I_{\cE_b}=[1].
+ \label{eq:exponential-1d}
+\end{equation}
+These blocks therefore do not increase the number of master integrals, but they must be numbered separately in order to preserve the user variables, the derivative Jacobian and the boundary coordinates. For a vertex $v$, the matrix layer only needs the signed sum
+\begin{equation}
+ p_{0,v}=\sum_{b:\,v(b)=v}\chi_bq_b,
+ \qquad
+ \sum_{b:\,v(b)=v}\Emb_b(Q_b)=\ii p_{0,v}I.
+ \label{eq:vertex-signed-phase-energy}
+\end{equation}
+The $e^{\ii k_{0,v}\tau_v}$ of the paper is the special case with a single block, $\chi_b=+1$ and $p_{0,v}=k_{0,v}$. Every Hankel derivative term is also multiplied by the identity matrices of all one-dimensional blocks, so all regular time derivatives remain Kronecker-sum terms of the same kind.
+
+\subsection{The two-dimensional h system}
+
+In what follows, the parameter $\nu$ of the 2401 matrix formulas is used first. Let
+\begin{equation}
+ \bm h(\nu;z)=
+ \begin{pmatrix}h(\nu,0;z)\\h(\nu,1;z)\end{pmatrix},
+ \qquad
+ P_1=\begin{pmatrix}0&0\\0&1\end{pmatrix},
+ \qquad
+ \sigma_2=\begin{pmatrix}0&-\ii\\ \ii&0\end{pmatrix}.
+\end{equation}
+Eqs.~(3.2)--(3.4) of the reference are equivalent to
+\begin{equation}
+ \partial_\tau\bm h
+ =\left[-\ii k\sigma_2-\frac{2\nu+1}{\tau}P_1\right]\bm h.
+ \label{eq:h-first-order-system}
+\end{equation}
+Here $-\ii k\sigma_2$ is a time-independent $2\times2$ matrix, and $-(2\nu+1)P_1/\tau$ merges with the lowering of the time power into $M_1$.
+
+The same system in the dimensionless variable $z=-k\tau$ satisfies
+\begin{equation}
+ \partial_z^2h(\nu,0;z)
+ +\frac{2\nu+1}{z}\partial_zh(\nu,0;z)
+ +h(\nu,0;z)=0.
+ \label{eq:h-dimensionless-eom}
+\end{equation}
+The constant term here is $1$, not $k^2$. The $k$ is recovered only through
+\begin{equation}
+ \partial_\tau=-k\partial_z
+ \label{eq:tau-z-chain}
+\end{equation}
+This layering is the key to reusing the matrix formulas of the paper later.
+
+\subsection{Positive/negative prefactor conventions and the massless exponential kernel}
+
+The Hankel equation depends only on the square of the order, but here the Hankel order is fixed to $\nu=|\nu|$ and only $z^{\pm\nu}$ is switched. The prefactor and the formula parameters must transform together according to Eq.~\eqref{eq:paper-to-positive-order}. In the default positive-prefactor convention of MadStree, for $\nu=1/2$,
+\begin{equation}
+ h(1/2,0;z)\big|_{s_\nu=+1}=z^{1/2}H_{1/2}^{(1,2)}(z)
+ \propto e^{\pm\ii z},
+ \qquad
+ \left.(2\nu+1)\right|_{2401}\xrightarrow{\nu\to-\nu}1-2\nu=0.
+ \label{eq:massless-h-eigenstate}
+\end{equation}
+Consequently
+\begin{equation}
+ \partial_z^2h(1/2,0;z)+h(1/2,0;z)=0\quad(s_\nu=+1),
+ \label{eq:massless-z-eom}
+\end{equation}
+and the first derivative state is the branch eigenstate of the zeroth-order state,
+\begin{equation}
+ h^{(1)}(1/2,1)=+\ii h^{(1)}(1/2,0),
+ \qquad
+ h^{(2)}(1/2,1)=-\ii h^{(2)}(1/2,0).
+ \label{eq:h-branch-eigenvalues}
+\end{equation}
+The negative-prefactor option gives $z^{-1/2}H_{1/2}^{(1,2)}\propto z^{-1}e^{\pm\ii z}$, which is no longer a pure exponential; its formulas are obtained from the positive-prefactor results by $\nu\to-\nu$. For a purely imaginary order, the square-root branch must be chosen first; here $|\nu|$ is a convention label and does not mean calling the complex \texttt{Abs[nu]} inside the algebraic formulas.
+
+\section{The purely massive vertex formulas are Kronecker sums from the outset}
+
+Consider the $p$-fold vertex integral of the paper
+\begin{equation}
+ V_v(\nu_{0,v},\bm a)
+ =\int\dd\tau_v\,
+ \tau_v^{\nu_{0,v}}e^{\ii p_{0,v}\tau_v}
+ \prod_{i=1}^{p}h(\nu_i,a_i;-k_i\tau_v),
+ \qquad a_i\in\{0,1\}.
+\end{equation}
+Its local space is
+\begin{equation}
+ \cV_v
+ =\bigotimes_{b:\,v(b)=v}\cE_b
+ \otimes\bigotimes_{i=1}^{p}\cH_i,
+ \qquad
+ \dim\cE_b=1,
+ \quad
+ \dim\cH_i=2.
+ \label{eq:vertex-tensor-space}
+\end{equation}
+
+For any local factor $\alpha$, define the embedding
+\begin{equation}
+ \Emb_\alpha(A)
+ =I_1\otimes\cdots\otimes A_\alpha\otimes\cdots\otimes I_N.
+ \label{eq:embedding-definition}
+\end{equation}
+Then a single time IBP of the integrand, Eq.~(3.37) of the paper, can be written directly as
+\begin{align}
+ M_{1,v}(\nu_{0,v})
+ &=\nu_{0,v}I_v
+ -\sum_{i=1}^{p}(2\nu_i+1)\Emb_i(P_1),
+ \label{eq:massive-M1-projector}\\
+ M_{0,v}
+ &=\ii p_{0,v}I_v
+ +\sum_{i=1}^{p}\Emb_i(-\ii k_i\sigma_2).
+ \label{eq:massive-M0-kronecker}
+\end{align}
+Using $P_1=(I-\sigma_3)/2$, the first equation is exactly the expression of the paper
+\begin{equation}
+ M_{1,v}
+ =\sum_i\left(\nu_i+\frac12\right)\Lambda_3^{(i)}
+ +\left(\nu_{0,v}-\frac p2-\sum_i\nu_i\right)I_v.
+\end{equation}
+Thus $p_0I$ and $k_i\Lambda_2^{(i)}$ are not essentially different: the former is a sum of one-dimensional exponential generators, the latter comes from the two-dimensional h factors; both are local generators multiplied by all the spectator identities.
+
+Let $\bm f_v(a)$ denote the $2^p$-dimensional integral vector obtained after shifting $\nu_{0,v}$ by the integer $a$. Ignoring the theta remaining term,
+\begin{equation}
+ M_{1,v}(\nu_{0,v}+a)\bm f_v(a-1)
+ +M_{0,v}\bm f_v(a)=0.
+ \label{eq:massive-vertex-ibp}
+\end{equation}
+One lowering step is directly
+\begin{equation}
+ A_{-,v}(a)
+ =-M_{1,v}(\nu_{0,v}+a)^{-1}M_{0,v}.
+ \label{eq:Aminus-local}
+\end{equation}
+
+The constant matrix of the paper
+\begin{equation}
+ T=\frac1{\sqrt2}
+ \begin{pmatrix}1&-\ii\\-\ii&1\end{pmatrix},
+ \qquad
+ T\sigma_2T^{-1}=\sigma_3,
+ \label{eq:paper-T}
+\end{equation}
+simultaneously diagonalizes all two-dimensional local generators in $M_0$. Let $T_v=T^{\otimes p}$; then
+\begin{equation}
+ \widetilde M_{0,v}=T_vM_{0,v}T_v^{-1}
+\end{equation}
+is diagonal, and one raising step is
+\begin{equation}
+ A_{+,v}(a)
+ =-T_v^{-1}\widetilde M_{0,v}^{-1}T_v
+ M_{1,v}(\nu_{0,v}+a+1).
+ \label{eq:Aplus-local}
+\end{equation}
+So the purely massive formulas never need a general large-matrix inversion from the outset: $M_1$ is diagonal in the original basis, and $\widetilde M_0$ is diagonal in the $T$ basis.
+
+\section{From vertex spaces to the full-graph space}
+
+Let $V_s$ be the set of active vertices of a fixed sector $s$. Before the massless extra relations are used, the h state at each propagator endpoint is an independent two-dimensional factor, and each theta-free exponential is a one-dimensional factor. The regular full-graph space can therefore be written as
+\begin{equation}
+ \cV_s^{\rm unreduced}
+ =\bigotimes_{b\in E_0(s)}\cE_b
+ \otimes
+ \bigotimes_{\text{all active endpoints }i}\cH_i.
+ \label{eq:global-unreduced-space}
+\end{equation}
+Here $E_0(s)$ is the set of active phase-exponent blocks. The $M_{0,v}$ and $M_{1,v}$ of every vertex are embedded into this common space by Eq.~\eqref{eq:embedding-definition}. For a purely massive graph, or for cross propagators without theta, the regular operator of vertex $v$ acts only on the factors belonging to that vertex, so the vertex families of different vertices factorize independently. The theta derivatives of $G^{++}/G^{--}$ do not belong to the regular operator; they are added separately as lower-sector remaining terms.
+
+This full-graph formulation is more fundamental than writing the formula once for each vertex. The latter is valid only because, in the purely massive case, the regular operators of different vertices are supported on mutually disjoint two-dimensional factors.
+
+\section{Massless full edges: from four states to a shared two-state}
+
+\subsection{It is not a one-dimensional exponential factor}
+
+Consider a massless full edge $e=(u_e,v_e)$ containing theta. Before the extra relations are used, it is exactly like a massive propagator: endpoint $u_e$ has two states $a\in\{0,1\}$, endpoint $v_e$ has two states $b\in\{0,1\}$, so the local space of the edge is
+\begin{equation}
+ \cH_{e,u}\otimes\cH_{e,v}\simeq\mathbb C^4.
+\end{equation}
+In the natural order of the paper take
+\begin{equation}
+ \bm F_e^{(4)}
+ =(F_{00},F_{01},F_{10},F_{11})^T.
+\end{equation}
+By Eq.~\eqref{eq:h-branch-eigenvalues}, in the dimensionless h-state convention of the paper,
+\begin{equation}
+ F_{01}=-F_{10},
+ \qquad
+ F_{11}=F_{00}.
+ \label{eq:h-state-massless-relations}
+\end{equation}
+No $k^2$ is missing here: each $F_{ab}$ uses $h_1=-k^{-1}\partial_\tau h_0$, not the physical endpoint derivative from which $k$ has not been removed. It is also not the algebraic quotient of the package, which factors out the phase of each endpoint derivative; the $11$ relation of the latter carries a minus sign. The physical relation is restored in Sec.~\ref{sec:physical-k2}, and the package quotient is given in Sec.~\ref{sec:package-adapter}.
+
+Choose the shared two-state
+\begin{equation}
+ \bm g_e=(F_{00},F_{10})^T\in\cM_e\simeq\mathbb C^2.
+\end{equation}
+The constant embedding and projection between the four states and the two states are
+\begin{equation}
+ \boxed{
+ \bm F_e^{(4)}=S_e\bm g_e,
+ \qquad
+ S_e=
+ \begin{pmatrix}
+ 1&0\\
+ 0&-1\\
+ 0&1\\
+ 1&0
+ \end{pmatrix},
+ \qquad
+ P_e=
+ \begin{pmatrix}
+ 1&0&0&0\\
+ 0&0&1&0
+ \end{pmatrix},
+ \qquad P_eS_e=I_2.
+ }
+ \label{eq:SP-massless}
+\end{equation}
+Any original four-dimensional operator that preserves the relation subspace can be reduced directly to
+\begin{equation}
+ O_e^{\rm red}=P_eO_eS_e.
+ \label{eq:POS-reduction}
+\end{equation}
+
+\subsection{Two vertices act on the same two-dimensional factor}
+
+Before reduction, the constant h generator of endpoint $u_e$ is $-\ii q_e\sigma_2\otimes I_2$, and that of endpoint $v_e$ is $-\ii q_eI_2\otimes\sigma_2$. Applying Eq.~\eqref{eq:SP-massless} directly gives
+\begin{align}
+ P_e(\sigma_2\otimes I_2)S_e&=\sigma_2,
+ \label{eq:first-endpoint-projection}\\
+ P_e(I_2\otimes\sigma_2)S_e&=-\sigma_2.
+ \label{eq:second-endpoint-projection}
+\end{align}
+Therefore, once the four states are reduced to two, the two endpoints no longer each have an independent tensor factor; instead they act with $+\sigma_2$ and $-\sigma_2$ respectively on the same $\cM_e$. This is precisely the only regular reason for the failure of vertex-by-vertex factorization.
+
+Importantly, the full-graph tensor-product structure does not fail. What fails is the decomposition
+\begin{equation}
+ \cV_s\stackrel{?}{=}\bigotimes_{v\in V_s}\cV_v,
+\end{equation}
+because the shared $\cM_e$ cannot belong independently to both $u_e$ and $v_e$; but all vertex operators are still Kronecker sums on the same full-graph space.
+
+\subsection{The contact selector is also obtained directly from the projection}
+
+Separating the overall scalar from the four-state remaining-term pattern of Eq.~(3.65) of the paper, the pattern is
+\begin{equation}
+ \bm r_e^{(4)}=(0,-1,+1,0)^T.
+\end{equation}
+It satisfies exactly
+\begin{equation}
+ \bm r_e^{(4)}=S_e|1\rangle_e,
+ \qquad
+ |1\rangle_e=\begin{pmatrix}0\\1\end{pmatrix}.
+ \label{eq:contact-vector-projection}
+\end{equation}
+So contact does not need to be re-solved: in the shared two-state it is simply the fixed column vector $|1\rangle_e$. The overall scalar $w_e^{(v)}$ depends on the two-state basis. Let $\sigma_e=+1,-1$ denote $G^{++},G^{--}$ respectively; in the paper's h-state basis of this section, the ordered first and second endpoints are
+\begin{equation}
+ w_{e,h}^{(u_e)}=+2\ii\sigma_e,
+ \qquad
+ w_{e,h}^{(v_e)}=-2\ii\sigma_e.
+ \label{eq:h-massless-contact-weight}
+\end{equation}
+The constant basis change of Sec.~\ref{sec:package-adapter} converts these exactly into the package's $-2,+2$. One only needs, in addition, to multiply by the common-theta odd-subset coefficient and the sector-normalization ratio; a massless edge carries no extra Hankel Wronskian prefactor.
+
+\section{Full-graph regular IBP with massless full edges}
+
+Fix a contact-reachable sector $s$. Write
+\begin{itemize}
+  \item $E_0(s)$ for all active one-dimensional theta-free exponential blocks;
+  \item $H(s)$ for all still-active massive endpoint h slots;
+  \item $E_m(s)$ for all uncontracted massless full edges;
+\end{itemize}
+The reduced full-graph space is
+\begin{equation}
+ \boxed{
+ \cV_s
+ =\bigotimes_{b\in E_0(s)}\cE_b
+ \otimes\bigotimes_{i\in H(s)}\cH_i
+ \otimes\bigotimes_{e\in E_m(s)}\cM_e.
+ }
+ \label{eq:global-reduced-space}
+\end{equation}
+Since $\dim\cE_b=1$, its dimension is
+\begin{equation}
+ \dim\cV_s=2^{|H(s)|+|E_m(s)|}.
+\end{equation}
+
+This gives a building-block registry that can be initialized directly. Each block records a stable number, its type, the root line/vertex, the user momentum name, and the basis and SK/Hankel metadata; each root vertex $v$ records the incidence list
+\begin{equation}
+ \cB(v)=
+ \{b\in E_0:v(b)=v\}
+ \cup\{i\in H:v(i)=v\}
+ \cup\{(e,\epsilon_{ve}):e\in E_m,\ v\in e\}.
+ \label{eq:vertex-block-incidence}
+\end{equation}
+One-dimensional blocks may be aggregated into $p_{0,v}$ inside $M_0$, but they cannot be removed from the registry, because the user still supplies numerical points and differentiation variables according to the individual propagator moduli and vertex energies. The same label $e$ of a massless full edge appears in the lists of both vertices; this is exactly the data expression of ``shared, not copied.''
+
+For each ordered edge $e=(u_e,v_e)$ define the incidence
+\begin{equation}
+ \epsilon_{ve}=
+ \begin{cases}
+ +1,&v=u_e,\\
+ -1,&v=v_e,\\
+ 0,&v\notin e.
+ \end{cases}
+\end{equation}
+In the paper's h-state basis, the choice of Hankel branch changes the particular solution but not the matrix $-\ii q_e\sigma_2$ of the first-order system. Therefore the branch sign of $G^{++}/G^{--}$ is not written into the generator here; that sign appears explicitly when changing to the package quotient basis.
+
+The contribution of each kind of atom in the registry to a vertex $v$ can be written uniformly as
+\begin{align}
+ \Delta M_{1;v}^{(E_b)}&=0,
+ &\Delta M_{0;v}^{(E_b)}&=\ii\chi_bq_b I,
+ &&b\in E_0(v),
+ \label{eq:phase-block-M10}\\
+ \Delta M_{1;v}^{(h_i)}&=-(2\nu_i+1)P_1,
+ &\Delta M_{0;v}^{(h_i)}&=-\ii k_i\sigma_2,
+ &&i\in H_v,
+ \label{eq:massive-h-block-M10}\\
+ \Delta M_{1;u_e}^{(m_e)}&=\Delta M_{1;v_e}^{(m_e)}=0,
+ &\Delta M_{0;u_e}^{(m_e)}&=-\ii q_e\sigma_2,
+ &\Delta M_{0;v_e}^{(m_e)}&=+\ii q_e\sigma_2.
+ \label{eq:massless-shared-block-M10}
+\end{align}
+The $\nu_i$ in Eq.~\eqref{eq:massive-h-block-M10} are the formula parameters of 2401; the package's default positive prefactor uniformly substitutes $\nu_i\to-\nu_i$. The global $M_1$ also receives the component time power $\nu_{0,v}I$, or the package's $A_vI$. The two endpoints of Eq.~\eqref{eq:massless-shared-block-M10} act on the same two-dimensional slot and cannot each multiply out a new slot.
+
+On the full-graph space \eqref{eq:global-reduced-space}, the regular matrices of each vertex are directly
+\begin{align}
+ \boxed{
+ M_{1;v,s}(\nu_{0,v})
+ =\nu_{0,v}I_s
+ -\sum_{i\in H_v(s)}(2\nu_i+1)\Emb_i(P_1),
+ }
+ \label{eq:global-M1}\\
+ \boxed{
+ M_{0;v,s}
+ =\ii p_{0,v}I_s
+ +\sum_{i\in H_v(s)}\Emb_i(-\ii k_i\sigma_2)
+ +\sum_{e\in E_m(s)}\Emb_e(-\ii\epsilon_{ve}q_e\sigma_2).
+ }
+ \label{eq:global-M0}
+\end{align}
+A massless edge does not enter $M_1$: with the default $\nu=1/2$ and positive prefactor, substituting $-\nu=-1/2$ for the parameter of the 2401 formula gives $2(-\nu)+1=0$. The same $\Emb_e(\sigma_2)$ appears in both $M_{0;u_e,s}$ and $M_{0;v_e,s}$ at the two ends of the edge, with opposite incidence signs.
+
+All $M_{0;v,s}$ are made of $\sigma_2$ on different slots, or of the same $\sigma_2$ on the same shared slot, so they commute with one another and can be simultaneously diagonalized by a single global constant transformation
+\begin{equation}
+ U_s
+ =\bigotimes_{i\in H(s)}T_i
+ \otimes\bigotimes_{e\in E_m(s)}T_e
+ \label{eq:global-T}
+\end{equation}
+simultaneously; the one-dimensional exponential slots only contribute $[1]$ and are not written explicitly.
+
+This step does not mean that arbitrary Pauli combinations can be handled this way. For any two-dimensional slot $\alpha$, write the local part of each vertex on that slot as
+\begin{equation}
+ Q_{v\alpha}=c_{0,v\alpha}I+\bm c_{v\alpha}\cdot\bm\sigma.
+\end{equation}
+The condition for a common diagonalizer to exist slot by slot is
+\begin{equation}
+ [Q_{v\alpha},Q_{w\alpha}]=0
+ \quad\Longleftrightarrow\quad
+ \bm c_{v\alpha}\times\bm c_{w\alpha}=0
+ \qquad(\text{all }v,w).
+ \label{eq:local-common-diagonalization-condition}
+\end{equation}
+That is, all Pauli directions on the same slot must be collinear. In the current paper h-state, only $\sigma_2$ appears on every massive/shared slot; in the package quotient, massive slots carry only $\sigma_2$ and each massless shared slot carries only $\sigma_1$, so the global diagonalizer is changed to
+\begin{equation}
+ U_s^J
+ =\bigotimes_{i\in H(s)}T_i
+ \otimes\bigotimes_{e\in E_m(s)}H_e,
+ \qquad
+ H=\frac1{\sqrt2}\begin{pmatrix}1&1\\1&-1\end{pmatrix}.
+ \label{eq:package-global-diagonalizer}
+\end{equation}
+If, in the future, a shared slot simultaneously receives non-collinear $\sigma_1$ and $\sigma_2$, a single $2\times2$ matrix might still diagonalize it separately, but different vertices would no longer share a common $U_s$; in that case one must not continue replacing the large-matrix inversion with a uniform letter-by-letter reciprocal.
+
+Let the massive bits be $a_i\in\{0,1\}$ and the shared massless-edge bits be $r_e\in\{0,1\}$. Then
+\begin{equation}
+ U_sM_{0;v,s}U_s^{-1}
+ =\operatorname{diag}\!\left(\ii\kappa_{v,s;\bm a,\bm r}\right),
+ \label{eq:global-M0-diagonal}
+\end{equation}
+where
+\begin{equation}
+ \boxed{
+ \kappa_{v,s;\bm a,\bm r}
+ =p_{0,v}
+ +\sum_{i\in H_v(s)}(2a_i-1)k_i
+ +\sum_{e\in E_m(s)}
+ \epsilon_{ve}(2r_e-1)q_e.
+ }
+ \label{eq:global-energy-letter}
+\end{equation}
+The same $r_e$ enters the letters of both $u_e$ and $v_e$ with opposite signs. This is the complete regular content of the shared-edge correlation.
+
+The massless quotient therefore does not prevent the use of Eqs.~\eqref{eq:global-M1}--\eqref{eq:global-M0} for a single vertex: given $v$, one only needs to add the terms block by block from $\cB(v)$. What changes is the support relation between the matrices of different vertices: $M_{0;u_e,s}$ and $M_{0;v_e,s}$ contain opposite coefficients on the same slot $e$, rather than acting on two unrelated slots. The two vertex-by-vertex recurrences share a state bit, yet each is still a closed-form matrix formula; there is no need to assemble a large system of IBP equations first.
+
+\subsection{Positive/negative vertices, SK signs and Wick coordinates must be kept separate}
+
+For each vertex choose its attached theta-free exponential
+\begin{equation}
+ \exp(\ii\varsigma_vk_{0,v}\tau_v),
+ \qquad \varsigma_v=+1\ \text{or}\ -1,
+ \label{eq:vertex-phase-sign}
+\end{equation}
+and treat it as one block of Eq.~\eqref{eq:phase-exponent-block}. $\varsigma_v$ is the vertex phase sign; it is neither the $G^{++}/G^{--}$ label $\sigma_e$ of a massless propagator nor the ordered-endpoint incidence $\epsilon_{ve}$. The other theta-free exponentials still enter $p_{0,v}$ with their own $\chi_bq_b$.
+
+The only effect of positive and negative vertices on the regular formulas is
+\begin{equation}
+ p_{0,v}=\varsigma_vk_{0,v}+\sum_{b\neq b_0(v)}\chi_bq_b,
+ \qquad
+ M_{0;v,s}\supset\ii p_{0,v}I_s.
+ \label{eq:signed-vertex-M0}
+\end{equation}
+$M_1$ does not contain these one-dimensional blocks; the $P_1,\sigma_2$ atoms of the massive h are likewise unchanged by the Hankel branch. The difference between $G^{++}$ and $G^{--}$ is instead stored in the theta branch, the Wronskian/contact weights, and in $D_{\sigma_e}$ of the package quotient; it cannot be replaced by $\varsigma_v$.
+
+Now set $\tau_v=-t_v<0$. Along the damping rays of the two kinds of vertices define uniformly
+\begin{equation}
+ K_v=\ii\varsigma_vk_{0,v}>0,
+ \qquad
+ k_{0,v}=-\ii\varsigma_vK_v.
+ \label{eq:unified-vertex-wick-coordinate}
+\end{equation}
+Then
+\begin{equation}
+ \exp(\ii\varsigma_vk_{0,v}\tau_v)=\exp(-K_vt_v).
+\end{equation}
+Therefore, for $\varsigma_v=+1$ one may write $k_{0,v}\to-\ii\,pik_{0,v}$ in the reference notation, while for $\varsigma_v=-1$ one writes $k_{0,v}\to+\ii\,mik_{0,v}$; in both cases $pik_{0,v}$ and $mik_{0,v}$ are positive. The main text uses these names only for communication with the literature; internally, the program should generate the stable $K_v$ coordinates at initialization.
+
+The user still supplies points with their own $k_{0,v}$ and all propagator moduli $q_e$ from initialization. When the connection is output in user coordinates, only the invertible pullback
+\begin{equation}
+ \dd p_{0,v}=\varsigma_v\dd k_{0,v}+\sum_b\chi_b\dd q_b,
+ \qquad
+ \dd K_v=\ii\varsigma_v\dd k_{0,v};
+ \label{eq:user-to-internal-coordinate-pullback}
+\end{equation}
+is performed; the user's $q_e$ are not silently renamed \texttt{pik} or \texttt{mik}. When contact merges a set of root vertices into $C$, $p_{0,C}=\sum_{v\in C}p_{0,v}$, while the damping variables satisfy $K_C=\sum_{v\in C}K_v$.
+
+\section{Direct iterative reduction: without first generating a large IBP system}
+
+\subsection{The 2401 binary order and the precise domain of the recurrences}
+
+Fix a sector $s$, let $n_s^{\mathrm{slot}}$ be the number of two-state factors in the sector and $c_s$ the number of time components after contact. Following the binary representation of 2401, write a state as
+\begin{equation}
+ \bm a=(a_1,\ldots,a_{n_s^{\mathrm{slot}}}),
+ \qquad a_i\in\{0,1\}.
+\end{equation}
+The state order is fixed to
+\begin{equation}
+ \bm a(m)=\operatorname{IntegerDigits}(m,2,n_s^{\mathrm{slot}}),
+ \qquad 0\leq m<2^{n_s^{\mathrm{slot}}}.
+ \label{eq:binary-state-order}
+\end{equation}
+The first bit is the most significant; in a Kronecker product the left slots vary slowly and the right slots vary quickly. For any bit string, $\operatorname{Del}_i\bm a$ deletes the $i$-th bit and $\operatorname{Ins}_i(\widehat{\bm c},x)$ inserts $x\in\{0,1\}$ at position $i$. These conventions are exactly in the same order as \texttt{IntegerDigits[...,2,n]}, \texttt{Delete} and \texttt{Insert} of the reference code.
+
+A native integral of MadStree can be written as
+\begin{equation}
+ J_s(\bm n;\bm a)
+ \equiv\texttt{MSIntegral[}s,\bm n,\bm a\texttt{]},
+ \qquad
+ \bm n\in\mathbb Z^{c_s},
+ \quad
+ \bm a\in\{0,1\}^{n_s^{\mathrm{slot}}}.
+ \label{eq:MSIntegral-domain}
+\end{equation}
+Here $s$ is not a label recovered from the local $\bm n,\bm a$. Let the root propagators be, in the initialization order,
+$E=(e_1,\ldots,e_{N_E})$, and let the contracted canonical set be $L_s^{\rm ctr}$. Define the fixed-length string
+\begin{equation}
+ \operatorname{key}(s)=q_1q_2\cdots q_{N_E},\qquad
+ q_j=\begin{cases}0,&e_j\in L_s^{\rm ctr},\\1,&e_j\notin L_s^{\rm ctr}.
+ \end{cases}
+ \label{eq:sector-bit-string-key}
+\end{equation}
+Propagators that cannot undergo contact shrink always have $q_j=1$, and the top sector is the all-$1$ string. The key is a string, not a binary integer; leading zeros cannot be dropped. For example, if $E=(e_1,e_2,e_3,e_4)$ and $L_s^{\rm ctr}=\{e_1,e_2,e_4\}$, the key is \texttt{"0010"}. The full integral head always puts this key in the first argument. Hence two subsectors remain different \texttt{MSIntegral} expressions even if $c_s,n_s^{\mathrm{slot}},\bm n,\bm a$ are all identical. If the same contraction set is reached through different contact paths, it is merged into the same sector. Before returning the context, \texttt{MSInitTree} generates a \texttt{sectorIdentityCertificate} that checks in one pass the canonical contraction sets, the sector keys, the full master expressions, the consecutive global indices, and the SHA-256 digest of the complete ordered master table; any collision returns \texttt{SectorIdentityCollision}, so that no ambiguity is left to the recurrence or DE consumers.
+
+Thus the input domain of \texttt{MSReduce} is not ``arbitrary dS integrals'' but the space spanned, in a fixed initialization context, by the following legal objects
+\begin{equation}
+ \boxed{
+ \operatorname{span}\!\left\{
+ J_s(\bm n;\bm a)\,\middle|\,
+ s\in\operatorname{ContactDAG},\
+ \bm n\in\mathbb Z^{c_s},\
+ \bm a\in\{0,1\}^{n_s^{\mathrm{slot}}}
+ \right\}.
+ }
+ \label{eq:MSReduce-domain}
+\end{equation}
+That is, one may choose arbitrary integer time shifts and all binary states in each contact-reachable sector, and take finite linear combinations of such legal objects; this set of recurrences cannot introduce new propagator powers, new discrete indices, sectors outside the context, or another function family.
+
+\subsection{Two-directional recurrences including the contact remaining term}
+
+Let $\bm F_s(\bm n)$ denote the ordered master vector of sector $s$, where $n_v$ shifts the paper time power $\nu_{0,v}$ of vertex $v$. The theta remaining term is written as a linear combination of lower-sector vectors
+\begin{equation}
+ \cR_{v,s}(\bm n)
+ =\sum_{t\prec s}C_{st}^{(v)}(\bm n)\bm F_t(\bm n_t).
+ \label{eq:R-as-CF}
+\end{equation}
+More concretely, for an ordinary one-edge contact it can be written as
+\begin{equation}
+ \cR_{v,s}(\bm n)
+ =\sum_{\substack{e\in E_{\rm full}(s)\\v\in e}}
+ C_{s,s/e}^{(v,e)}
+ \bm F_{s/e}\!\left(\chi_e(\bm n)\right).
+ \label{eq:R-edge-sum}
+\end{equation}
+$\chi_e$ merges the time shifts belonging to the two ends of the edge and includes the fixed shift by which the delta contact makes the child base power one less. This parent-to-child structure is identical for massive and massless edges; only the local matrices $C^{(v,e)}$ differ. A massive edge uses the complementary endpoint bits and signs of Eq.~(3.65) of 2401; a massless edge first takes the $4\to2$ quotient and then uses the shared-bit selector of Eq.~\eqref{eq:contact-injection} together with the $-2,+2$ of Eq.~\eqref{eq:package-massless-contact-weight}. Hence massless contraction does not need a second set of recurrence formulas.
+
+The package fixes the child base power deliberately according to the delta contact: $\cR(\bm0)$ lands on child shift $-1$, while the $\cR(\bm e_v)$ needed by the DE lands exactly on child shift $0$. Hence $R^{(1)}$ of an ordinary one-edge massive/massless contact already hits the child master directly; there is no problem of ``a dlog master being chosen but the iterative reduction failing to reach it.''
+
+The complete one-step IBP at vertex $v$ is
+\begin{equation}
+ M_{1;v,s}(\nu_{0,v}+n_v)\bm F_s(\bm n-\bm e_v)
+ +M_{0;v,s}\bm F_s(\bm n)
+ +\cR_{v,s}(\bm n)=0.
+ \label{eq:global-one-step-ibp}
+\end{equation}
+
+One lowering step is therefore directly
+\begin{align}
+ \bm F_s(\bm n-\bm e_v)
+ &=A_{-,v,s}(\bm n)\bm F_s(\bm n)
+ -M_{1;v,s}^{-1}\cR_{v,s}(\bm n),\\
+ A_{-,v,s}(\bm n)
+ &=-M_{1;v,s}(\nu_{0,v}+n_v)^{-1}M_{0;v,s}.
+ \label{eq:global-Aminus}
+\end{align}
+One raising step uses the diagonal matrix
+\begin{equation}
+ \widetilde M_{0;v,s}=U_sM_{0;v,s}U_s^{-1}
+\end{equation}
+and gives
+\begin{align}
+ \bm F_s(\bm n+\bm e_v)
+ &=A_{+,v,s}(\bm n)\bm F_s(\bm n)
+ -U_s^{-1}\widetilde M_{0;v,s}^{-1}U_s
+ \cR_{v,s}(\bm n+\bm e_v),\\
+ A_{+,v,s}(\bm n)
+ &=-U_s^{-1}\widetilde M_{0;v,s}^{-1}U_s
+ M_{1;v,s}(\nu_{0,v}+n_v+1).
+ \label{eq:global-Aplus}
+\end{align}
+These are the direct generalizations of Eqs.~(3.37), (3.47), (3.50) and (3.66) of the paper to the shared massless-edge space. What still needs to be inverted is only the diagonal $M_1$ in the original basis and the diagonal $\widetilde M_0$ in the $U_s$ basis. The complete singular layers at general indices can now be obtained directly.
+
+Before explaining the singular layers, one must distinguish the $h$ block in the formulas from the complete physical mode. If $d$ is the spatial dimension and contributions such as the curvature coupling are absorbed into $m_{\rm eff}$, the scalar index satisfies
+\begin{equation}
+ \nu^2=\frac{d^2}{4}-\frac{m_{\rm eff}^2}{H^2}.
+ \label{eq:physical-mode-nu}
+\end{equation}
+Four-dimensional de Sitter has $d=3$, and the complete mode contains
+\begin{equation}
+ u_k(\tau)\propto(-\tau)^{3/2}H_\nu^{(1,2)}(-k\tau),
+ \label{eq:physical-mode-full-power}
+\end{equation}
+rather than the Hankel function alone. For general $d$ the two late-time branches are
+\begin{equation}
+ u_k(\tau)\sim c_-(-\tau)^{d/2-\nu}
+ +c_+(-\tau)^{d/2+\nu}.
+ \label{eq:physical-late-time-branches}
+\end{equation}
+For a minimally coupled massless scalar, $\nu=d/2$, and the leading branch is exactly the zeroth power while the other branch is the $d$-th power. For a light field with $0<m_{\rm eff}^2<d^2H^2/4$, one has $0<\nu<d/2$ and both branches have positive real part; for a heavy field $\nu=\ii\mu$, both real parts equal $d/2>0$. Hence the mass term indeed enters Eq.~\eqref{eq:physical-mode-nu} with a minus sign, and the natural late-time powers of a generic massive mode do not by themselves produce boundary divergences.
+
+$h=z^{\pm\nu}H_\nu$ only redistributes the $\pm\nu$ power of Eq.~\eqref{eq:physical-late-time-branches} between the explicit $(-\tau)^A$ and the interior of the block; the same convention must be fixed after initialization, but the complete physical power is unchanged. If the master integrals keep the natural $(-\tau)^{d/2}$ prefactor of each propagator, both massive branches decay at $\tau\to0$. Although the massless leading branch is a constant, a total-derivative primitive used by the IBP still tends to zero as long as it carries one more positive explicit $(-\tau)$ power; what is genuinely dangerous is the total primitive power dropping to zero or below. This corresponds exactly to the layers below where the $M_1$ eigenvalue vanishes or is crossed; one must not add extra boundary terms merely because ``the massless mode is itself a constant,'' nor continue using the boundary-discarding recurrence on the zero layer.
+
+For a state $(\bm a,\bm r)$, the $M_1$ eigenvalue is
+\begin{equation}
+ \lambda_{1;v,\bm a}(n_v)
+ =\nu_{0,v}+n_v
+ -\sum_{i\in H_v}(2\nu_i+1)a_i,
+ \label{eq:M1-general-eigenvalue}
+\end{equation}
+which is independent of the massless shared bits $\bm r$ and of all kinematics. When lowering $n_v\to n_v-1$, only
+\begin{equation}
+ \lambda_{1;v,\bm a}(n_v)=0
+ \label{eq:M1-lowering-resonance}
+\end{equation}
+produces an $M_1^{-1}$ pole. A general mixed/Hankel family still needs to be judged against the concrete small-$\tau$ asymptotics; but a purely massless vertex has no massive endpoint terms, and setting $\alpha_v=\nu_{0,v}+n_v$ gives $M_{1;v}=\alpha_v I$, while the corresponding endpoint integral indeed contains $\int_0^\infty\!\dd t_v\,t_v^{\alpha_v-1}e^{-\kappa t_v}=\Gamma(\alpha_v)\kappa^{-\alpha_v}$. Hence when the whole $M_1$ vanishes at $\alpha_v=0$, the unregularized Gamma integral itself diverges and the boundary-discarding IBP cannot be used directly. One should first take $\alpha_v\to\alpha_v+\delta$ as analytic regularization; in the suitably regularized generic-$\delta$ system $M_1$ is invertible, and after the recurrences are completed one expands and takes $\delta\to0$, so no physical failure of the recurrences appears. For massive states, if one instead uses the natural time powers without the absorbed $H\to h$ prefactor, a group of $m$ equal orders with $r$ of them having $a_i=1$ contributes $r+(m-2r)\nu$; generically, different orders do not cancel systematically, and the $\nu$ of the group cancels only when $m$ is even and $r=m/2$. For such $M_1$ zeros one likewise first moves them away with an analytic regulator in the time power and then runs the recurrences at generic regulator.
+
+In the opposite direction, raising $n_v\to n_v+1$, the denominator is
+\begin{equation}
+ \lambda_{0;v,\bm a,\bm r}
+ =\ii\kappa_{v,s;\bm a,\bm r},
+ \qquad
+ \kappa_{v,s;\bm a,\bm r}=0.
+ \label{eq:M0-raising-resonance}
+\end{equation}
+This is the kinematics energy-letter singular surface. Here $k_i$ and $q_e$ are momentum moduli; ordinary vector momentum conservation does not force $\kappa$ to vanish. When the relevant momenta degenerate to collinear and split into two opposite groups $L,R$ along the axis, momentum conservation becomes $\sum_{\ell\in L}|\bm k_\ell|-\sum_{\ell\in R}|\bm k_\ell|=0$, which is exactly $\kappa=0$ for the corresponding choice of state signs. In the raising formula, $M_1=0$ appears only in the numerator and produces no pole; in the lowering formula, $M_0=0$ likewise appears only in the numerator. If both vanish, the row cannot be crossed in either direction and the formulas leave only a lower-sector constraint; one then needs another relation or a different basis, but one still cannot declare that a new master necessarily appears merely from the rank loss. The program should return the direction, shift, state bits, the zero eigenvalue and the original undivided IBP row, without hiding these layers behind a fixed maximum number of steps.
+
+The $0$-fold special case is the clearest: $M_1=\nu_0+n$ and $M_0=\ii p_0$. Lowering fails at $\nu_0+n=0$ and raising fails at $p_0=0$; these are precisely the two directions to which the two denominators of Eq.~(3.59) of the paper belong, not one ``unified singular layer.''
+
+For a single massless edge $e$ contracted to $t=s/e$, Eq.~\eqref{eq:contact-vector-projection} directly gives
+\begin{equation}
+ \boxed{
+ C_{s,s/e}^{(v,e)}
+ =w_e^{(v)}
+ \operatorname{PermuteToGlobalOrder}
+ \left(|1\rangle_e\otimes I_{\rm spectators}\right).
+ }
+ \label{eq:contact-injection}
+\end{equation}
+If a bundle of full lines $\mathcal B$ shares the same theta argument, they are not a product of independent deltas. Write
+\begin{equation}
+ \prod_{e\in\mathcal B}G_e
+ =\theta(\Delta)\prod_{e\in\mathcal B}A_e
+ +\theta(-\Delta)\prod_{e\in\mathcal B}B_e,
+ \qquad
+ \mathsf J_e=\frac{A_e+B_e}{2},\quad D_e=A_e-B_e,
+\end{equation}
+a single differentiation gives only one $\delta(\Delta)$, and
+\begin{equation}
+ \prod_eA_e-\prod_eB_e
+ =\sum_{\substack{\varnothing\neq S\subseteq\mathcal B\\|S|\ {m odd}}}
+ 2^{1-|S|}\prod_{e\in S}D_e\prod_{e\notin S}\mathsf J_e.
+ \label{eq:common-theta-odd-subsets}
+\end{equation}
+Hence an odd subset $S$ is a simultaneous contact event: the selected edges are contracted at once, the endpoints merge only once, and the contact selector is the tensor product of the local selectors of the selected edges times $2^{1-|S|}$. If the two ends of an unselected massless full edge become coincident after merging, its odd shared state is zero; an unselected massive full edge uses the equal-time canonical quotient $10\sim01$. The program first builds the matrices in the raw binary space and then projects with $P_sM^{\rm raw}S_s$ onto the true sector masters, so the coincident quotient does not require a general large-matrix inversion.
+
+For an event-reachable component $C$, the child base power can be written directly from the final partition as
+\begin{equation}
+ A_{C,s}=\sum_{v\in C}A_v
+ +\sum_{e\in E_s(C)}r_e+|C|-1,
+ \label{eq:simultaneous-contact-base-power}
+\end{equation}
+where $r_e$ is the raw contact power of the contracted edge. The last term $|C|-1$ is the number of vertex merges that actually occur; a common-theta event of $k$ edges contributes once, not the erroneous $k$ times. Eq.~\eqref{eq:simultaneous-contact-base-power} depends only on the final component and the contracted set, so different legal contact paths give the same base power.
+Every event strictly reduces the number of components, so the sector BFS terminates automatically, and a repeated contact of an active self-edge is excluded.
+
+\section{The full-graph tensor formula for the dlog DE}
+
+Define the diagonal matrix-valued logarithm of each vertex
+\begin{equation}
+ \widetilde\Omega_{0;v,s}
+ =\operatorname{diag}_{\bm a,\bm r}
+ \left[-\ii\log\kappa_{v,s;\bm a,\bm r}\right].
+ \label{eq:global-omega0}
+\end{equation}
+The explicit momentum terms of the paper come only from the massive endpoint slots, which are still two-dimensional h systems:
+\begin{equation}
+ (\Omega_{{\rm ex},s})_{\bm b\bm a}
+ =\delta_{\bm b\bm a}
+ \left[-\sum_{i\in H(s)}a_i(2\nu_i+1)\log k_i\right].
+ \label{eq:global-omega-ex}
+\end{equation}
+A massless shared-edge slot does not contribute this term, because after the default substitution $2(-\nu)+1=1-2\nu=0$.
+
+The regular dlog potential of a fixed sector is the full-graph version of Eq.~(3.55) of the paper:
+\begin{equation}
+ \boxed{
+ \Omega_{ss}^{\rm reg}
+ =\Omega_{{\rm ex},s}
+ -\ii\sum_{v\in V_s}
+ U_s^{-1}\widetilde\Omega_{0;v,s}U_s
+ M_{1;v,s}(\nu_{0,v}+1).
+ }
+ \label{eq:global-diagonal-omega}
+\end{equation}
+Its letters are exactly all of Eq.~\eqref{eq:global-energy-letter}; no linear solution of the IBP relations is needed first.
+
+The dlog producer and the iterative producer therefore use the same registry, not a second algorithm: one-dimensional blocks give $p_{0,v}$, massive blocks give $M_1$, $M_0$ and $\Omega_{\rm ex}$ at the same time, and massless shared blocks give the two endpoints the same state bit, opposite incidence and the contact selector. First construct $U_s$ according to Eq.~\eqref{eq:local-common-diagonalization-condition}, then write $\log\kappa$ state by state, and finally multiply by $M_1(A+1)$ to obtain Eq.~\eqref{eq:global-diagonal-omega}. A general inversion of the dense $2^N\times2^N$ $M_0$ is never performed here; the actual inversion is only the letter-by-letter reciprocal of the scalar letters of Eq.~\eqref{eq:global-M0-diagonal}.
+
+If one changes to user coordinates or Wick coordinates, the DE is not rederived; one only pulls back the differential one-form with Eq.~\eqref{eq:user-to-internal-coordinate-pullback}. If one changes to the package quotient or the physical-derivative basis, one uses the constant similarity transformation \eqref{eq:global-package-similarity} or the gauge transformation \eqref{eq:physical-DE-gauge} containing derivative terms, respectively; the three must not be mixed into a single derivative-free basis change.
+
+The off-diagonal blocks of the DE must use the remaining term of the raising relation, i.e. the $R^{(1)}$ of the paper; one cannot substitute the $R^{(0)}$ with its lower time powers reduced first. The package uses $(-\tau)^A$, whose raising row is
+\begin{equation}
+ M_{0;v,s}\bm F_s(\bm e_v)
+ =M_{1;v,s}(\nu_{0,v}+1)\bm F_s(0)-\cR_{v,s}(\bm e_v).
+ \label{eq:package-raising-contact-sign}
+\end{equation}
+Hence the contact term in the parameter derivative is $+\ii M_0^{-1}\cR$; when adapting the $\tau^\nu$ notation of the paper to this form, this overall sign must not be dropped. If
+\begin{equation}
+ \cR_{v,s}(\bm e_v)=\sum_{t\prec s}C_{st}^{(v,1)}\bm F_t(0),
+\end{equation}
+then Eq.~(3.68) of the paper generalizes directly to
+\begin{equation}
+ \boxed{
+ \Omega_{st}^{\rm contact}
+ =+\ii\sum_{v\in V_s}\chi_v(E_{st})
+ U_s^{-1}\widetilde\Omega_{0;v,s}U_s
+ C_{st}^{(v,1)},
+ \qquad t\prec s.
+ }
+ \label{eq:global-offdiagonal-omega}
+\end{equation}
+where $E_{st}$ is the set of edges actually selected by that simultaneous event, $N_0(E_{st})$ is the number of masslessFull edges in it, and one defines
+\begin{equation}
+ \chi_v(E_{st})=
+ \begin{cases}
+  \varsigma_v,&N_0(E_{st})=0,\\
+  (-1)^{N_0(E_{st})},&N_0(E_{st})>0.
+ \end{cases}
+ \label{eq:contact-event-phase}
+\end{equation}
+For pure-massive events, $\varsigma_v$ is the vertex phase sign fixed at initialization; an event containing massless edges also includes the phase of the exponential quotient relative to the h/Wronskian contact atoms. All sign-linear correlations are already contained in $C_{st}^{(v,1)}$: massive endpoints use the complementary-bit selector, and the massless quotient uses the $-2,+2$ of Eq.~\eqref{eq:package-massless-contact-weight}. After differentiating the analytic chamber integral of a single pure-massless full edge with respect to the two vertex energies, Eq.~\eqref{eq:contact-event-phase} makes the complete DE residual exactly zero component by component; a simultaneous event of three common-theta edges takes $N_0=3$. A pure-massive component after contact must have a single $\varsigma$; if the input makes the same component mix positive and negative phases, the formula entry fails closed.
+
+\subsection{Bit deletion, insertion and the massless quotient in Eq.~(3.68) of 2401}
+
+First write the pure-massive two-vertex result of 2401. Let the contracted edge sit at endpoint positions $i,j$ of the left and right vertices, respectively; the parent states are $(\bm a,\bm b)$ and the child states are $(\widehat{\bm c},\widehat{\bm d})$. Define
+\begin{equation}
+ K_u^{2401}=T_{n_u}^{-1}\widetilde\Omega_{0;u}T_{n_u},
+ \qquad
+ K_v^{2401}=T_{n_v}^{-1}\widetilde\Omega_{0;v}T_{n_v}.
+ \label{eq:component-log-kernel}
+\end{equation}
+Then the two endpoint terms of Eq.~(3.68) of the paper read component by component
+\begin{align}
+ \left(\Omega_{s,s/e}^{2401}\right)_{(\bm a,\bm b),(\widehat{\bm c},\widehat{\bm d})}
+={}&-\ii
+ (K_u^{2401})_{\bm a,\operatorname{Ins}_i(\widehat{\bm c},1-b_j)}
+ (-1)^{b_j}
+ \delta_{\operatorname{Del}_j\bm b,\widehat{\bm d}}
+ \notag\\
+ &-\ii
+ (K_v^{2401})_{\bm b,\operatorname{Ins}_j(\widehat{\bm d},1-a_i)}
+ (-1)^{a_i}
+ \delta_{\operatorname{Del}_i\bm a,\widehat{\bm c}}.
+ \label{eq:2401-binary-top-to-sub}
+\end{align}
+This is the precise meaning of ``deleting the bit of the contracted endpoint and inserting its complementary bit on the other side''; all undeleted bits are preserved by the Kronecker deltas. The $(-\tau)^A$ normalized-$J$ convention of this document converts the overall $-\ii$ of Eq.~\eqref{eq:2401-binary-top-to-sub} into the $+\ii\chi_v(E)$ of Eq.~\eqref{eq:global-offdiagonal-omega} according to Eq.~\eqref{eq:package-raising-contact-sign}; for the fixed positive pure-massive vertices of 2401, $\chi_v=\varsigma_v=+1$. One must not change only the binary selector and miss this convention transformation.
+
+Now contract a massless edge $e$. Since the shared slot breaks the vertex-by-vertex factorization, first define the global kernel on the full parent sector
+\begin{equation}
+ \mathcal K_{v,s}=U_s^{-1}\widetilde\Omega_{0;v,s}U_s.
+ \label{eq:global-component-log-kernel}
+\end{equation}
+In the parent global binary string after the quotient, the edge has a single shared bit, whose position is denoted by $p_e$; the child string is denoted by $\widehat{\bm c}$. The contact matrix components in the package basis are
+\begin{equation}
+ \left(C_{s,s/e}^{(v,e)}\right)_{\bm d,\widehat{\bm c}}
+ =\eta_{s,e}\,w_e^{(v)}
+ \delta_{d_{p_e},1}
+ \delta_{\operatorname{Del}_{p_e}\bm d,\widehat{\bm c}},
+ \label{eq:massless-contact-binary-component}
+\end{equation}
+where $\eta_{s,e}$ collects the already-absorbed sector-normalization and pinch prefactor, with $w_e^{(u_e)}=-2$ and $w_e^{(v_e)}=+2$. The intermediate-state sum in Eq.~\eqref{eq:global-offdiagonal-omega} then collapses directly:
+\begin{equation}
+ \sum_{\bm d}
+ (\mathcal K_{v,s})_{\bm a,\bm d}
+ \delta_{d_{p_e},1}
+ \delta_{\operatorname{Del}_{p_e}\bm d,\widehat{\bm c}}
+ =
+ (\mathcal K_{v,s})_{\bm a,
+ \operatorname{Ins}_{p_e}(\widehat{\bm c},1)}.
+ \label{eq:massless-binary-sum-collapse}
+\end{equation}
+The complete top-to-sub block of a single massless edge is therefore
+\begin{align}
+ \boxed{
+ \left(\Omega_{s,s/e}^{(e)}\right)_{\bm a,\widehat{\bm c}}
+ =-\ii\eta_{s,e}\Big[
+ w_e^{(u_e)}(\mathcal K_{u_e,s})_{\bm a,\operatorname{Ins}_{p_e}(\widehat{\bm c},1)}
+ +w_e^{(v_e)}(\mathcal K_{v_e,s})_{\bm a,\operatorname{Ins}_{p_e}(\widehat{\bm c},1)}
+ \Big]
+ }
+ \notag\\
+ =2\ii\eta_{s,e}\Big[
+ (\mathcal K_{u_e,s})_{\bm a,\operatorname{Ins}_{p_e}(\widehat{\bm c},1)}
+ -(\mathcal K_{v_e,s})_{\bm a,\operatorname{Ins}_{p_e}(\widehat{\bm c},1)}
+ \Big].
+ \label{eq:massless-binary-top-to-sub}
+\end{align}
+Thus one does not keep two independent $2\times2$ endpoint indices and then sum: the $4\to2$ quotient has already turned them into one shared bit; the so-called ``sum over the two endpoints'' is only the addition of the two component log kernels in Eq.~\eqref{eq:massless-binary-top-to-sub}.
+
+If another massless edge $f\neq e$ is not contracted, its shared bit is a spectator and automatically gives
+\begin{equation}
+ \delta_{r_f^{\rm parent},r_f^{\rm child}}.
+ \label{eq:massless-spectator-delta}
+\end{equation}
+in Eq.~\eqref{eq:massless-contact-binary-component}. It does not produce an extra sum over two endpoint bits; it only continues to enter the energy letters and $\mathcal K_{v,s}$ of the two endpoints with opposite incidence signs. In the mixed massive/massless case, one only needs to assemble the massive endpoint bits and the other shared bits into the same global string according to Eq.~\eqref{eq:binary-state-order}; after deleting $p_e$, all remaining bits are preserved by the second delta of Eq.~\eqref{eq:massless-contact-binary-component}.
+
+If a generalized or multi-edge contact makes $R^{(1)}$ land on a nonzero shift $\bm q$ of the child, the program now calls the same recurrence formula child state by child state and constructs
+\begin{equation}
+ \bm F_t(\bm q)=\mathcal Q_t(\bm q\to0)\,\bm F_{\rm all}(0),
+ \qquad
+ \Omega_{s\to *}^{(v)}
+ =-\mathcal K_{v,s}C_{st}^{(v,1)}\mathcal Q_t(\bm q_v\to0).
+ \label{eq:shifted-contact-right-composition}
+\end{equation}
+Here $\bm F_{\rm all}(0)$ is ordered according to the global master-integral order of the context, so $\mathcal Q_t$ is allowed to continue down to the lower contact sectors of $t$, rather than keeping only the direct child. The program stores, column by column, the residual, the unresolved shifted integrals and the direction-sensitive singular layers. Only when all columns close is Eq.~\eqref{eq:shifted-contact-right-composition} written into the connection; otherwise it returns
+\begin{center}
+ \texttt{contactShiftReductionFailed}.
+\end{center}
+An ordinary one-edge contact still gives $\bm q=0$ directly by the base-power choice.
+
+After ordering the sectors by the number of remaining full edges, the complete connection is block triangular:
+\begin{equation}
+ \dd
+ \begin{pmatrix}
+ \bm F_{s_0}\\\bm F_{s_1}\\\vdots
+ \end{pmatrix}
+ =\dd
+ \begin{pmatrix}
+ \Omega_{s_0s_0}&\Omega_{s_0s_1}&\cdots\\
+ 0&\Omega_{s_1s_1}&\cdots\\
+ \vdots&\vdots&\ddots
+ \end{pmatrix}
+ \begin{pmatrix}
+ \bm F_{s_0}\\\bm F_{s_1}\\\vdots
+ \end{pmatrix}.
+ \label{eq:block-triangular-de}
+\end{equation}
+Whether the matrix is written as upper or lower triangular depends only on the sector ordering; the physical content is that contact only points from a parent to a strictly lower sector.
+
+\section{The dimensionless h equation, physical quadratic-momentum terms and realification}
+\label{sec:physical-k2}
+
+Eq.~\eqref{eq:massless-z-eom} is the equation to be used inside the building block:
+\begin{equation}
+ \partial_z^2h_0=-h_0.
+\end{equation}
+Only restoring the physical time derivative with Eq.~\eqref{eq:tau-z-chain} gives
+\begin{equation}
+ \boxed{
+ \partial_\tau^2h_0
+ =k^2\partial_z^2h_0
+ =-k^2h_0.
+ }
+ \label{eq:physical-second-derivative}
+\end{equation}
+So $-k^2$ is not a second set of EOMs; it is the physical coefficient of the dimensionless constant $-1$ after two chain-rule steps. Continuing to use the two states $h_0,h_1$ internally allows the $2\times2$ formulas of the paper to be reused unchanged.
+
+If the backend realification uses
+\begin{equation}
+ k=-\ii\kappa,
+\end{equation}
+then
+\begin{equation}
+ -k^2=+\kappa^2.
+\end{equation}
+If the program token for the real variable happens to be named \texttt{ik}, the \texttt{ik\^2} in the output means the square of this real variable, not the imaginary unit $\ii$ times $k^2$.
+
+Now distinguish the paper h-state from the physical endpoint derivatives. Let
+\begin{equation}
+ \mathcal F_{ab}
+ =\partial_{\tau_u}^{a}\partial_{\tau_v}^{b}G_e
+ \quad(a,b=0,1)
+\end{equation}
+denote the physical states from which $-k$ has not been divided out. The regular top-sector part satisfies
+\begin{equation}
+ \mathcal F_{01}=-\mathcal F_{10},
+ \qquad
+ \mathcal F_{11}=k^2\mathcal F_{00},
+ \label{eq:physical-massless-relations}
+\end{equation}
+while the second relation of the complete full propagator must additionally receive the contact distribution from the theta derivative, which is exactly the lower sector to which Eq.~\eqref{eq:contact-injection} belongs.
+
+If one chooses the physical two-state $\bm g_{\rm phys}=(\mathcal F_{00},\mathcal F_{10})^T$, its relation to the paper h two-state is
+\begin{equation}
+ \bm g_{\rm phys}=N(k)\bm g_h,
+ \qquad
+ N(k)=\begin{pmatrix}1&0\\0&-k\end{pmatrix}.
+ \label{eq:physical-basis-N}
+\end{equation}
+The regular embedding of the physical four states is therefore
+\begin{equation}
+ \begin{pmatrix}
+ \mathcal F_{00}\\\mathcal F_{01}\\\mathcal F_{10}\\\mathcal F_{11}
+ \end{pmatrix}_{\!\rm reg}
+ =
+ \begin{pmatrix}
+ 1&0\\
+ 0&-1\\
+ 0&1\\
+ k^2&0
+ \end{pmatrix}
+ \bm g_{\rm phys}.
+ \label{eq:physical-four-to-two}
+\end{equation}
+Hence if the final DE uses the physical two-state rather than the paper h two-state, one must perform
+\begin{equation}
+ \boxed{
+ \mathcal A_{\rm phys}
+ =\dd N\,N^{-1}+N\mathcal A_hN^{-1},
+ \qquad
+ \dd N\,N^{-1}
+ =\begin{pmatrix}0&0\\0&\dd\log k\end{pmatrix}.
+ }
+ \label{eq:physical-DE-gauge}
+\end{equation}
+It is recommended that the formula producer always keep the dimensionless h-state basis internally, so that $S_e,P_e,T,U_s$ are all kinematics-independent constants; only when outputting the physical-derivative states should $N(k)$ and Eq.~\eqref{eq:physical-DE-gauge} be applied.
+
+\section{Interface with the package conventions}
+\label{sec:package-adapter}
+
+\subsection{The massless quotient basis of the package}
+
+The $F_{ab}$ above are the paper h-states. In order to separate the momentum factor of each endpoint derivative from the discrete states, the package uses another algebraic quotient. For an ordered edge $e=(u_e,v_e)$, let $\Delta=\tau_{u_e}-\tau_{v_e}$, and use $\sigma_e=+1,-1$ for $G^{++},G^{--}$ respectively; define
+\begin{align}
+ \mathsf m_{e,0}&=\theta(\Delta)e^{-\ii\sigma_eq_e\Delta}
+       +\theta(-\Delta)e^{+\ii\sigma_eq_e\Delta},\\
+ \mathsf m_{e,1}&=-\theta(\Delta)e^{-\ii\sigma_eq_e\Delta}
+       +\theta(-\Delta)e^{+\ii\sigma_eq_e\Delta}.
+ \label{eq:package-M01}
+\end{align}
+The shared two-state and the four-state embedding of the package are
+\begin{equation}
+ \bm g_e^J=(\mathsf m_{e,0},\mathsf m_{e,1})^T,
+ \qquad
+ \begin{pmatrix}F^J_{00}\\F^J_{01}\\F^J_{10}\\F^J_{11}\end{pmatrix}
+ =S_e^J\bm g_e^J,
+ \qquad
+ S_e^J=
+ \begin{pmatrix}
+  1&0\\0&-1\\0&1\\-1&0
+ \end{pmatrix}.
+ \label{eq:package-S-massless}
+\end{equation}
+So in the package one indeed has
+\begin{equation}
+ F^J_{01}=-F^J_{10},
+ \qquad
+ F^J_{11}=-F^J_{00}.
+ \label{eq:package-quotient-relations}
+\end{equation}
+This minus sign does not conflict with Eq.~\eqref{eq:h-state-massless-relations}: $F^J_{ab}$ has already factored out the $\pm\ii\sigma_eq_e$ of the endpoint derivatives, so it is not $h_a h_b$. Under a common kinematics-independent normalization, the two shared two-states satisfy
+\begin{equation}
+ \bm g_e^J=D_{\sigma_e}\bm g_e^h,
+ \qquad
+ D_{\sigma_e}=\operatorname{diag}(1,\ii\sigma_e).
+ \label{eq:h-to-package-basis}
+\end{equation}
+Therefore the $\mp\ii q_e\sigma_2$ of the two endpoints in the paper h-state become, in the package quotient, exactly
+\begin{align}
+ Q^J_{u_e,e}
+ &=D_{\sigma_e}(-\ii q_e\sigma_2)D_{\sigma_e}^{-1}
+   =+\ii\sigma_eq_e\sigma_1,\\
+ Q^J_{v_e,e}
+ &=D_{\sigma_e}(+\ii q_e\sigma_2)D_{\sigma_e}^{-1}
+   =-\ii\sigma_eq_e\sigma_1,
+ \qquad
+ \sigma_1=\begin{pmatrix}0&1\\1&0\end{pmatrix}.
+ \label{eq:package-endpoint-generators}
+\end{align}
+The equivalent complete endpoint rules are
+\begin{align}
+ \partial_{\tau_{u_e}}\mathsf m_{e,n}
+ &=+\ii\sigma_eq_e\mathsf m_{e,1-n}-2n\,\delta(\Delta),\\
+ \partial_{\tau_{v_e}}\mathsf m_{e,n}
+ &=-\ii\sigma_eq_e\mathsf m_{e,1-n}+2n\,\delta(\Delta).
+ \label{eq:package-massless-time-rules}
+\end{align}
+This simultaneously gives the contact weights of the ordered first and second endpoints in the package quotient
+\begin{equation}
+ w_{e,J}^{(u_e)}=-2,
+ \qquad
+ w_{e,J}^{(v_e)}=+2.
+ \label{eq:package-massless-contact-weight}
+\end{equation}
+They agree exactly with Eq.~\eqref{eq:h-massless-contact-weight}, because
+\begin{equation}
+ D_{\sigma_e}|1\rangle_e\,(+2\ii\sigma_e)=-2|1\rangle_e,
+ \qquad
+ D_{\sigma_e}|1\rangle_e\,(-2\ii\sigma_e)=+2|1\rangle_e.
+ \label{eq:contact-basis-conversion}
+\end{equation}
+A cycle line stores each factor of $q_e$ as $b_e\to b_e-1$; a fixed/non-loop line has no $b_e$ slot and must keep the structured modulus $q_e$ explicitly. Two regular derivatives at the same endpoint therefore give $-q_e^2$, while one at each endpoint gives $+q_e^2$.
+
+The diagonalizing matrix of the package quotient can be obtained directly from the matrix of the paper:
+\begin{equation}
+ T_e^J=T D_{\sigma_e}^{-1},
+ \qquad
+ T_e^JQ^J_{u_e,e}(T_e^J)^{-1}
+ =T(-\ii q_e\sigma_2)T^{-1}.
+ \label{eq:package-diagonalizer}
+\end{equation}
+So the two bases give the same set of energy letters; $\sigma_e$ only swaps the label of the shared bit. If one instead uses the fixed real Hadamard matrix, this swap appears explicitly as $\sigma_e(2r_e-1)q_e$ in the letter.
+
+For the whole sector, embed Eq.~\eqref{eq:h-to-package-basis} into every uncontracted massless full-edge slot and denote the resulting constant matrix by
+\begin{equation}
+ B_s=\bigotimes_{e\in E_m(s)}D_{\sigma_e},
+ \label{eq:global-package-basis}
+\end{equation}
+with identity matrices on the remaining slots. All regular and contact blocks can then be transformed directly as
+\begin{equation}
+ M_{0;v,s}^{J}=B_sM_{0;v,s}^{h}B_s^{-1},
+ \qquad
+ \Omega_{ss}^{J}=B_s\Omega_{ss}^{h}B_s^{-1},
+ \qquad
+ C_{st}^{J}=B_sC_{st}^{h}B_t^{-1}.
+ \label{eq:global-package-similarity}
+\end{equation}
+The last equation is a basis change between spaces of different dimensions, not a similarity transformation; when $s\to t$ deletes the edge $e$, the left multiplication by $D_{\sigma_e}$ exactly accomplishes Eq.~\eqref{eq:contact-basis-conversion}.
+
+\subsection{The unique quotient and its four-state derivation space}
+
+MadStree uniquely uses one shared two-state \texttt{masslessShared} slot for every
+\texttt{masslessFull}. The public input has no representation-selection option; recurrence,
+contact, dlog and numerical layers consume only the quotient. The ordered-endpoint four-state
+space $(00,01,10,11)$ below is used only to derive that quotient and is not a second program
+context, slot registry or formula route.
+
+For the derivation, work first in a four-state space with the constant normalization compatible
+with the quotient, without introducing the $2/\pi$ of the bare Hankel product. Using $S_e,P_e$ of
+Eq.~\eqref{eq:SP-massless}, define
+\begin{equation}
+ S_{h\leftarrow J}=S_eD_{\sigma}^{-1},\qquad
+ P_{J\leftarrow h}=D_{\sigma}P_e,\qquad
+ P_{J\leftarrow h}S_{h\leftarrow J}=I_2.
+ \label{eq:madstree-redundant-massless-map}
+\end{equation}
+For $G^{++}$ this gives
+\begin{equation}
+ S_{h\leftarrow J}=\begin{pmatrix}1&0\\0&\ii\\0&-\ii\\1&0\end{pmatrix},
+ \qquad
+ P_{J\leftarrow h}=\begin{pmatrix}1&0&0&0\\0&0&\ii&0\end{pmatrix}.
+\end{equation}
+The contact column of the first endpoint in the four-state derivation space is
+$2\ii\sigma(0,-1,1,0)^T$, and the second endpoint takes the opposite sign; after projecting with
+$P_{J\leftarrow h}$, one obtains exactly the $-2,+2$ of Eq.~\eqref{eq:package-massless-contact-weight}.
+For a sector with spectator slots, Eq.~\eqref{eq:madstree-redundant-massless-map} shows how the
+four-state space is projected once into the shared production two-state space. The program then
+generates $M_1,M_0$, the iterative reduction and the complete block-triangular dlog only in the
+quotient space and retains no four-state production branch.
+
+\subsection{\texorpdfstring{$(-\tau)^A$ and normalized-$J$}{(-tau)A and normalized-J}}
+
+The previous text used the $\tau^{\nu_0}$ convention of the paper. The integral object used by recurrence, DEs and numerical transport is the normalized object
+\begin{equation}
+ J_s=\cN_sI_s,
+\end{equation}
+where the bare integral with the same existing indices is defined compactly by
+\begin{equation}
+ I_s(\bm n;\bm a)=
+ \int_{(-\infty,0)^{c_s}}
+ \prod_{C=1}^{c_s}\!\dd\tau_C\,
+ (-\tau_C)^{A_{C,s}+n_C}e^{\ii p_{C,s}\tau_C}
+ \;\mathcal H_{s,\bm a}(\bm\tau).
+ \label{eq:package-bare-integral}
+\end{equation}
+Here $s=\texttt{sectorKey}$, $\bm n=\texttt{aShifts}$ and $\bm a=\texttt{stateBits}$;
+$\mathcal H_{s,\bm a}$ is the ordered product of the active-line two-state building blocks defined above.
+Massive endpoints read their own state bits, whereas a massless shared quotient reads one bit shared by the whole edge. The $++/--$ time ordering of a Full line stays inside its building block, and contracted lines are absent. The program does not expand this product separately for every master.
+
+The single-integral query is
+\begin{verbatim}
+MSIntegralDefinition[MSIntegral[s,n,a], context]
+\end{verbatim}
+It returns the same-index \texttt{MSBareIntegral[s,n,a]}, the exact $\cN_s$, and an inert equality;
+each ordered record returned by \texttt{MSMasterIntegrals[context]} contains the same fields.
+For $\cN_s=1$ the displayed relation is $J_s(\bm n;\bm a)=I_s(\bm n;\bm a)$.
+The time power is written as $(-\tau_v)^{A_{v,s}}$, so
+\begin{equation}
+ \partial_{\tau_v}(-\tau_v)^{A_{v,s}}
+ =-A_{v,s}(-\tau_v)^{A_{v,s}-1}.
+ \label{eq:package-time-power-derivative}
+\end{equation}
+In the same h-state basis, the package adapter therefore writes the paper's Eq.~\eqref{eq:global-one-step-ibp} exactly as
+\begin{equation}
+ -M_{1;v,s}(A_v)\bm J_s(\bm a-\bm e_v)
+ +M_{0;v,s}\bm J_s(\bm a)
+ +\cR^{J}_{v,s}(\bm a)=0,
+ \label{eq:package-one-step-ibp}
+\end{equation}
+where the minus sign comes entirely from Eq.~\eqref{eq:package-time-power-derivative}. If the package quotient basis is used, one only needs to apply the constant similarity transformation of Eq.~\eqref{eq:h-to-package-basis} to $M_0$ on each massless shared slot; $M_1$ does not contain that slot. This adaptation does not change the shared-edge slot registry.
+
+Under the package conventions the two one-step formulas are therefore explicitly
+\begin{align}
+ \bm J_s(\bm n-\bm e_v)
+ &=M_{1;v,s}(A_v+n_v)^{-1}
+ \left[M_{0;v,s}\bm J_s(\bm n)+\cR^J_{v,s}(\bm n)\right],
+ \label{eq:package-lowering}\\
+ \bm J_s(\bm n+\bm e_v)
+ &=M_{0;v,s}^{-1}
+ \left[M_{1;v,s}(A_v+n_v+1)\bm J_s(\bm n)
+ -\cR^J_{v,s}(\bm n+\bm e_v)\right].
+ \label{eq:package-raising}
+\end{align}
+This preserves the directionality of Eqs.~\eqref{eq:M1-lowering-resonance}--\eqref{eq:M0-raising-resonance}; the overall sign change does not alter which matrix is inverted in that direction.
+
+In the normalized basis one must also use
+\begin{equation}
+ \partial_xJ_s
+ =(\partial_x\log\cN_s)J_s+\cN_s\partial_xI_s,
+ \qquad
+ C^{J}_{st}=\frac{\cN_s}{\cN_t}C^{I}_{st}.
+ \label{eq:normalization-adapter}
+\end{equation}
+So the sector diagonal blocks receive an additional $\dd\log\cN_sI_s$, and the off-diagonal contact blocks are multiplied by $\cN_s/\cN_t$. Only when this ratio has been turned into a kinematics-independent constant by the basis normalization is Eq.~\eqref{eq:global-offdiagonal-omega} directly a constant-residue dlog; otherwise an additional basis/gauge transformation is needed, and one cannot claim completion merely from the literal $\log\kappa$.
+
+\subsection{The forward and inverse transformations of the H/h state vectors}
+
+Let $p=s_\nu\nu$. The local relation between the same function $h$ and the bare Hankel states is
+\begin{equation}
+ \begin{pmatrix}h(\nu,0;z)\\h(\nu,1;z)\end{pmatrix}
+ =T_{H\to h}(p,z)
+ \begin{pmatrix}H_\nu(z)\\\partial_zH_\nu(z)\end{pmatrix},
+ \qquad
+ T_{H\to h}(p,z)=
+ \begin{pmatrix}
+  z^p&0\\p z^{p-1}&z^p
+ \end{pmatrix}.
+ \label{eq:package-H-to-h}
+\end{equation}
+Its inverse matrix is
+\begin{equation}
+ T_{h\to H}(p,z)=
+ \begin{pmatrix}
+  z^{-p}&0\\-p z^{-p-1}&z^{-p}
+ \end{pmatrix},
+ \qquad
+ T_{h\to H}T_{H\to h}=I_2.
+ \label{eq:package-h-to-H}
+\end{equation}
+MadStree's \texttt{MSHTohMatrix[nu,z,context]} and \texttt{MShToHMatrix[nu,z,context]} implement these two matrices directly. \texttt{MSConvertBasis} can also take their Kronecker product according to the slot registry of a fixed sector: each massive endpoint uses its own $z=-k\tau_{\rm component}$, while the massless shared quotient is not a bare Hankel endpoint pair and therefore multiplies by identity in this basis change. \texttt{NuConvention} is chosen only at \texttt{MSInitTree}; after the context is built, both the local matrices and the full-sector basis change read that value fixedly and do not accept per-call overrides. The forward and inverse transformations have been checked separately for both positive/negative prefactor contexts to give the identity.
+
+What is transformed here is the same-ordered state vector of the integrand, not the already-integrated \texttt{MSIntegral}. The reason is that the $z^p$ and $z^{p-1}$ of Eq.~\eqref{eq:package-H-to-h} also change the component base time power at the same time; the first version has not built an independent H-family sector metadata, so overloading the integral object explicitly fails closed, and this step cannot be disguised as merely flipping a state bit.
+
+The public time-only representation of dSIBP is \texttt{J[sectorKey,timeShifts,stateBits]}, which corresponds slot by slot to MadStree's \texttt{MSIntegral[sectorKey,timeShifts,stateBits]}; \texttt{stateBits} are discrete states of the $n_i$ type in the full-sector registry and are not required to be grouped by vertex. This correspondence only converts the integral identity and does not replace the normalization: both contexts must use the same $\cN_s$ for every sector, and differentiation must include the $\partial\log\cN_s$ of Eq.~\eqref{eq:normalization-adapter}. The default massless input of MadStree is $\nu=1/2$ with positive prefactor, and the 2401 formulas are assembled with the uniform substitution $\nu\to-\nu=-1/2$. This analytic equivalence does not replace line metadata, theta, or contact normalization.
+
+\subsection{Single-vertex families, local inverses and the complete reduction interface}
+
+A single-vertex family does not need to construct a fake graph. The compact input is
+\begin{verbatim}
+ctx = MSInitVertexFamily[<|
+  "ki" -> {k0,k1,...},
+  "nui" -> {A0,nu1,...},
+  "hankelBranches" -> {1,2,...}
+|>, NuConvention -> "Positive"];
+\end{verbatim}
+Here \texttt{First[ki]} and \texttt{First[nui]} are respectively the parameter of the
+theta-free exponential attached to the vertex and the base power of $(-\tau)$; the remaining entries give the momentum,
+$\nu=|\nu|$, and Hankel branch of each h block. The explicit data model uses
+\texttt{externalLegEnergy/timePower/hBlocks/exponentialBlocks}. Each pure exponential block is a
+one-dimensional factor that shifts only the effective external-leg energy, while each h block is a
+two-dimensional massive endpoint slot. The context can directly call
+\texttt{MSFormulaMatrices}, \texttt{MSMasterIntegrals}, \texttt{MSDLogDE}, and
+\texttt{MSBoundaryData}, then use \texttt{MSEvaluatePath} for the one-stage numerical workflow.
+\texttt{NuConvention} is chosen only at initialization and all later interfaces read it
+from the context.
+
+The complete explicit model has the shape
+\begin{verbatim}
+ctx = MSInitVertexFamily[<|
+  "externalLegEnergy" -> k0,
+  "timePower" -> A0,
+  "hBlocks" -> {
+    <|"id"->h1,"momentum"->k1,"nu"->nu1,"hankelBranch"->1|>
+  },
+  "exponentialBlocks" -> {
+    <|"id"->e1,"momentum"->p1,"exponentType"->"-"|>
+  },
+  "vertexType" -> "+",
+  "normalization" -> 1
+|>];
+\end{verbatim}
+Here \texttt{vertexType} fixes the SK contour branch of the whole vertex, while
+\texttt{exponentType} is only the literal sign of that extra exponential block in the effective
+external-leg energy. A single-vertex family has no propagator incidence, so its initialization
+schema intentionally differs from tree \texttt{vertices/lines}. Once the context exists, both
+forms use the same masters, recurrence, DE, boundary, numerical options, and return structure.
+
+The implementation contains no general $2^p\times2^p$ symbolic inverse. For a massive endpoint, the local non-trivial direction of $M_0$ is $\sigma_2$, and one directly uses the constant matrix $T$ of the paper with its explicit inverse; for a massless shared edge, the local direction is $\sigma_1$, and one uses the self-inverse Hadamard matrix
+\begin{equation}
+ H_2=\frac1{\sqrt2}
+ \begin{pmatrix}1&1\\1&-1\end{pmatrix},
+ \qquad H_2^{-1}=H_2.
+ \label{eq:package-hadamard-inverse}
+\end{equation}
+Pure exponential factors are one-dimensional identity matrices. The full-sector $U_s$ and $U_s^{-1}$ are obtained only as Kronecker products of these local matrices. Since $M_1$ is already diagonal in the state-bit basis, \texttt{msM1Inverse} only computes
+\begin{equation}
+ \operatorname{diag}(M_1^{-1})_r=\lambda_{1,r}^{-1};
+\end{equation}
+while $M_0$ is computed only in the common diagonal basis as
+\begin{equation}
+ M_0^{-1}=U_s^{-1}\operatorname{diag}
+ \left((\ii\kappa_r)^{-1}\right)U_s.
+ \label{eq:package-local-tensor-inverse}
+\end{equation}
+Thus after the massless $4\to2$ quotient the local-diagonalization inversion still applies unchanged. The necessary condition is that all local operators on the same slot contain only the same Pauli direction; if non-collinear directions appear in the future, the program must reject Eq.~\eqref{eq:package-local-tensor-inverse} instead of pretending they can be simultaneously diagonalized.
+
+The complete reduction entry point is
+\begin{verbatim}
+MSReduce[linearCombination, context, MasterBasis -> Automatic]
+\end{verbatim}
+It recursively moves each component shift to zero for every \texttt{MSIntegral} according to Eqs.~\eqref{eq:package-lowering}--\eqref{eq:package-raising}, and continues to reduce the lower sectors along the contact DAG; repeated subproblems are reused through a memo table. The key returned fields are
+\begin{verbatim}
+result, masterBasis, masterRules, coefficientVector,
+nonMasterResidual, remainingShiftedIntegrals,
+memoizedIntegralCount, singularLayers
+\end{verbatim}
+where the master basis, the coefficient vector and the rules are strictly in the same order, and \texttt{result} is the explicit linear combination of master integrals. The status is \texttt{reduced} only when the residual is zero and the shifted-integral list is empty. \texttt{MasterBasis} may be any permutation of all context masters, but it cannot miss or repeat entries. The singular layers record, for each step, the direction, the component and the denominator that was actually inverted: toward zero with a positive shift only the energy letters of $M_0$ are reported; with a negative shift only the $M_1$ eigenvalues are reported. This is exactly the program contract of Eqs.~\eqref{eq:M1-lowering-resonance}--\eqref{eq:M0-raising-resonance}.
+
+The same entry directly accepts \texttt{List}, regular \texttt{Table}, empty lists and ragged
+nested lists. The returned \texttt{result}, per-element
+\texttt{coefficientVector/masterRules}, residuals and remaining shifts preserve the input shape;
+all elements share one recursion memo. A failed element reports its exact list position and does
+not mark the partial results of other elements as a complete reduction.
+
+\subsection{Small-time endpoints and the safe time-IBP shift}
+
+Integer time-IBP shifts may not cross a divergent endpoint. MadStree does not solve a new local
+series here. It substitutes only the known two leading small-time powers of h into every reachable
+component and enumerates all binary branch combinations of that component. For a zero-shift Gamma
+argument $\alpha$, if $\alpha\in\{0,-1,-2,\ldots\}$, the original master diverges and initialization
+is rejected immediately. If $\alpha=m\in\mathbb Z_{>0}$, initialization is allowed, but that branch
+is restricted to
+\begin{equation}
+ n\geq 1-m,
+\end{equation}
+because the next shift reaches a non-positive integer. \texttt{MSRecurrenceStep},
+\texttt{MSReduce}, and shifted-child reduction in the dlog reject only an actual request that
+crosses this bound, returning the original vertices, sector, local branch, $\alpha$, and the
+requested shift. An $\alpha$ containing a symbolic analytic regulator remains symbolic and is not
+misclassified as an integer.
+
+\section{Large pure-exponential-energy boundary and blow-up for arbitrary time-only graphs}
+\label{sec:boundary-blowup}
+
+\subsection{Damping variables and auxiliary one-dimensional exponentials}
+
+For each root vertex $v$, choose the pure vertex exponential of Eq.~\eqref{eq:vertex-phase-sign} and use the internal positive variable $K_v$ of Eq.~\eqref{eq:unified-vertex-wick-coordinate}. Since $\tau_v=-t_v<0$, both kinds of vertices satisfy
+\begin{equation}
+ \exp(\ii\varsigma_vk_{0,v}\tau_v)=\exp(-K_vt_v),
+ \qquad K_v>0.
+ \label{eq:wick-damping-energy}
+\end{equation}
+So $K_v\to\infty$ localizes the integral to $\tau_v\to0^-$. This is the same as the single-vertex family boundary of Sec.~3 of \cite{Chen:2024jms}; the paper uses the chart with $\varsigma_v=+1$ and $k_{0,v}\to-\ii\infty$.
+
+If the original integrand has no pure vertex exponential at some vertex, one may add an auxiliary block $\exp(\ii\varsigma_vk_{0,v}^{\rm aux}\tau_v)$. It only maps
+\begin{equation}
+ p_{0,v}\longmapsto p_{0,v}+\varsigma_vk_{0,v}^{\rm aux},
+ \qquad
+ M_{0;v,s}\longmapsto M_{0;v,s}
+ +\ii\varsigma_vk_{0,v}^{\rm aux}I_s .
+ \label{eq:auxiliary-energy-M0-shift}
+\end{equation}
+Hence under generic kinematics it does not increase the number of slots or masters and does not change $M_1$. However, $K_v^{\rm aux}=0$ is a specialization of this augmented family; whether the point is still ordinary must be decided by the full-sector letters and cannot be inferred from ``a one-dimensional slot does not increase the masters.''
+
+\subsection{Strict total time order, nested blow-up and theta fixing}
+
+Directly choose a strict total order for all root times, and take the opposite strict order of damping energies
+\begin{equation}
+ K_{\sigma(1)}\gg K_{\sigma(2)}\gg\cdots
+ \gg K_{\sigma(V)}\gg1.
+ \label{eq:strict-energy-rank}
+\end{equation}
+This step does not require the propagator incidence graph to be a tree. What this document calls a time-only loop graph is a graph that is allowed to contain loops, but where all line momenta are still treated as fixed parameters and only the time integrals of the vertices are performed; it does not include loop-momentum integration. A strict total order orders every pair of times, and for non-adjacent vertices the order merely selects one blow-up chart.
+
+Define the nested coordinates
+\begin{equation}
+ x_j=\frac{K_{\sigma(j+1)}}{K_{\sigma(j)}}
+ \quad(1\leq j<V),
+ \qquad
+ x_V=\frac{1}{K_{\sigma(V)}}.
+ \label{eq:nested-blowup-coordinates}
+\end{equation}
+Then
+\begin{equation}
+ \frac{1}{K_{\sigma(j)}}=\prod_{r=j}^{V}x_r,
+ \qquad x_1,\ldots,x_V\longrightarrow0.
+ \label{eq:nested-energy-inverse}
+\end{equation}
+For two vertices with $K_1\gg K_2$, this is the $x=K_2/K_1$, $y=1/K_2$ of Sec.~4.1 of the reference. In the original inverse variables, the three divisors $t_1,t_2,t_1+t_2$ pass through the two-dimensional origin simultaneously, a degenerate intersection; Eq.~\eqref{eq:nested-blowup-coordinates} resolves it analytically into a normal-crossing chart.
+
+The exponential localization scales satisfy
+\begin{equation}
+ |\tau_{\sigma(1)}|\ll|\tau_{\sigma(2)}|\ll\cdots
+ \ll|\tau_{\sigma(V)}|\ll1.
+ \label{eq:tau-rank}
+\end{equation}
+Since all $\tau$ approach zero from the negative side, large $K$ corresponds to small $|\tau|$; hence $K_u\gg K_v$ implies $\tau_u>\tau_v$, and therefore
+\begin{equation}
+ \theta(\tau_u-\tau_v)\longrightarrow1,
+ \qquad
+ \theta(\tau_v-\tau_u)\longrightarrow0.
+ \label{eq:theta-rank-rule}
+\end{equation}
+For $G^{++}$ or $G^{--}$, Eq.~\eqref{eq:theta-rank-rule} must be applied to every explicit theta in the propagator expansion according to the order of its argument; one cannot guess a single value from the SK label alone. All thetas in an arbitrary time graph therefore become $0$ or $1$. If some term requires a cyclic inequality, for example
+\begin{equation}
+ \theta(\tau_1-\tau_2)\theta(\tau_2-\tau_3)
+ \theta(\tau_3-\tau_1),
+\end{equation}
+then it is automatically zero in every strict-total-order chart, instead of producing a new boundary region.
+
+\subsection{Choosing the preferred rank from a user-preferred ordinary point}
+
+The user may additionally provide a preferred starting point $P_*$. The point is still submitted in the user variables of initialization, including all $k_{0,v}$ and all propagator moduli $q_e$; the package first computes with the coordinate map of Eq.~\eqref{eq:user-to-internal-coordinate-pullback}
+\begin{equation}
+ K_v(P_*)=\ii\varsigma_vk_{0,v}(P_*).
+\end{equation}
+If $\operatorname{Re}K_v(P_*)>0$, the preferred strict chart takes
+\begin{equation}
+ \operatorname{Re}K_{\sigma(1)}(P_*)>\cdots>
+ \operatorname{Re}K_{\sigma(V)}(P_*),
+ \label{eq:preferred-rank-from-point}
+\end{equation}
+with ties broken deterministically first by $|K_v(P_*)|$ and then by the root vertex order. Note that the order must not be reversed: a large $K_v$ supports only a smaller typical $t_v=|\tau_v|$ to avoid the exponential suppression of $e^{-K_vt_v}$, so Eq.~\eqref{eq:preferred-rank-from-point} corresponds to
+\begin{equation}
+ |\tau_{\sigma(1)}|\ll\cdots\ll|\tau_{\sigma(V)}|,
+ \qquad
+ \tau_{\sigma(1)}>\cdots>\tau_{\sigma(V)}.
+\end{equation}
+
+This choice makes the scale hierarchy of the boundary chart closest to $P_*$, usually shortening the first continuation segment and possibly reducing the letter hypersurfaces that must be bypassed; it is not a theorem of ``globally fewest singularities.'' The program must still issue a normal-crossing certificate for the complete top/subsector connection of the candidate chart, and verify that the path from an ordinary anchor inside the chart to $P_*$ does not cross any letter. If some $\operatorname{Re}K_v(P_*)\leq0$, that point cannot directly define a damping rank; it may still be used as a later ordinary point, but the preferred chart is then given explicitly by the user or determined by another positive-damping anchor.
+
+\subsection{Contact subsectors inherit the same root rank}
+
+In a sector $s$, the delta contact merges a set of root vertices into a component $C$. Its damping energy and rank are defined as
+\begin{equation}
+ K_C=\sum_{v\in C}K_v,
+ \qquad
+ r_C=\max_{v\in C}r_v.
+ \label{eq:component-energy-rank}
+\end{equation}
+The strict total order guarantees that $K_C$ is dominated by the unique largest-rank root in $C$. The delta merge changes the component base time power and the sector normalization, but does not reselect a subsector rank; when a remaining theta connects two components, only their dominant roots are compared.
+
+Let $v_C$ be the dominant root in $C$. The boundary form of any letter of Eq.~\eqref{eq:global-energy-letter} is
+\begin{equation}
+ \begin{split}
+ \kappa_{C,s;\bm a,\bm r}
+ &=-\ii K_C+E_{C,s;\bm a,\bm r}\\
+ &=-\ii K_{v_C}
+ \left[1+\text{higher monomials in }x
+ +\frac{\ii E_{C,s;\bm a,\bm r}}{K_{v_C}}\right],
+ \end{split}
+ \label{eq:boundary-letter-unit}
+\end{equation}
+where the bracket equals $1$ at $x=0$. All energy letters of every contact-reachable sector are therefore a coordinate monomial times a boundary-nonzero unit; this is the direct resolution of the linear letters of arbitrary time graphs by the strict-rank blow-up.
+
+This conclusion is in fact more general than the component letters. The diagonal blocks of a fixed sector contain only the $\log\kappa$ of Eq.~\eqref{eq:global-omega0}. The top-to-sub formula \eqref{eq:global-offdiagonal-omega} merely multiplies the same $\widetilde\Omega_{0;v,s}$ of the parent by the kinematics-independent contact map $C_{st}^{(v,1)}$, so no new log argument is produced. If $R^{(1)}$ does not land directly on the child master and further reduction is needed, the new denominators come only from the $M_0^{-1}$ of the child and are still energy letters of the same type of the child component. Inducting along the strictly descending contact DAG, every denominator containing $K$ in the complete block-triangular DE has the form
+\begin{equation}
+ D_{\alpha,s}(K,q)
+ =Q_{\alpha,s}(q)
+ +\sum_{v=1}^{V}c_{\alpha,s;v}K_v,
+ \qquad
+ \operatorname{supp}c_{\alpha,s}\neq\varnothing,
+ \label{eq:general-affine-K-divisor}
+\end{equation}
+where $c_{\alpha,s;v}$ is kinematics-independent. For an ordinary component letter, $c_v$ is exactly the indicator of the component; more general constant contact bases or SK phases only change the nonzero constant coefficients.
+
+Let
+\begin{equation}
+ j_\alpha=\min\{j\mid c_{\alpha,s;\sigma(j)}\neq0\}
+\end{equation}
+be the first position of the support of this denominator in the strict energy total order. Substituting Eq.~\eqref{eq:nested-blowup-coordinates}, it factorizes strictly as
+\begin{equation}
+ \begin{split}
+ D_{\alpha,s}
+ =K_{\sigma(j_\alpha)}\Bigg[&c_{\alpha,s;\sigma(j_\alpha)}
+ +\sum_{j>j_\alpha}c_{\alpha,s;\sigma(j)}
+   \prod_{r=j_\alpha}^{j-1}x_r\\
+ &+Q_{\alpha,s}\prod_{r=j_\alpha}^{V}x_r\Bigg].
+ \end{split}
+ \label{eq:affine-divisor-blowup-factorization}
+\end{equation}
+The bracket equals the nonzero constant $c_{\alpha,s;\sigma(j_\alpha)}$ at $x=0$. All strict transforms of such denominators are therefore units; their pullback divisors consist only of the coordinate hyperplanes of $x_{j_\alpha},\ldots,x_V$. A hyperplane that recurs is the same irreducible divisor and does not increase the number of normals, so near the boundary there are at most $V$ mutually independent coordinate normals. This proves: as long as the denominators of the dlog and top-to-sub formulas keep the affine-linear structure of Eq.~\eqref{eq:general-affine-K-divisor}, the blow-up corresponding to a strict ordering of all $\tau_i$ eliminates the degenerate singularities caused by all $K_i\to\infty$ occurring simultaneously. The proof is independent of whether the original propagator graph is a tree or a time-only loop graph.
+
+The program must still provide a certificate and cannot rely only on the above formal check of the top sector. A simple and sufficient algorithm is: collect all irreducible divisors of the complete block-triangular connection, the normalization gauge and the coordinate Jacobian; substitute Eq.~\eqref{eq:nested-blowup-coordinates}; extract all monomial powers of the $x_j$; and require the remaining strict transforms to be nonzero at $x=0$. If some strict transform still vanishes, check, for the deduplicated local defining functions $f_1,\ldots,f_m$,
+\begin{equation}
+ \nabla f_i\neq0,
+ \qquad
+ \operatorname{rank}\!\left(\frac{\partial(f_1,\ldots,f_m)}
+ {\partial(x_1,\ldots,x_V)}\right)=m\leq V.
+ \label{eq:normal-crossing-test}
+\end{equation}
+If Eq.~\eqref{eq:normal-crossing-test} is not satisfied, the singularity is still a degenerate multi-variable one. For the letters of Eq.~\eqref{eq:general-affine-K-divisor}, Eq.~\eqref{eq:affine-divisor-blowup-factorization} already proves that all strict transforms become units; the check in the program is a certificate for the formula implementation and for the extra gauge/normalization, not a second guess of this conclusion.
+
+The public interface \texttt{MSBoundaryChartCertificate} implements this certificate. It collects all sector letters of \texttt{MSDLogDE}, the normalization divisors and the shifted-contact recurrence singular layers, and returns for each divisor the dominant rank, the coordinate monomial, the strict transform and its value at $x=0$; it also returns the complete Jacobian from the user energies to $K_v$ and then to $x_j$, the per-sector theta-fixing table, and the $P_sS_s=I$ quotient check. \texttt{RankOrder->All} enumerates all root strict charts. \texttt{MSBoundaryData} forces consumption of the certificate of the chosen chart before constructing the infinity Frobenius data and the finite matching points; any non-affine new denominator, vanishing strict transform, zero Jacobian or uncertified quotient returns \texttt{BoundaryChartNotCertified} and does not continue the numerical transport.
+
+The theorem above also fixes the scope of automation. Singularities that contain no $K_v$ at all are already listed explicitly in the DE letters; they are not obstacles for this boundary producer.  An ordinary polyline can use \texttt{"Avoid"} to refuse a crossing.  For an explicitly supplied finite singular user point, \texttt{"Automatic"} uses the backend power--log basis to classify a finite limit, a pole, or a logarithmic divergence and uses the same local basis for user points on both sides inside its convergence disk.  More general blow-ups, non-collinear turning at a singularity, and new denominators introduced by an extra gauge transformation do not automatically inherit the proof above.
+
+The boundary condition of each sector must treat that sector itself as the top sector: use the post-contact component base power, the normalization and Eq.~\eqref{eq:component-energy-rank}. Compute the bottom sectors first, then move up along the sector DAG. After theta fixing, the homogeneous leading term factorizes into a product of component vertex-family boundary coefficients; but the parent may also receive a leading contribution from the lower-sector solution. In the five-dimensional example of Sec.~4.2 of the reference, the remaining integral already has nonzero leading coefficients on the second and third components of the original sector, which is exactly why writing only the homogeneous product misses terms. A general producer should solve the block-triangular Frobenius leading system, or equivalently keep the endpoint expansions of the theta/delta, to obtain the complete same-ordered boundary vector recursively.
+
+\subsection{Controlled transport of an auxiliary external-leg energy to zero}
+
+From Eq.~\eqref{eq:global-M0-diagonal},
+\begin{equation}
+ \det M_{0;C,s}\propto
+ \prod_{\bm a,\bm r}\kappa_{C,s;\bm a,\bm r}.
+ \label{eq:M0-determinant-letters}
+\end{equation}
+So the raising recurrence \eqref{eq:global-Aplus} fails on any $\kappa=0$. The smallest counterexample is a single full edge $e=(u,v)$: the top-sector letters are
+\begin{equation}
+ p_{0,u}\pm q_e,
+ \qquad
+ p_{0,v}\pm q_e,
+ \end{equation}
+which, for generic $q_e\neq0$, do not vanish even when the two auxiliary energies are set to zero; but the edge-contracted sector has no such two-dimensional slot and necessarily contains
+\begin{equation}
+ \kappa_{\{u,v\}}=p_{0,u}+p_{0,v}.
+ \label{eq:contracted-zero-letter}
+\end{equation}
+Therefore, when these two $p_0$ consist only of the auxiliary blocks to be removed, the complete top/subsector system is singular where the auxiliary energies vanish simultaneously. More generally, any reachable component that, at the target point, neither provides an active slot with nonzero signed energy nor has a nonzero total exponential energy necessarily has a zero letter.
+
+The general conclusion for $M_1=0$ has already been given by Eqs.~\eqref{eq:M1-general-eigenvalue}--\eqref{eq:M0-raising-resonance}: a general mixed state must consult the endpoint asymptotics separately; the pure-massless exception was explained after Eq.~\eqref{eq:M1-lowering-resonance}, where $M_1=0$ corresponds exactly to the divergence of the unregularized $\Gamma(\alpha_v)$ and an analytic regulator must be introduced first. The boundary and recurrence producers should consume the regularized generic parameter system, and must not misreport an unregularized zero eigenvalue as a new master or a physical failure of the recurrences.
+
+If the target point itself lies on $M_0=0$, one must first reduce at generic vertex energies and then take a controlled limit, or the user must handle that singularity separately using the output DE; a zero point must not be handed to the ordinary-point numerical transport.
+
+The recommended flow is therefore: first choose the preferred chart according to Eq.~\eqref{eq:preferred-rank-from-point}, obtain the same-ordered vector from the boundary of Eq.~\eqref{eq:nested-blowup-coordinates}, take a small but finite ordinary point inside the chart, and then let the user provide a multivariable polyline in the required homotopy class to the preferred ordinary point and the final target.  \texttt{"Avoid"} reports a direct crossing of a letter hypersurface, \texttt{"Automatic"} classifies an explicitly supplied singular user point and resumes from an outgoing ordinary match on the same straight continuation branch, and \texttt{"SingularityJump"} explicitly selects the local crossing branch and requires confirmation of its multivaluedness.  Auxiliary vertex energies may be taken to zero one at a time; a finite singular point returns either a finite value or \texttt{Infinity}.  A singularity at a complex-affine turn still fails closed because the input does not uniquely specify a continuation branch.
+
+\subsection{The current 2411 infinity boundary and FlintNDE transport}
+
+The production entry point does not compute the defining integral directly at a finite Euclidean ordinary point. \texttt{MSBoundaryData} uses the $K_v\to\infty$ data of \cite{Chen:2024jms} as the only boundary source. If a vertex has no physical external leg, the program internally introduces a private auxiliary external-leg energy $k_{0,v}^{\rm aux}$ in the same analytic dlog system, first constructs the boundary data from the corresponding damped limit $K_v^{\rm aux}\to\infty$, and then uses FlintNDE to transport along that auxiliary coordinate to the physical target $k_{0,v}^{\rm aux}=0$. The user does not enter this private coordinate in \texttt{pointSequence} or \texttt{ParameterRules}. Every closed tree/time-only context, including the single-vertex massive-external family, uniformly consumes the sector DAG, components, slot registry, normalization, state order and strict rank and follows the ``boundary leading term plus FlintNDE Frobenius recurrence'' route. The explicit multivariable series of Eqs.~(3.44)--(3.46) is retained only as a test oracle and is not a production dispatch.
+
+Concretely, for a component $C$ of a sector $s$ define
+\begin{align}
+ \alpha_{sC}(\bm a)&=A_{sC}+1-
+ \sum_{r\in H(s,C)}a_r(2\nu_r^{\rm formula}+1),
+ \notag\\
+ \ell_{sC}&=V-\min_{v\in C}\operatorname{rank}(v)+1,
+ \qquad
+ K_{sC}(t)=c_{sC}t^{-\ell_{sC}}+O(t^{-\ell_{sC}+1}).
+ \label{eq:generic-sector-boundary-component}
+\end{align}
+Here $H(s,C)$ contains only the still-active Hankel endpoint slots on that component; massless shared slots do not enter $\alpha_{sC}$, but instead give a $\pm1$ state factor according to the fixed theta chamber. The Frobenius exponent and the physical leading weight of the corresponding master are
+\begin{align}
+ \lambda_{s,\bm a}&=\sum_C\ell_{sC}\alpha_{sC}(\bm a),
+ \notag\\
+ W_{s,\bm a}&=\cN_s\Xi_{s,\bm a}
+ \prod_C\left[
+ (-\ii)^{A_{sC}+1}\Gamma(\alpha_{sC})
+ E_{sC,\bm a}\,c_{sC}^{-\alpha_{sC}}
+ \right].
+ \label{eq:generic-sector-boundary-weight}
+\end{align}
+$\cN_s$ is the sector normalization, $\Xi_{s,\bm a}$ collects the shared-massless chamber sign, and $E_{sC,\bm a}$ is the product of all Hankel endpoint coefficients of the component. Each contracted massive Full line $e$ contributes
+\begin{equation}
+ -\frac{4\ii}{\pi}\eta_e k_e^{-2\nu_e^{\rm formula}-1},
+ \qquad
+ \eta_e=\begin{cases}+1,&++\\-1,&--\end{cases},
+ \label{eq:massive-full-pinch-normalization}
+\end{equation}
+to $\cN_s$. The factor $\eta_e$ defines only the normalization of the physical child master; it is not multiplied again into the normalized-master dlog contact block or recurrence event. The remaining constant coefficient of a massive contact is already complete in the defining-integral coefficient of each component, and no extra phase may be multiplied according to contact depth. All quantities are taken from the current sector metadata; one must not guess the child powers or two-state factors from the root sector.
+
+Pull back the complete dlog potential along $K_{\sigma(j)}=B^{V-j+1}t^{-(V-j+1)}$ and denote the residue by $R_0$. For each $(s,\bm a)$, the program fixes the component of the corresponding root master in that sector to $1$ and the components of the non-ancestor sectors to $0$, and solves
+\begin{equation}
+ (\lambda_{s,\bm a}I-R_0)v_{s,\bm a}=0.
+ \label{eq:generic-sector-indicial-vector}
+\end{equation}
+Then $W_{s,\bm a}v_{s,\bm a}$ automatically contains the leading components injected into the parent by the child solutions. Repeated roots or integer-difference resonances do not create graph-specific parameters; the complete exact residue together with these $\{\lambda,0,v\}$ is handed to the power-log recurrences of FlintNDE. Finite defining integrals are independent-validation oracles only and never production inputs.
+
+For the two-vertex case with equal time powers $\nu_0$ in the negative-prefactor convention, Eq.~(4.2) of 2411 defines, in the paper endpoint basis,
+\begin{equation}
+ I_R^{\rm paper}=-\frac{4\ii}{\pi}e^{\pi\operatorname{Im}\nu_1}k_s^{-2\nu_1-1}
+ \int_{-\infty}^{0}\dd\tau\,(-\tau)^{2\nu_0-2\nu_1}
+ e^{\ii(k_{12}+k_{34})\tau}.
+ \label{eq:paper-two-vertex-child-normalization}
+\end{equation}
+This expression cannot be copied directly into the MadStree sector normalization without a basis conversion. For the physical order $\nu_1=\ii\mu$, the conjugate-order paper endpoint and the common-order MadStree endpoints obey
+\begin{equation}
+ e^{-\pi\mu}H^{(2)}_{-\ii\mu}(z)=H^{(2)}_{\ii\mu}(z).
+ \label{eq:paper-endpoint-to-common-hankel-order}
+\end{equation}
+The explicit Boltzmann factor in Eq.~\eqref{eq:paper-two-vertex-child-normalization} is therefore absorbed by the endpoint-basis conversion. This example is $G_{++}$, so Eq.~\eqref{eq:massive-full-pinch-normalization} has $\eta_e=+1$ and the child normalization in the common-Hankel-order MadStree basis is
+\begin{equation}
+ \cN_R^{\rm MS}=-\frac{4\ii}{\pi}k_s^{-2\nu_1-1},
+ \label{eq:madstree-common-order-child-normalization}
+\end{equation}
+and must not be multiplied by $e^{\pi\operatorname{Im}\nu_1}$ again. The same fifth branch has the leading vector and the basis-specific physical coefficients
+\begin{align}
+ v_5&=\left(0,\frac{1}{2\nu_1-\nu_0},\frac{1}{\nu_0+1},0,1\right)^T,
+ \notag\\
+ C_5^{\rm paper}&=-\frac{4\ii}{\pi}e^{\pi\operatorname{Im}\nu_1}
+ k_s^{-2\nu_1-1}e^{-\ii\pi(2\nu_0-2\nu_1+1)/2}
+ \Gamma(2\nu_0-2\nu_1+1),
+ \notag\\
+ C_5^{\rm MS}&=-\frac{4\ii}{\pi}
+ k_s^{-2\nu_1-1}e^{-\ii\pi(2\nu_0-2\nu_1+1)/2}
+ \Gamma(2\nu_0-2\nu_1+1).
+ \label{eq:paper-two-vertex-contact-boundary}
+\end{align}
+This uses the $i\epsilon$ branch $\int_{-\infty}^{0}\dd\tau\,(-\tau)^p e^{\ii K\tau}=(-\ii)^{p+1}\Gamma(p+1)K^{-p-1}$. The phase $e^{\ii\pi(\nu_1-\nu_0)}$ printed in Eq.~(4.11) is larger by one factor of $\ii$ than this direct evaluation of the defining Eq.~(4.2). MadStree follows its public definition $J_s=\cN_s I_s$, uses the direct integral, and explicitly maps to the same endpoint basis before comparison with the paper. The positive-prefactor context only replaces the paper parameters in these formulas uniformly by \texttt{formulaNu}$=-|\nu|$. The five-dimensional result above is now merely a check example of Eqs.~\eqref{eq:generic-sector-boundary-component}--\eqref{eq:generic-sector-indicial-vector}, not a production dispatch; general unequal time powers read the $A_{sC}$ of each component directly. The massive pinch normalization for real positive physical momenta is fixed by Eq.~\eqref{eq:madstree-common-order-child-normalization}; the formal symbol $(-k_s)^{-2\nu_1-1}$ must not be handed to the Mathematica principal branch.
+
+\texttt{MSEvaluatePath} partitions the input order into maximal consecutive complex-affine
+one-variable segments $x(s)=x_0+s v$ and pulls each segment back only once. It sends every
+exact complex parameter point, the boundary, and the selected options in one UTF-8 request.
+MadStree neither selects nodes nor builds detours; FlintNDE initializes the boundary, optionally
+plans, and transports in one process. With planning enabled, points covered by one expansion
+node form an evaluation bucket: large buckets use subproduct/remainder-tree fast multipoint
+evaluation and small buckets use the iterative algorithm. With planning disabled, every user
+point is a transport node. The second argument is always named \texttt{pointSequence}.
+Its first row is the ordered header of running-coordinate symbols and every later row is an
+equal-width value row. A single point has one value row; multiple points only append rows.
+Fixed, non-running parameters are supplied once through \texttt{ParameterRules}. The header and
+fixed parameters must be disjoint and together cover every symbol required by the analytic DE and
+boundary. Missing or still nonnumeric values return a Failure listing the symbols before a runtime
+directory is created or Python/FlintNDE starts. The function, options, backend schema,
+\texttt{pointResults}, and return structure do not depend on the number of points.
+\texttt{TransportOrder} sets the production primary chain; nodes,
+dense points, segment endpoints, and regulator-fit samples all come from this lower-order chain.
+The higher \texttt{ReferenceTransportOrder} chain is used only for the relative-difference accuracy
+check. Regular-singular initialization and successive affine segments propagate both states
+independently, so a reference endpoint neither replaces user output nor restarts the next primary
+chain. Distinct segments never share local coefficients. A single
+project-relative configuration variable controls the backend location.
+\texttt{MSRuntimeDirectory} denotes the temporary runtime root itself; \texttt{Automatic}
+creates one \texttt{results\_temp/} next to the calling script, with short \texttt{nde/} and
+\texttt{cache/} children, never in the package source tree. On Windows, complete cache,
+input, and log paths are checked before directory creation or Python launch. Paths longer
+than 259 characters return the separate \texttt{RuntimePathTooLong} failure. Input writes,
+missing \texttt{python-flint}, launch failures, missing output, and invalid output retain
+distinct tags. CSV/JSON export returns \texttt{"written"} only when every requested format
+has been written successfully.
+
+The analytic \texttt{MSDLogDE[context]} is itself a durable user result. A symbolic-only
+workflow may call \texttt{MSWriteFormula\allowbreak Artifacts} explicitly. \texttt{MSEvaluatePath}
+and \texttt{MSReconstructEp\allowbreak Series} automatically write or reuse the complete formal
+artifacts before any Python/FlintNDE task starts. A write failure prevents numerical NDE,
+and the successful result reports every path under \texttt{"formula\allowbreak Artifacts"}. The default
+files are \texttt{masters.wl},
+\texttt{recurrence\_metadata.wl}, \texttt{dlog\_de.wl}, and \texttt{manifest.wl} under
+\path{results/madstree_formula/run-<UUID>/} by default. The dlog file always contains the
+complete analytic DE. Numerical work derives only a function-local parameterized copy and never
+overwrites the analytic object or durable file. Repeated evaluations in one session reuse the
+complete files for the same context and calling root; deleted files are regenerated, while any
+partial write fails before backend launch. Ordinary-point export defaults to
+\path{results/madstree_evaluation/run-<UUID>/evaluation_data.csv/json}.
+\texttt{results/} contains durable user outputs, \texttt{results\_temp/} contains requests,
+logs, and cache, and \texttt{test/results\_test/} contains development-test artifacts.
+
+Every multipoint transport through intermediate nodes is a jump; only a crossing of a
+singularity through a local-basis connection is a singularity jump.  The default
+\texttt{SingularityMode -> "Automatic"} follows explicitly supplied singular user points and
+warns about the local branch.  An exact singularity is removed from the ordinary-node chain;
+one local basis owns user points on both sides inside the disk whose radius is the distance to
+the nearest other singularity.  A removable singularity returns a numerical value, while a true
+pole or a zeroth-order logarithmic divergence returns the text \texttt{Infinity}; transport then
+resumes from the outgoing ordinary match.  A terminal singular target receives a hidden in-disk
+ordinary match point along the incoming direction when required.  The lower-order primary chain
+supplies the result, and the higher-order reference chain only checks classifications and finite
+values.  The evidence is listed separately in \texttt{singularityClassifications}.
+\texttt{"Avoid"} explicitly refuses a crossing, whereas \texttt{"SingularityJump"} explicitly
+selects the local crossing branch and warns the user to confirm the multivalued branch of the
+equivalent detour class.  A non-collinear singular turn, consecutive singular points, and an
+intermediate singular point with planning disabled remain fail closed.
+\texttt{MessageLanguage -> "EN"} gives English notices by default, while
+\texttt{"CN"} selects Chinese; the values are case-sensitive. The backend discovers finite
+singularities from each pulled-back one-variable system, so the user does not supply a list.
+
+If every dlog letter is constant on a segment, every pulled-back derivative vanishes, so the
+segment is a zero connection with no finite poles and is transported normally. Both
+\texttt{MSBoundaryData} and \texttt{MSEvaluatePath} default to 200 decimal working digits;
+automatic regulator planning takes the larger of 200 and its adaptive estimate, while an explicit
+precision overrides the default. FlintNDE uses $\lceil p_{\rm dec}\log_2 10\rceil+32$ working
+bits: the 200-digit default gives 697 bits, while 70 and 100 digits use 265 and
+365 bits, and higher requests continue to grow by the same formula; the numerical gates of
+the local singular basis tighten with the current precision as well. Segment projection,
+match ratios, rotation factors, and winding/monodromy retain the current Arb precision.
+All geometry retains the current Arb precision.
+
+\subsection{Symbolic Laurent-support certificate and regulator error control}
+
+Let the shared regulator be $\epsilon$.  In
+\texttt{MSReconstructEpSeries[..., MaximumEpPower -> $m$]} the user specifies only the
+highest returned power $m$; the lowest power $n_{\min}$ is not a numerical fit parameter.
+Before starting any NDE task at nonzero $\epsilon$, MadStree constructs a support certificate
+from the physical boundary and dlog DE of the same production context.  It requires:
+\begin{enumerate}[label=\arabic*.]
+  \item regulator-independent path coordinates and no negative Laurent power at
+  $\epsilon=0$ in any dlog matrix, pulled-back connection, or residue;
+  \item finite-Laurent defining-integral boundary branches; branches with the same limiting
+  Frobenius exponent and log degree are first combined with their physical weights and leading
+  vectors, and only then are component valuations extracted;
+  \item at least one provably nonzero coefficient at the lowest power of the combined boundary.
+  A noninteger power, non-Laurent structure, undecidable coefficient, or support entirely above
+  the checked user range fails closed.
+\end{enumerate}
+Before these symbolic valuations, the package also checks that the numerical input is complete and
+that a generic boundary chart can be constructed. This coverage preflight uses the fixed nonzero
+exact probe $\epsilon=1/1009$, so a legitimate normalization pole is not rejected by a generic
+numeric-completeness check. The probe is neither a production nor a validation sample, never enters
+the fit, and does not determine $n_{\min}$; the dlog DE, complete physical boundary, and resonance
+records are still Laurent-valued strictly at $\epsilon=0$.
+For $n_{\min}<0$ the certificate describes a finite meromorphic Laurent boundary, not an
+analytic boundary at $\epsilon=0$; analyticity is recorded only when $n_{\min}\geq0$.
+Along the current finite path, an $\epsilon$-analytic invertible fundamental matrix preserves
+the valuation of nonzero formal boundary data, so the certified $n_{\min}$ is passed directly
+to numerical sample planning.  A rank drop of an individual Frobenius recurrence operator at
+$\epsilon=0$ is retained as a resonance diagnostic only; it is not by itself interpreted as a
+$1/\epsilon$ pole across the already combined physical boundary.
+
+Example 06 uses the massless three-vertex family with
+$a_1=a_2=a_3=1+\epsilon$.  Its physical boundary weights include
+$\Gamma(2+\epsilon)^3$, $\Gamma(2+\epsilon)\Gamma(4+2\epsilon)$, and
+$\Gamma(6+3\epsilon)$, all regular at $\epsilon=0$.  The actual nine-dimensional DE also has
+no negative $\epsilon$ power.  The program therefore certifies $n_{\min}=0$ before any NDE
+solve: this example has no pole, and no artificial $1/\epsilon$ term is introduced.
+
+After support certification, the square interpolation initially includes at least two powers
+above the user maximum.  Independent validation points never enter the fit.  If their relative
+residual exceeds the fixed \texttt{EpGoalDigits} target, the next round adds two fitted powers
+by default, solves only the new production points, and reuses every previous production and
+validation value.  If the target is still missed after at most three rounds, the current best
+coefficients are returned without precision certification: the tolerance is not relaxed,
+least squares is not substituted, and caches are not discarded.  Independent regulator tasks
+use an outer process pool with default \texttt{ParallelTaskCount -> 12}; the effective count is
+the smaller of this limit and the number of tasks.
+
+The default call still contains no regulator values.  To restrict every solve to an approved
+range, \texttt{EpSamplePoints -> \{...\}} supplies an ordered production candidate pool and
+\texttt{EpValidationPoints -> \{...\}} supplies an independent grid disjoint from that whole
+pool.  The pool may be redundant.  With
+\texttt{EpInitialInternalMaximumPower -> $q$}, the first round consumes exactly the
+$q-n_{\min}+1$ candidates required for powers $n_{\min},\ldots,q$; later candidates are consumed
+only after failed validation.  Exhaustion never creates an out-of-pool point: the current
+coefficients are returned with \texttt{computed\_with\_warning},
+\texttt{precisionTargetMet -> False}, and reason \texttt{candidate\_pool\_exhausted}.
+
+Alternatively, \texttt{EpSampleAngleRange -> \{thetaMin,thetaMax\}} selects an open angular
+interval in radians.  Up to three uniformly spaced interior rays are used, while magnitudes remain
+controlled by the same precision formula and have no user radius cap.  Validation points retain
+their corresponding angles and reduce only the radii.  The high-precision real and imaginary parts
+are rationalized to exact values in $\mathbb Q(i)$ before MadStree performs its exact dlog pullback.
+The option is mutually exclusive with explicit \texttt{EpSamplePoints}; \texttt{Automatic} keeps
+the original positive-real-axis schema.
+All related options default to \texttt{Automatic}, preserving the original default call and
+adapter JSON field set.
+
+Ordinary coordinate-value rows are saved; a transient waypoint is written as
+\texttt{\{\{value1,value2,...\},"tmp"\}}. Ordinary saved points in the \texttt{MSEvaluatePath} result
+carry coordinates, the full master-integral vector, status, and user index. Use
+\texttt{MSExportEvaluationData[result, MSOutputDirectory -> outputDirectory,}
+\texttt{ExportFormats -> \{"CSV", "JSON"\}]} to export them. The option accepts
+\texttt{Automatic}, either single format, or a list of the two. Status is \texttt{written} only
+when every requested format succeeds. Precision and relative-difference fields that are already
+strings round-trip through JSON without an additional layer of literal quotes. Transient waypoints
+are excluded from the ordinary-point export.
+
+FlintNDE classifies the local singularities and runs a capability preflight before starting; the current generic boundary producer of MadStree delivers $\{a,b,C\}$ only when the pulled-back connection is an exact regular-singular one, so the addition of $\{\phi,a,b,C\}$ is a backend path-saving capability rather than a change of the dS boundary source. If the input requires higher-order or irregular singularities beyond the declared capabilities of the backend, the adapter fails closed directly and does not disguise ordinary Taylor transport as a singular solution.
+
+In the original-coordinate formulation, the $e^{-K_vt_v}$ damping of the integrand looks exponentially asymptotic at $K_v\to\infty$; this does not mean that the dlog system of the normalized master integrals necessarily has an essential singularity at the blow-up coordinates $x_j=0$. After extracting the known physical weights of Eq.~\eqref{eq:generic-sector-boundary-weight} and performing the nested blow-up, the currently accepted exact systems must be ordinary matching problems or Fuchsian regular-singular problems. If the actually pulled-back system still has an irreducible pole of order higher than two, needs Stokes/ramification, or is not in the current exact field, the capability preflight returns the actual classification and stops; the package does not automatically interpret it as a solved boundary condition.
+
+The following are already checked end to end: the 2411 boundary for a single vertex with three massive lines, the analytic chamber boundary for the two-vertex pure-massless case, the generic 15-dimensional boundary and transport for the three-vertex massive/massless case, and the five-dimensional $G^{++}$ two-vertex system. For the pure-massless defining integral, both DE residuals of the contact-atom weights and the complete target vector are checked; for the massive five-dimensional system, the connection, the singular pullback, the five leading vectors, the five coefficients and the target vector all agree with an independent paper-based route. Structural checks also cover common-theta simultaneous events, massless/massive coincident quotients, and the generic boundary/residue of the triangle time-only loop graph. The FlintNDE adapter additionally checks ordinary/regular-singular save points and the fail-closed behavior for super-capability poles. Representative run evidence is not a point-by-point certification of all topologies and parameter regions; the generality comes from the same metadata data flow and the joint regression over structurally different topologies, not from an enumeration of dedicated production branches.
+
+\section{Typical usage examples}
+
+\subsection{Single-vertex family: definition, reduction, and unified point input}
+
+Use \texttt{MSInitVertexFamily} for a function product at one vertex instead of constructing a fake
+one-vertex topology. Package example
+\texttt{Examples/02\_single\_vertex\_family.wl} gives both the compact and equivalent explicit
+models, reads the masters and dlog DE, and reduces one shifted integral. Its numerical section uses
+only one entry:
+\begin{verbatim}
+parameterRules = {q->1,nu->1/2,a->2};
+singlePointSequence = {{k0},{3 I}};
+multipointSequence = {{k0},{3 I},{7 I/2},{4 I}};
+single = MSEvaluatePath[ctx,singlePointSequence,
+  ParameterRules->parameterRules];
+multi  = MSEvaluatePath[ctx,multipointSequence,
+  ParameterRules->parameterRules];
+\end{verbatim}
+The example compares the common first point component by component, demonstrating that a single
+point is merely a length-one \texttt{pointSequence}.
+
+\subsection{Two-vertex massless Full edge: multiple sectors and points}
+
+\texttt{Examples/01\_massless\_full\_edge.wl} starts from two \texttt{+} vertices and one public
+\texttt{"massless"} line. MadStree derives the Full/quotient classification, top and child sectors,
+masters, contact map, and dlog DE. The example uses \texttt{\{k1,k2\}} as the header, puts only
+coordinate values in later rows, and supplies common \texttt{q/a1/a2} values once through
+\texttt{ParameterRules}. It then enables FlintNDE planning and fast multipoint evaluation and
+exports saved points with \texttt{MSExportEvaluationData}. A transient waypoint is
+\texttt{\{\{value1,value2\},"tmp"\}}; there is no separate path object.
+
+\subsection{Massive three-vertex tree: zero middle external-leg energy is not automatically singular}
+
+\texttt{Examples/05\_massive\_three\_vertex\_tree.wl} initializes one context for a three-vertex
+tree with two massive lines. It fixes $k_3=5\ii$, $q_{12}=1$, $q_{23}=2$,
+$\nu_{12}=3/4$, $\nu_{23}=1/3$, and $a_1=a_2=a_3=1$. The original sequence
+\begin{verbatim}
+{{k1,k2},{8 I,2 I},{7 I,4 I},{6 I,3 I},{9 I,5 I}}
+\end{verbatim}
+is retained. A second independent \texttt{MSEvaluatePath} call plans, evaluates, and exports
+\begin{verbatim}
+{{k1,k2},{8 I,0},{7 I,0},{6 I,0},{9 I,0}},
+\end{verbatim}
+so the two runs share only the context and never mix their plans or results.
+
+The singularity test substitutes each point into the complete top/contact-sector dlog letters; it
+does not test whether an individual coordinate is zero. No letter vanishes at these four points,
+so all are ordinary: all 25 master-integral components are saved, the
+\texttt{singularityClassifications} table is empty, and the maximum pointwise relative difference
+between the lower-order primary chain and the higher-order reference chain is about
+$2.31\times10^{-31}$. If another family really meets an exact letter at zero or at any nonzero
+complex coordinate, the same FlintNDE local power--log entry classifies it as removable, pole, or
+log divergent without dispatching on a variable name or graph type.
+
+\subsection{Three-vertex regulator: automatic Laurent support and incremental fitting}
+
+\texttt{Examples/06\_massless\_three\_vertex\_ep\_regularization.wl} sets
+$a_1=a_2=a_3=1+\epsilon$, while the user requests only \texttt{MaximumEpPower->0}. The package first
+certifies the lowest power from the symbolic boundary and DE and then selects production and
+independent validation points. If validation misses the target, only the internal fit order and new
+points are added, while previous values are reused. Its coordinate table contains only
+$\epsilon$-independent $k_i$ values, while $a_i\to1+\epsilon$ occurs only in
+\texttt{ParameterRules}. This example certifies lowest power zero and therefore returns the finite
+part without inventing a pole.
+
+\subsection{No physical external leg: private auxiliary energy to zero}
+
+\texttt{Examples/07\_zero\_external\_leg\_energy.wl} shows the two equivalent inputs for a
+vertex without a physical external leg: omit \texttt{externalLegEnergy} or set it explicitly to
+zero.  The example puts only physical coordinates in \texttt{pointSequence}, verifies that the
+private auxiliary coordinate remains absent from public input, and transports it from the damping
+boundary to zero while preserving the same analytic dlog system.
+
+\section{Minimal algorithm and acceptance of the direct formula producer}
+
+Without running a sampled IBP or reduction, the formula producer only needs to perform the following steps:
+\begin{enumerate}[label=\arabic*.]
+  \item Build the full-graph building-block registry from the topology: an independently numbered one-dimensional slot for each theta-free exponential, a two-dimensional h slot for each massive endpoint, and one shared two-dimensional slot for each uncontracted massless full edge; also store the block incidence list of each vertex.
+  \item Fix $S_e,P_e$ of Eq.~\eqref{eq:SP-massless} and the endpoint incidence for each massless full edge; cross/external exponents do not create shared slots.
+  \item Assemble the Kronecker sums vertex by vertex according to Eqs.~\eqref{eq:global-M1}--\eqref{eq:global-M0}; the one-dimensional exponential terms and all two-dimensional terms use the same embedding API, and $\varsigma_v$, $\sigma_e$ and $\epsilon_{ve}$ are kept strictly separate.
+  \item First verify Eq.~\eqref{eq:local-common-diagonalization-condition}, then enumerate the diagonal elements of Eq.~\eqref{eq:global-energy-letter} with one global $U_s$; invert only the scalar diagonal elements of $M_1$ and $\widetilde M_0$.
+  \item Run an event BFS over the current-component bundles according to Eq.~\eqref{eq:common-theta-odd-subsets}; construct the $S_s,P_s$ quotient for coincident spectators, and fix the child powers with Eq.~\eqref{eq:simultaneous-contact-base-power}.
+  \item Output the general-index one-step recurrences with Eqs.~\eqref{eq:global-Aminus}--\eqref{eq:global-Aplus}; append the lower-sector sources with the event-level contact selector, and return the $M_1/M_0$ singular layers by direction.
+  \item Output the block-triangular dlog candidate directly with Eqs.~\eqref{eq:global-diagonal-omega} and \eqref{eq:global-offdiagonal-omega}; nonzero child shifts are reduced back to the global masters automatically by Eq.~\eqref{eq:shifted-contact-right-composition}, and then Eq.~\eqref{eq:normalization-adapter} is applied.
+  \item Call \texttt{MSBoundaryChartCertificate} for the chosen or all root ranks; only when the complete connection, normalization, Jacobian, theta fixing and quotient all pass is the automatic boundary entered.
+\end{enumerate}
+
+The minimum exact acceptance should include:
+\begin{itemize}
+  \item the $4\to2$ rank of a single massless full edge, $P_eS_e=I_2$, Eqs.~\eqref{eq:first-endpoint-projection}--\eqref{eq:second-endpoint-projection}, and the contact vector;
+  \item in a two-vertex single-edge graph, the same shared bit has opposite signs in the two $\kappa_v$;
+  \item the four common eigenstates of the two shared slots in a three-vertex chain, rather than an independent enumeration per vertex;
+  \item the global $U_sM_{0;v,s}U_s^{-1}$ is fully diagonal for a mixed massive/massless tree;
+  \item the formula one-step relations equal the naive time-IBP term by term in the exactly same ordered normalized basis;
+  \item the formula DE equals the naive DE matrix element by matrix element, all lower-sector residuals are empty, and exact flatness is passed;
+  \item in the mixed three-vertex case, the five $15\times15$ matrices obtained from the public \texttt{ds} of dSIBP through the slot-by-slot adapter and \texttt{MSReduce} are strictly equal to the direct formula DE;
+  \item the physical output basis additionally contains Eq.~\eqref{eq:physical-DE-gauge}, without missing $k$, $k^2$ or the normalization derivative.
+\end{itemize}
+
+\section{Final assessment}
+
+The purely massive formulas are Kronecker sums on the building-block registry from the outset: each theta-free exponential gives $\Delta M_1=0$ and $\Delta M_0=\ii\chi_bq_bI$, each two-dimensional h endpoint gives $\Delta M_1=-(2\nu_i+1)P_1$ and $\Delta M_0=-\ii k_i\sigma_2$, and all terms are multiplied by the identity matrices of the other slots. The default positive-prefactor convention of MadStree uniformly substitutes $\nu_i\to-\nu_i$, so the first term becomes $-(1-2\nu_i)P_1$. Positive and negative vertices only change $\chi_b=\varsigma_v$ of the pure vertex exponential; along $k_{0,v}=-\ii\varsigma_vK_v$ with $K_v>0$, both become $e^{-K_vt_v}$ and the two-dimensional h atoms are unchanged.
+
+After a massless full edge containing theta is included, one should first keep the same two endpoint two-states as for a massive edge, and then reduce the four states to one shared two-state with $S_e,P_e$. The two vertices no longer have mutually independent factors of that edge; instead they act on the same slot with opposite signs. The vertex-by-vertex tensor factorization therefore fails, but the full-graph Kronecker sum, the common diagonalization, the iteration matrices and the dlog DE can still all be written directly. The theta derivatives only add the lower-sector block generated by $|1\rangle_e$. The $F_{11}=+F_{00}$ of the paper h-state and the $F_{11}^J=-F_{00}^J$ of the package quotient are strictly connected by the constant $D_{\sigma_e}$ and must not be mixed.
+
+The single-vertex recurrences are not blocked by the shared slot: adding the blocks of the vertex's incidence list gives $M_{1;v,s}$ and $M_{0;v,s}$. Different vertices merely share the state bit on the same massless slot and take opposite endpoint signs. At present, only one fixed Pauli direction appears in each two-dimensional slot, so operators on the same slot commute pairwise; the Kronecker product of the local $2\times2$ diagonalizers reduces the large-matrix inversion to a letter-by-letter reciprocal of the energy letters. If non-collinear Pauli directions appear on the same slot in the future, this fast path must be disabled. Lowering fails only when an $M_1$ eigenvalue is zero, and raising fails only when an energy letter of $M_0$ is zero; a matrix that is not inverted in that direction produces no pole in that direction even if it is zero.
+
+The dlog DE is produced directly by the same registry: the sector diagonal blocks use the commonly diagonalized $\log\kappa$ with $M_1(A+1)$, the top-to-sub blocks use the same $\log\kappa$ times the $R^{(1)}$ contact map, and then the sector normalization is applied. Hence there is no need to generate a large IBP system first and then solve for the DE; but only after the normalization ratio, the constant residue, the block closure and the flatness all pass can the output be certified as a dlog, rather than merely called a connection candidate.
+
+The boundary likewise uses the initialized $K_v=\ii\varsigma_vk_{0,v}$ and does not permanently rename the user variables to \texttt{pik0}/\texttt{mik0}. The preferred ordinary point selects the preferred strict chart by descending $\operatorname{Re}K_v$; this is equivalent to ascending $|\tau_v|$, because a large damping energy supports only a smaller typical $|\tau_v|$. This choice serves to shorten the first continuation segment and reduce the letters that may need to be bypassed; it does not replace the ordinary-point and normal-crossing certificates.
+
+The massless building block should always be written with the dimensionless h equation $h_{zz}+h=0$. The physical form $\partial_\tau^2h=-k^2h$ is fully equivalent; it is only the two chain-rule steps of $\partial_\tau=-k\partial_z$. It does not require introducing another incompatible set of local EOMs. In this way the $2\times2$ structure of the paper formulas is preserved, and $k^2$ and the contact are correctly recovered in the final physical basis.
+
+\bibliographystyle{unsrtnat}
+\bibliography{references}
+
+\end{document}
