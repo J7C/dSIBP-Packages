@@ -31,7 +31,9 @@ MadStree/
 
 MadStree runs its numerical back end as a Python child process against the FlintNDE snapshot in
 `Vendor/FlintNDE`, so no separate installation is required. `MSFlintNDEConfiguration[]` reports
-the resolved backend directory and whether a usable Python environment was found;
+the resolved backend directory and whether the bundled `flintnde` Python sources are present; it
+does not start an interpreter, so a missing or unusable Python environment — including
+`python-flint` — surfaces as an error from the numeric entry points at run time.
 `MSSetFlintNDERelativePath[path]` points the package at a different copy. The result cache is
 keyed by the content identity of the backend sources, so a changed vendor copy never silently
 reuses cached numbers.

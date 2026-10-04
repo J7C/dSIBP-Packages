@@ -53,7 +53,8 @@ either from symbol names.
 
 ## Reduction is external
 
-`DSKiraPlan` and `DSKiraExport` write a Kira-ready input tree; `DSKiraImport` reads the
+`DSKiraPlan` builds a two-stage reduction plan in memory and returns it with status `"planned"`;
+`DSKiraExport` is what writes the Kira-ready input tree, and `DSKiraImport` reads the
 reduction table back and `DSDE` turns it into the differential equation. The reducer itself runs
 outside this repository, and the examples that use it require the environment variable
 `DSIBP_KIRA_WORKSPACE` to point at a writable workspace **outside** the package tree — they

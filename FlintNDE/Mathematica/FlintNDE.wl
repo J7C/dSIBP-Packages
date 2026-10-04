@@ -458,10 +458,18 @@ Options[FlintNDEExecutePath] = {
 };
 
 
+(* 后端把零中点写成字符串 "0"，而 Wolfram 的 "`digits" 精度标记对零不成立：
+   ToExpression["0.0`40"] 得到机器精度零，I 乘该零又会把同一复数的高精度实部一起拖到
+   MachinePrecision。因此这里只按字面识别全零尾数并保留精确零，不设阈值容差，
+   真正非零的小分量仍按 digits 位任意精度解码。 *)
 flintNDEDecodeDecimal[text_String, digits_Integer] := Module[
   {parts, mantissa, exponent},
   parts = StringSplit[ToLowerCase[StringTrim[text]], "e", 2];
   mantissa = First[parts];
+  If[mantissa =!= "" &&
+    StringFreeQ[StringDelete[mantissa, {"-", "+", "."}], Except["0"]],
+    Return[0]
+    ];
   exponent = If[Length[parts] === 2, "*^" <> Last[parts], ""];
   If[! StringContainsQ[mantissa, "."], mantissa = mantissa <> ".0"];
   ToExpression[mantissa <> "`" <> ToString[digits] <> exponent]
