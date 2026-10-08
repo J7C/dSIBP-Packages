@@ -1369,14 +1369,14 @@ $\{1,1\}$ 的 Euler matrix；应检查非对角元为零、对角元等于同序
 
 首个闭环 example 固定使用 pure massive bubble reference 的 $--$ branch 和 even-parity closed subsystem，不生成全 parity 大系统。reference 的顶点交换 symmetry 只在 $P_1=P_2$ 成立。reference 的 $V_{\pm}=0$ 与 package 的 $--$ 分支使用相反的能量参数号，因此 $P_{\rm pkg}=-P_{\rm ref}$；Kira-only 截面再取 $P_{0,\rm pkg}=-i\,ip0$。独立 $P_1/P_2$ family 不得复用该 symmetry。
 
-同目录 \texttt{reference\_user\_mi\_basis.wl} 只保存 21 个有序候选、
-前 19 个 active 位置、physical \texttt{ks=ss11}、导数变量和 scaling degrees；\texttt{main.wl} 必须把这些数据交给 package \texttt{DSUserMI}，由 package 构造秩、双向映射、backend ID 与 derivative closure，不在 example 中自写 basis adapter。
+同目录 \texttt{reference\_user\_mi\_basis.wl} 只保存 19 个有序候选（全部 active，没有辅助关系）、
+physical \texttt{ks=ss11}、导数变量和 scaling degrees；\texttt{main.wl} 必须把这些数据交给 package \texttt{DSUserMI}，由 package 构造秩、双向映射、backend ID 与 derivative closure，不在 example 中自写 basis adapter。
 \texttt{dlog\_basis.wl} 只保留 reference-readable 记号。当前 package fresh Kira 2.3 生成
-5992 条 canonical relations、6012 条 formal equations 和 2966 个积分，得到 19 个 active masters、
-215 个 targets 和 0 unreduced；\texttt{w10*1} 的墙钟时间为 $91.03\,\mathrm{s}$。
-恢复 reference 原始 dlog basis 第 15--18 项的显式 $k_s$ 后，physical $P_0$、backend \texttt{ip0}
-与 physical $k_s$ 三套 $19\times19$ 矩阵均为 $361/361$ 精确相等、非零差值 0。reference 侧只复制并
-校验既有 \texttt{DEP0.m/DEks.m/DEscaleCheck.m/MIdlogNote.m/derivative\_rules\_bubble.m}，禁止重新生成
+14986 条 canonical relations、15004 条 formal equations 和 5728 个积分，得到 19 个 active masters、
+300 个 targets 和 0 unreduced；\texttt{w10*1} 的墙钟时间为 $109.09\,\mathrm{s}$。
+当前十九项 basis 统一权重、直接在符号 $k_s$ 下建立 physical dlog 矩阵，physical $P_0$、backend \texttt{ip0}
+与 physical $k_s$ 三套 $19\times19$ 矩阵均为 $361/361$ 精确相等、非零差值 0（旧版第 15--18 项的显式 $k_s$ 恢复不再存在）。reference 侧只复制并
+校验既有 \texttt{full19\_connection/DEP0.m}、\texttt{DEks.m}、\texttt{DEscaleCheck.m} 与 \texttt{basis/MIdlogNote.m}，禁止重新生成
 reference IBP 或运行 reference Kira。
 
 \section{Tree vertex family}

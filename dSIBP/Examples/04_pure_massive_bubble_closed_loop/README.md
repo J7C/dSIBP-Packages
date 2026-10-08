@@ -11,13 +11,14 @@ input, external reduction, result readback, the 19-dimensional differential equa
 Eq. (51)/(64) scaling checks. Vertex-exchange symmetry is enabled only under the equal-energy
 constraint of this case; a family with independent `P1/P2` must not reuse it.
 
-`reference_user_mi_basis.wl` stores only the 21 reference candidate linear combinations,
-`activeIndices = Range[19]`, the physical `ks = ss11`, the derivative variables, and the 19
-scaling degrees. `main.wl` hands this data straight to the package entry `DSUserMI`; the
+`reference_user_mi_basis.wl` stores only the 19 reference candidate linear combinations (all
+active, with no auxiliary relations), `activeIndices = Range[19]`, the physical `ks = ss11`,
+the derivative variables, and the 19 uniform scaling degrees. `main.wl` hands this data
+straight to the package entry `DSUserMI`; the
 linear rank, the invertible `J/userMI` map, backend ids, derivative closure and the manifest
 are all produced by the package, so the example implements no basis adapter of its own.
-`dlog_basis.wl` keeps only the reference-readable legacy notation and is not a formal basis
-on its own.
+`dlog_basis.wl` keeps only the reference-readable notation and is not a formal basis on its
+own.
 
 Kira is not run inside this directory. Input generation happens in a Wolfram session outside
 the repository and the reduction itself runs in an external Kira installation:

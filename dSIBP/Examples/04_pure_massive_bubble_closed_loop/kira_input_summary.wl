@@ -32,11 +32,11 @@ external Kira. This file holds no equation tables and no run paths, and it is no
   },
   "numericStage" -> "postDerivative",
   "seedTemplateCount" -> 88,
-  "canonicalEquationCount" -> 5992,
-  "formalEquationCount" -> 6012,
-  "integralCount" -> 2966,
+  "canonicalEquationCount" -> 14986,
+  "formalEquationCount" -> 15004,
+  "integralCount" -> 5728,
   "activeMasterCount" -> 19,
-  "formalTargetCount" -> 215,
+  "formalTargetCount" -> 300,
   "retainedInputFiles" -> {
     "main.wl", "family_conventions.wl", "reference_user_mi_basis.wl",
     "dlog_basis.wl"

@@ -19,18 +19,18 @@ Boundary: No reduction table, log, database or cache is kept here.
     "version" -> "2.3 (Git: 2.3-7-geb541f9)",
     "runtime" -> "WSL",
     "parallelConfig" -> "w10*1",
-    "wallTimeSeconds" -> 91.03,
+    "wallTimeSeconds" -> 109.09,
     "exitStatus" -> 0
   |>,
   "masterIDs" -> Range[19],
   "masterCount" -> 19,
-  "targetCount" -> 215,
-  "selectedEquationCount" -> 1368,
+  "targetCount" -> 300,
+  "selectedEquationCount" -> 2179,
   "unreducedCount" -> 0,
   "deVariables" -> {ss11, P0},
   "deDimensions" -> {{19, 19}, {19, 19}},
   "scalingCertificateScope" -> "symbolic",
-  "sourceIntegralIdentities" -> {33, 33},
+  "sourceIntegralIdentities" -> {53, 53},
   "sourceActiveBasisIdentities" -> {19, 19},
   "referenceMatrixEqualCounts" -> <|
     "P0" -> {361, 361}, "ip0" -> {361, 361}, "ks" -> {361, 361}

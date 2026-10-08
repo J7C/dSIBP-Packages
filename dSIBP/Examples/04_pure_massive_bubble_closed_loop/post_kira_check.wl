@@ -108,7 +108,8 @@ scaleData = DSScaleCheck[
 (* ::Chapter:: *)
 (*闭环验收*)
 
-expectedMasters = (pureMassiveBubbleUserMIExpressions /. parameterProbeRules)[[pureMassiveBubbleUserMIActiveIndices]];
+(* postDerivative 阶段只把参数规则用于 DE 系数；masters 保持 basis 原始定义，逐项同序比较。 *)
+expectedMasters = pureMassiveBubbleUserMIExpressions[[pureMassiveBubbleUserMIActiveIndices]];
 expectedMasterIDs = Range[19];
 expectedMasterTokens = userMI /@ expectedMasterIDs;
 expectedBackendMasterTokens = Tuserweight /@ expectedMasterIDs;
@@ -144,7 +145,8 @@ checks = <|
    "backendMasterTokens" -> (Lookup[reductionData, "backendMasterTokens", {}] === expectedBackendMasterTokens),
    "activeMasterOrder" -> (Lookup[reductionData, "masters", {}] === expectedMasters),
    "userMIMapping" -> TrueQ[Lookup[userMIData, "reversibleQ", False]],
-   "auxiliaryIDsNotMasters" -> (Intersection[{20, 21}, Lookup[reductionData, "backendMasterIDs", {}]] === {}),
+   (* 新 basis 十九项全部 active、没有辅助关系；改为检查 19 个 active 关系均被选为 master。 *)
+   "backendMasterIDsCoverActive" -> (Select[Lookup[reductionData, "backendMasterIDs", {}], 1 <= # <= 19 &] === Range[19]),
    "completeTargetCoverage" -> TrueQ[Lookup[validationChecks, "completeTargetCoverage", False]],
    "rhsContainsOnlyMasters" -> TrueQ[Lookup[validationChecks, "rhsContainsOnlyMasters", False]],
    "deStatus" -> (Lookup[deData, "status", "missing"] === "generated"),
@@ -157,8 +159,10 @@ checks = <|
    "manifestParameterRules" -> (Lookup[sourceManifest, "userCoefficientRulesApplied", Missing["coefficientRules"]] === parameterProbeRules),
    "noFixedParameterResidual" -> (fixedParameterResiduals === {}),
    "scalingStatus" -> (Lookup[scaleData, "status", "missing"] === "passed"),
-   "scalingMatrixResidual" -> TrueQ[Lookup[Lookup[scaleData, "checks", <||>], "matrixRelation", False]],
-   "scalingSourceResidual" -> TrueQ[Lookup[Lookup[scaleData, "checks", <||>], "sourceRelation", False]]
+   (* 当前 package 的标度证书按 certificateScope 区分键名；本例的定点参数不含 Euler 变量，
+      证书范围为 symbolic，故读取 symbolicMatrixRelation/symbolicSourceRelation。 *)
+   "scalingMatrixResidual" -> TrueQ[Lookup[Lookup[scaleData, "checks", <||>], "symbolicMatrixRelation", False]],
+   "scalingSourceResidual" -> TrueQ[Lookup[Lookup[scaleData, "checks", <||>], "symbolicSourceRelation", False]]
    |>;
 
 failedChecks = Keys @ Select[checks, ! TrueQ[#] &];
