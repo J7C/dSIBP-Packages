@@ -59,9 +59,10 @@ def run_ep_tasks(
         raise ValueError("parallel_task_count must be a positive integer")
     effective_count = min(parallel_task_count, len(values))
     print(
-        "FlintNDE ep task pool: "
-        f"requested={parallel_task_count}, effective={effective_count}; "
-        "default parallel_task_count=12."
+        "FlintNDE ep task pool: you requested "
+        f"{parallel_task_count} parallel workers and {effective_count} of them will run, "
+        "because only that many ep values were submitted; the default request is 12, and "
+        "queued values start automatically as workers finish."
     )
     payloads = [(task, index, value) for index, value in enumerate(values)]
     with get_context("spawn").Pool(

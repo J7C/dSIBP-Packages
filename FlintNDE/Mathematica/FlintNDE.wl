@@ -27,10 +27,18 @@ SingularityMode::usage =
 
 FlintNDEBridgeError::usage = "FlintNDEBridgeError represents a Python bridge failure.";
 
-FlintNDEBridgeError::error = "FlintNDE bridge failure: `1`";
-FlintNDEBridgeError::pythonFlintMissing = "Python started but cannot import python-flint: `1`";
-FlintNDEBridgeError::launchFailed = "The Python bridge could not be launched: `1`";
-FlintNDEBridgeError::outputMissing = "The Python bridge exited without creating its output file: `1`";
+FlintNDEBridgeError::error =
+  "FlintNDE 的 Python 后端返回失败，后端信息为：`1`。请按该信息修正输入后重新调用同一函数。 \
+The FlintNDE Python backend returned a failure with the message: `1`. Correct the input accordingly and call the same function again.";
+FlintNDEBridgeError::pythonFlintMissing =
+  "Python 已启动但无法导入 python-flint，后端日志为：`1`。请在该环境中安装 python-flint，或用 Python 选项指向已装好它的解释器后重试。 \
+Python started but could not import python-flint; the backend log is: `1`. Install python-flint in that environment, or point the Python option at an interpreter that already has it, then try again.";
+FlintNDEBridgeError::launchFailed =
+  "无法启动 FlintNDE 的 Python 后端，日志为：`1`。请检查 Python 选项指向的解释器是否存在且可执行，并确认 WorkDirectory 可写后重试。 \
+The FlintNDE Python backend could not be launched; the log is: `1`. Check that the interpreter given by the Python option exists and is executable, and that WorkDirectory is writable, then try again.";
+FlintNDEBridgeError::outputMissing =
+  "FlintNDE 的 Python 后端已退出但没有生成输出文件，日志为：`1`。请检查 WorkDirectory 是否可写、磁盘是否有余量，并按日志报错修正后重试。 \
+The FlintNDE Python backend exited without creating its output file; the log is: `1`. Check that WorkDirectory is writable and has free disk space, fix what the log reports, then try again.";
 
 
 Begin["`Private`"];
@@ -50,7 +58,10 @@ flintNDEResolvePython[Automatic] := "python";
 flintNDEResolvePython[command_String] := command;
 flintNDEResolvePython[other_] := Failure[
   "InvalidPythonExecutable",
-  <|"value" -> other|>
+  <|"value" -> other,
+    "MessageTemplate" ->
+      "Python 选项只接受 Automatic 或解释器命令字符串，当前收到的是其它类型的无效值；请把 Python 改为 Automatic 或有效的命令字符串后重试。 \
+The Python option accepts only Automatic or an interpreter command string, and the given value is of another, invalid kind; set Python to Automatic or a valid command string and try again."|>
 ];
 
 
@@ -58,7 +69,10 @@ flintNDEResolveWorkDirectory[Automatic] := FileNameJoin[{Directory[], "results_t
 flintNDEResolveWorkDirectory[path_String] := ExpandFileName[path];
 flintNDEResolveWorkDirectory[other_] := Failure[
   "InvalidWorkDirectory",
-  <|"value" -> other|>
+  <|"value" -> other,
+    "MessageTemplate" ->
+      "WorkDirectory 选项只接受 Automatic 或目录路径字符串，当前收到的是其它类型的无效值；请把 WorkDirectory 改为 Automatic 或有效路径后重试。 \
+The WorkDirectory option accepts only Automatic or a directory path string, and the given value is of another, invalid kind; set WorkDirectory to Automatic or a valid path and try again."|>
 ];
 
 
@@ -81,7 +95,10 @@ flintNDEPathLengthFailure[paths_List] := Module[{maximum = 259, strings, overlon
     "pathLength" -> StringLength[longest],
     "safeMaximum" -> maximum,
     "suggestion" ->
-      "请通过 WorkDirectory 指定更短的临时运行目录；该错误发生在 Python 启动之前。"
+      "请通过 WorkDirectory 指定更短的临时运行目录；该错误发生在 Python 启动之前。",
+    "MessageTemplate" ->
+      "某个运行时文件路径超过 Windows 的 259 字符安全上限，该检查发生在启动 Python 之前；请通过 WorkDirectory 指定更短的运行目录后重试。 \
+A runtime file path exceeds the Windows 259-character safe maximum, and this check runs before Python is launched; specify a shorter runtime directory via WorkDirectory and try again."
   |>]
 ];
 
@@ -91,7 +108,10 @@ flintNDENormalizeLanguage[value_] := If[
   value,
   Failure[
     "InvalidMessageLanguage",
-    <|"value" -> value, "acceptedValues" -> {"EN", "CN"}|>
+    <|"value" -> value, "acceptedValues" -> {"EN", "CN"},
+      "MessageTemplate" ->
+        "MessageLanguage 只接受 \"EN\" 或 \"CN\"，当前值不在其中；请把 MessageLanguage 改为 \"EN\" 或 \"CN\" 后重试。 \
+MessageLanguage accepts only \"EN\" or \"CN\", and the current value is neither; set MessageLanguage to \"EN\" or \"CN\" and try again."|>
   ]
 ];
 
@@ -107,11 +127,17 @@ flintNDENormalizeMode["Avoid"] := "avoid";
 flintNDENormalizeMode["SingularityJump"] := "singularity_jump";
 flintNDENormalizeMode[value_String] := Failure[
   "InvalidSingularityMode",
-  <|"value" -> value, "acceptedValues" -> {"Avoid", "SingularityJump"}|>
+  <|"value" -> value, "acceptedValues" -> {"Avoid", "SingularityJump"},
+    "MessageTemplate" ->
+      "SingularityMode 只接受字符串 \"Avoid\" 或 \"SingularityJump\"，当前字符串不在其中；请改用这两个模式之一后重试。 \
+SingularityMode accepts only the string \"Avoid\" or \"SingularityJump\", and the given string is neither; use one of these two modes and try again."|>
 ];
 flintNDENormalizeMode[other_] := Failure[
   "InvalidSingularityMode",
-  <|"value" -> other|>
+  <|"value" -> other,
+    "MessageTemplate" ->
+      "SingularityMode 必须是字符串 \"Avoid\" 或 \"SingularityJump\"，当前收到的是非字符串值；请改用这两个模式之一后重试。 \
+SingularityMode must be the string \"Avoid\" or \"SingularityJump\", and the given value is not a string; use one of these two modes and try again."|>
 ];
 
 
@@ -128,7 +154,10 @@ flintNDERationalFunctionRecord[expression_, variable_Symbol] := Module[
   If[! PolynomialQ[numerator, variable] || ! PolynomialQ[denominator, variable],
     Return[Failure[
       "NonRationalMatrixEntry",
-      <|"entry" -> expression, "variable" -> HoldForm[variable]|>
+      <|"entry" -> expression, "variable" -> HoldForm[variable],
+        "MessageTemplate" ->
+          "某个矩阵元素化简后分子或分母不是变量的多项式，因此不是有理函数；请把该元素改为变量的有理函数后重试。 \
+After simplification, one matrix entry has a numerator or denominator that is not a polynomial in the variable, so it is not a rational function; replace that entry with a rational function of the variable and try again."|>
     ]]
   ];
   coefficients = Join[
@@ -138,7 +167,10 @@ flintNDERationalFunctionRecord[expression_, variable_Symbol] := Module[
   If[! FreeQ[coefficients, _Real],
     Return[Failure[
       "InexactRationalMatrixEntry",
-      <|"entry" -> expression|>
+      <|"entry" -> expression,
+        "MessageTemplate" ->
+          "某个矩阵元素的系数中含有近似实数，而精确系统只接受精确有理数；请把该元素改写为精确有理系数后重试。 \
+A matrix entry has approximate real numbers among its coefficients, while the exact system accepts only exact rationals; rewrite that entry with exact rational coefficients and try again."|>
     ]]
   ];
   <|
@@ -157,7 +189,10 @@ FlintNDERationalSystem[
 ] := Module[{dimension, records, failure},
   dimension = Length[matrix];
   If[dimension == 0 || ! AllTrue[matrix, Length[#] == dimension &],
-    Return[Failure["SquareMatrixRequired", <|"dimensions" -> Dimensions[matrix]|>]]
+    Return[Failure["SquareMatrixRequired", <|"dimensions" -> Dimensions[matrix],
+      "MessageTemplate" ->
+        "输入矩阵必须是方阵，当前矩阵为空或各行长度不一致；请传入 n 行 n 列的方阵后重试。 \
+The input matrix must be square, but it is empty or its rows have different lengths; pass an n-by-n square matrix and try again."|>]]
   ];
   records = Map[flintNDERationalFunctionRecord[#, variable] &, matrix, {2}];
   failure = FirstCase[records, _Failure, None, Infinity];
@@ -172,7 +207,10 @@ FlintNDERationalSystem[
 
 FlintNDERationalSystem[___] := Failure[
   "InvalidRationalSystemArguments",
-  <|"usage" -> "FlintNDERationalSystem[matrix, variable]"|>
+  <|"usage" -> "FlintNDERationalSystem[matrix, variable]",
+    "MessageTemplate" ->
+      "FlintNDERationalSystem 收到的参数不符合调用形态，它需要一个由变量的有理函数组成的方阵和一个变量符号；请按 FlintNDERationalSystem[matrix, variable] 传入有理函数方阵与变量后重试。 \
+FlintNDERationalSystem received arguments that do not match its calling form, which needs a square matrix of rational functions in the variable together with a variable symbol; call it as FlintNDERationalSystem[matrix, variable] with a rational-function square matrix and a variable, then try again."|>
 ];
 
 
@@ -185,7 +223,10 @@ flintNDEPartialFractionRecord[
   poles_List
 ] := Module[{dimension, dimensions},
   If[! flintNDEPolynomialMatricesQ[polynomialCoefficients],
-    Return[Failure["PolynomialMatrixListRequired", <||>]]
+    Return[Failure["PolynomialMatrixListRequired", <|
+      "MessageTemplate" ->
+        "第一个参数必须是由至少一个矩阵组成的多项式系数列表 {P0,P1,...}；常数项请写成 {P0} 形式的矩阵列表后重试。 \
+The first argument must be a nonempty list {P0,P1,...} of polynomial coefficient matrices; write a constant term as a matrix list such as {P0} and try again."|>]]
   ];
   dimension = Length[First[polynomialCoefficients]];
   dimensions = Dimensions /@ Join[polynomialCoefficients, residues];
@@ -195,13 +236,19 @@ flintNDEPartialFractionRecord[
     ! AllTrue[dimensions, # === {dimension, dimension} &],
     Return[Failure[
       "ConsistentSquareMatricesRequired",
-      <|"dimensions" -> dimensions|>
+      <|"dimensions" -> dimensions,
+        "MessageTemplate" ->
+          "多项式系数矩阵与留数矩阵必须全部是同一维数的方阵，当前维度不一致或不是方阵；请把所有矩阵统一为同一 n 行 n 列维数后重试。 \
+The polynomial coefficient matrices and residue matrices must all be square with one common dimension, but the current dimensions differ or are not square; make every matrix the same n-by-n size and try again."|>
     ]]
   ];
   If[Length[residues] =!= Length[poles],
     Return[Failure[
       "PoleResidueLengthMismatch",
-      <|"residueCount" -> Length[residues], "poleCount" -> Length[poles]|>
+      <|"residueCount" -> Length[residues], "poleCount" -> Length[poles],
+        "MessageTemplate" ->
+          "留数矩阵个数与极点个数不相等，二者无法一一配对；请把 residues 与 poles 调整为相同长度后重试。 \
+The number of residue matrices differs from the number of poles, so they cannot be paired one-to-one; adjust residues and poles to the same length and try again."|>
     ]]
   ];
   <|
@@ -222,7 +269,10 @@ FlintNDEPartialFractionSystem[
 
 FlintNDEPartialFractionSystem[___] := Failure[
   "InvalidPartialFractionSystemArguments",
-  <|"usage" -> "FlintNDEPartialFractionSystem[{P0,P1,...}, residues, poles]"|>
+  <|"usage" -> "FlintNDEPartialFractionSystem[{P0,P1,...}, residues, poles]",
+    "MessageTemplate" ->
+      "FlintNDEPartialFractionSystem 收到的参数不符合调用形态，它需要多项式系数矩阵列表 {P0,P1,...}、留数列表和极点列表共三个参数；请按 FlintNDEPartialFractionSystem[{P0,P1,...}, residues, poles] 传入这三个列表后重试。 \
+FlintNDEPartialFractionSystem received arguments that do not match its calling form, which needs three arguments: a list {P0,P1,...} of polynomial coefficient matrices, a list of residues and a list of poles; call it as FlintNDEPartialFractionSystem[{P0,P1,...}, residues, poles] with those three lists, then try again."|>
 ];
 
 
@@ -269,13 +319,19 @@ flintNDEInvoke[
   If[! DirectoryQ[bridgeDirectory],
     Quiet@Check[
       CreateDirectory[bridgeDirectory, CreateIntermediateDirectories -> True],
-      Return[Failure["WorkDirectoryCreationFailed", <|"path" -> bridgeDirectory|>]]
+      Return[Failure["WorkDirectoryCreationFailed", <|"path" -> bridgeDirectory,
+        "MessageTemplate" ->
+          "无法创建 bridge 运行目录，可能是路径无效或没有写权限；请检查该路径的权限，或通过 WorkDirectory 指定一个可写目录后重试。 \
+The bridge runtime directory could not be created, possibly because the path is invalid or not writable; check the permissions of that path or point WorkDirectory at a writable directory, then try again."|>]]
     ]
   ];
   requestWrite = Quiet@Check[Export[requestFile, flintNDEEncode[request], "JSON"], $Failed];
   If[requestWrite === $Failed || ! FileExistsQ[requestFile],
     Return[Failure["RuntimeInputWriteFailed", <|
-      "path" -> requestFile, "pathLength" -> StringLength[requestFile]
+      "path" -> requestFile, "pathLength" -> StringLength[requestFile],
+      "MessageTemplate" ->
+        "bridge 请求文件写入失败，可能是运行目录不可写或磁盘已满；请检查所列路径的写权限与磁盘剩余空间后重试。 \
+Writing the bridge request file failed, possibly because the runtime directory is not writable or the disk is full; check write permission for the listed path and the free disk space, then try again."
     |>]]
   ];
   command = {
@@ -311,7 +367,10 @@ flintNDEInvoke[
     "StandardError" -> standardError
   |>;
   If[launchFailure,
-    Return[Failure["BridgeLaunchFailed", <|"process" -> process|>]]
+    Return[Failure["BridgeLaunchFailed", <|"process" -> process,
+      "MessageTemplate" ->
+        "Python 后端进程根本未能启动，通常是 Python 选项指向的解释器不存在或不可执行；请核对解释器路径后重试。 \
+The Python backend process could not be started at all, usually because the interpreter given by the Python option does not exist or is not executable; verify the interpreter path and try again."|>]]
   ];
   If[! FileExistsQ[outputFile],
     If[StringContainsQ[logText, Alternatives[
@@ -320,33 +379,49 @@ flintNDEInvoke[
       ]],
       Message[FlintNDEBridgeError::pythonFlintMissing, logText];
       Return[Failure["PythonFlintUnavailable", <|
-        "process" -> process, "requestFile" -> requestFile
+        "process" -> process, "requestFile" -> requestFile,
+        "MessageTemplate" ->
+          "Python 已启动但无法导入 python-flint；请在该解释器环境中安装 python-flint，或用 Python 选项指向已装好它的解释器后重试。 \
+Python started but could not import python-flint; install python-flint in that interpreter environment, or point the Python option at an interpreter that already has it, then try again."
       |>]]
     ];
     If[exitCode =!= 0,
       Message[FlintNDEBridgeError::launchFailed, logText];
       Return[Failure["BridgeLaunchFailed", <|
-        "process" -> process, "requestFile" -> requestFile
+        "process" -> process, "requestFile" -> requestFile,
+        "MessageTemplate" ->
+          "Python 后端以非零退出码结束且没有写出结果文件，具体原因见进程日志；请按日志修正 Python 环境或输入后重试。 \
+The Python backend exited with a nonzero code and wrote no result file; see the process log for the cause, fix the Python environment or input accordingly, and try again."
       |>]]
     ];
     Message[FlintNDEBridgeError::outputMissing, logText];
     Return[Failure["BridgeOutputMissing", <|
-      "process" -> process, "requestFile" -> requestFile
+      "process" -> process, "requestFile" -> requestFile,
+      "MessageTemplate" ->
+        "Python 后端已退出但没有生成输出文件；请检查 WorkDirectory 是否可写、磁盘是否有余量，并按日志报错修正后重试。 \
+The Python backend exited without creating its output file; check that WorkDirectory is writable and has free disk space, fix what the log reports, then try again."
     |>]]
   ];
   Clear[Global`FlintNDEBridgeResult];
   outputLoad = Quiet@Check[Get[outputFile, CharacterEncoding -> "UTF-8"], $Failed];
   If[outputLoad === $Failed,
-    Return[Failure["BridgeOutputInvalid", <|"path" -> outputFile, "process" -> process|>]]
+    Return[Failure["BridgeOutputInvalid", <|"path" -> outputFile, "process" -> process,
+      "MessageTemplate" ->
+        "后端输出文件存在但无法作为 Wolfram 表达式读取，内容可能已损坏；请检查该文件内容与进程日志后重试。 \
+The backend output file exists but cannot be read as a Wolfram expression and may be corrupted; inspect the file contents and the process log, then try again."|>]]
   ];
   result = Global`FlintNDEBridgeResult;
   Quiet[DeleteFile /@ Select[{requestFile, outputFile, logFile}, FileExistsQ]];
   Clear[Global`FlintNDEBridgeResult];
   If[! AssociationQ[result],
-    Return[Failure["InvalidBridgeResult", <|"result" -> result|>]]
+    Return[Failure["InvalidBridgeResult", <|"result" -> result,
+      "MessageTemplate" ->
+        "后端输出可以读取，但没有定义符合 bridge schema 的 Association 结果；请核对后端模块与请求 schema 版本是否匹配后重试。 \
+The backend output was readable but did not define a schema-conforming Association result; check that the backend module matches the request schema version, then try again."|>]]
   ];
   If[Lookup[result, "status", None] === "error",
-    Message[FlintNDEBridgeError::error, Lookup[result, "message", "unknown bridge failure"]];
+    Message[FlintNDEBridgeError::error, Lookup[result, "message",
+      "后端没有给出具体原因。 The backend did not report a specific cause."]];
     Return[Failure[
       "BridgeFailure",
       <|"message" -> Lookup[result, "message", "unknown bridge failure"],
@@ -379,7 +454,10 @@ flintNDEPlanningNotice[result_Association, mode_String, language_String] := Modu
   {status = Lookup[result, "status", "error"], text},
   text = Which[
     status === "singularPathRefused",
-      Lookup[result, "message", "singular path refused"],
+      Lookup[result, "message",
+        If[language === "CN",
+          "FlintNDEPlanPath：规划出的线段会穿过奇点，已被拒绝。请显式设置 SingularityMode->\"SingularityJump\" 并自行确认分支，或调整输入点让路径避开奇点。",
+          "FlintNDEPlanPath: a planned segment would cross a singularity, so the path was refused. Either set SingularityMode->\"SingularityJump\" and confirm the branch yourself, or move the input points so the path avoids the singularity."]],
     language === "CN" && mode === "singularity_jump",
       "FlintNDEPlanPath：已按输入的原始点完成路径规划；当前显式使用奇点折跃。多值分支等价于某一绕行路径，必须由用户确认。",
     language === "CN",
@@ -403,7 +481,10 @@ FlintNDEPlanPath[
   If[unknownOptions =!= {},
     Return[Failure[
       "UnknownOption",
-      <|"function" -> "FlintNDEPlanPath", "options" -> unknownOptions|>
+      <|"function" -> "FlintNDEPlanPath", "options" -> unknownOptions,
+        "MessageTemplate" ->
+          "FlintNDEPlanPath 收到了其当前 Options 之外的未知选项；请删除多余规则或改用 FlintNDEPlanPath 的合法选项后重试。 \
+FlintNDEPlanPath received option names that are not in its current Options; remove the extra rules or use only valid FlintNDEPlanPath options and try again."|>
     ]]
   ];
   language = flintNDENormalizeLanguage[OptionValue[MessageLanguage]];
@@ -437,7 +518,10 @@ FlintNDEPlanPath[
 
 FlintNDEPlanPath[___] := Failure[
   "InvalidPlanArguments",
-  <|"usage" -> "FlintNDEPlanPath[system, start, {point1,...}]"|>
+  <|"usage" -> "FlintNDEPlanPath[system, start, {point1,...}]",
+    "MessageTemplate" ->
+      "FlintNDEPlanPath 收到的参数不符合调用形态，它需要一个系统、一个起点和一个目标点列表；请按 FlintNDEPlanPath[system, start, {point1,...}] 传入系统、起点与目标点列表后重试。 \
+FlintNDEPlanPath received arguments that do not match its calling form, which needs a system, a start point and a list of target points; call it as FlintNDEPlanPath[system, start, {point1,...}] with a system, a start and a list of points, then try again."|>
 ];
 
 
@@ -544,7 +628,10 @@ FlintNDEExecutePath[
   If[unknownOptions =!= {},
     Return[Failure[
       "UnknownOption",
-      <|"function" -> "FlintNDEExecutePath", "options" -> unknownOptions|>
+      <|"function" -> "FlintNDEExecutePath", "options" -> unknownOptions,
+        "MessageTemplate" ->
+          "FlintNDEExecutePath 收到了其当前 Options 之外的未知选项；请删除多余规则或改用 FlintNDEExecutePath 的合法选项后重试。 \
+FlintNDEExecutePath received option names that are not in its current Options; remove the extra rules or use only valid FlintNDEExecutePath options and try again."|>
     ]]
   ];
   language = flintNDENormalizeLanguage[OptionValue[MessageLanguage]];
@@ -556,7 +643,10 @@ FlintNDEExecutePath[
     ! KeyExistsQ[plan, "plan"],
     Return[Failure[
       "InvalidExecutionPlan",
-      <|"reason" -> "expected the complete result returned by FlintNDEPlanPath"|>
+      <|"reason" -> "expected the complete result returned by FlintNDEPlanPath",
+        "MessageTemplate" ->
+          "plan 参数不是 FlintNDEPlanPath 返回的完整规划结果，缺少要求的 schema、status、operation 或 plan 字段；请把 FlintNDEPlanPath 的返回值原样传入后重试。 \
+The plan argument is not the complete result returned by FlintNDEPlanPath; the required schema, status, operation or plan field is missing. Pass the FlintNDEPlanPath result through unchanged and try again."|>
     ]]
   ];
   planRecord = plan["plan"];
@@ -568,7 +658,10 @@ FlintNDEExecutePath[
     Return[Failure[
       "PlannedPathPrecisionMissing",
       <|"requestedPrecisionDigits" -> workingDigits,
-        "reason" -> "the plan does not record its planning precision; replan"|>
+        "reason" -> "the plan does not record its planning precision; replan",
+        "MessageTemplate" ->
+          "该计划没有记录规划精度，无法与本次执行请求的精度比较；请重新运行 FlintNDEPlanPath 生成带精度记录的计划后重试。 \
+The plan does not record its planning precision, so it cannot be compared with the precision requested for execution; rerun FlintNDEPlanPath to produce a plan that records its precision and try again."|>
     ]]
   ];
   If[TrueQ[workingDigits > planningDigits],
@@ -625,7 +718,10 @@ FlintNDEExecutePath[
 
 FlintNDEExecutePath[___] := Failure[
   "InvalidExecuteArguments",
-  <|"usage" -> "FlintNDEExecutePath[system, initialVector, plan]"|>
+  <|"usage" -> "FlintNDEExecutePath[system, initialVector, plan]",
+    "MessageTemplate" ->
+      "FlintNDEExecutePath 收到的参数不符合调用形态，它需要一个系统、一个初始向量和一份已有计划；请按 FlintNDEExecutePath[system, initialVector, plan] 传入系统、初始向量与计划后重试。 \
+FlintNDEExecutePath received arguments that do not match its calling form, which needs a system, an initial vector and an existing plan; call it as FlintNDEExecutePath[system, initialVector, plan] with a system, an initial vector and a plan, then try again."|>
 ];
 
 
@@ -657,7 +753,10 @@ flintNDEEpJobRequest[job_Association, options_Association] := Module[
   required = {"ep", "system", "start", "points", "initialVector"};
   missing = Select[required, ! KeyExistsQ[job, #] &];
   If[missing =!= {},
-    Return[Failure["InvalidEpJob", <|"missingKeys" -> missing, "job" -> job|>]]
+    Return[Failure["InvalidEpJob", <|"missingKeys" -> missing, "job" -> job,
+      "MessageTemplate" ->
+        "某个 ep 任务缺少必需字段（ep、system、start、points、initialVector 中的一项或多项）；请为每个任务补齐全部必需字段后重试。 \
+An ep job is missing one or more required fields among ep, system, start, points and initialVector; complete every required field for each job and try again."|>]]
   ];
   mode = flintNDENormalizeMode[options[SingularityMode]];
   If[Head[mode] === Failure, Return[mode]];
@@ -692,13 +791,22 @@ FlintNDEEvaluateEpBatch[jobs_List, opts : OptionsPattern[]] := Module[
   unknownOptions = flintNDEUnknownOptionNames[{opts}, Options[FlintNDEEvaluateEpBatch]];
   If[unknownOptions =!= {},
     Return[Failure["UnknownOption", <|"function" -> "FlintNDEEvaluateEpBatch",
-      "options" -> unknownOptions|>]]
+      "options" -> unknownOptions,
+      "MessageTemplate" ->
+        "FlintNDEEvaluateEpBatch 收到了其当前 Options 之外的未知选项；请删除多余规则或改用 FlintNDEEvaluateEpBatch 的合法选项后重试。 \
+FlintNDEEvaluateEpBatch received option names that are not in its current Options; remove the extra rules or use only valid FlintNDEEvaluateEpBatch options and try again."|>]]
   ];
-  If[jobs === {}, Return[Failure["EpJobListEmpty", <||>]]];
+  If[jobs === {}, Return[Failure["EpJobListEmpty", <|
+    "MessageTemplate" ->
+      "FlintNDEEvaluateEpBatch 收到了空的任务列表；请至少提供一个包含 ep、system、start、points 和 initialVector 的任务后重试。 \
+FlintNDEEvaluateEpBatch received an empty job list; provide at least one job containing ep, system, start, points and initialVector, then try again."|>]]];
   parallelCount = OptionValue[ParallelTaskCount];
   If[! IntegerQ[parallelCount] || parallelCount < 1,
     Return[Failure["ParallelTaskCountPositiveIntegerRequired",
-      <|"value" -> parallelCount, "default" -> 12|>]]
+      <|"value" -> parallelCount, "default" -> 12,
+        "MessageTemplate" ->
+          "ParallelTaskCount 必须是正整数（缺省为 12），当前值不是；请把 ParallelTaskCount 改为不小于 1 的整数后重试。 \
+ParallelTaskCount must be a positive integer (default 12), and the current value is not; set ParallelTaskCount to an integer of at least 1 and try again."|>]]
   ];
   language = flintNDENormalizeLanguage[OptionValue[MessageLanguage]];
   If[Head[language] === Failure, Return[language]];
@@ -740,7 +848,10 @@ FlintNDEEvaluateEpBatch[jobs_List, opts : OptionsPattern[]] := Module[
 
 FlintNDEEvaluateEpBatch[___] := Failure[
   "InvalidEpBatchArguments",
-  <|"usage" -> "FlintNDEEvaluateEpBatch[{job1,...}, ParallelTaskCount->12]"|>
+  <|"usage" -> "FlintNDEEvaluateEpBatch[{job1,...}, ParallelTaskCount->12]",
+    "MessageTemplate" ->
+      "FlintNDEEvaluateEpBatch 收到的参数不符合调用形态，它需要一个 ep 任务列表，并可选地用 ParallelTaskCount 指定并行上限；请按 FlintNDEEvaluateEpBatch[{job1,...}, ParallelTaskCount->12] 传入任务列表后重试。 \
+FlintNDEEvaluateEpBatch received arguments that do not match its calling form, which needs a list of ep jobs and optionally a ParallelTaskCount setting for the parallel limit; call it as FlintNDEEvaluateEpBatch[{job1,...}, ParallelTaskCount->12] with a job list, then try again."|>
 ];
 
 

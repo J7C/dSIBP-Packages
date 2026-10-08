@@ -341,7 +341,7 @@ DSKiraImport[root_String, context_: Automatic, OptionsPattern[]] := Module[
      activeBackendToUserMIRules, checks, diagnostics, issues, reductionRules, masters, masterTokens, returnedMasterIDs, progress = OptionValue[ProgressReporting]},
    resolved = dsResolveContext[context];
    If[Head[resolved] === Missing,
-    Message[DSKiraImport::mismatch, "missing DSInit context"]; dsErrorPrint["Kira import 需要同源 DSInit context。 Kira import requires the matching DSInit context."]; Return[<|"status" -> "failed", "reason" -> "missingContext"|>]
+    Message[DSKiraImport::mismatch, "Kira import 缺少同源 DSInit context，无法验证结果归属；请先成功调用 DSInit，或把该 context 显式传给 DSKiraImport。 Kira import has no matching DSInit context, so result provenance cannot be verified; run DSInit successfully first or pass the context explicitly to DSKiraImport."]; dsErrorPrint["Kira import 需要同源 DSInit context。 Kira import requires the matching DSInit context."]; Return[<|"status" -> "failed", "reason" -> "missingContext"|>]
     ];
    workspace = ExpandFileName[root];
    If[! DirectoryQ[workspace],
@@ -373,7 +373,7 @@ DSKiraImport[root_String, context_: Automatic, OptionsPattern[]] := Module[
     dsWarningPrint["Kira 日志未确认成功完成；将以 reduction、targets、masters、映射和系数域的结构闭合作为硬边界。 The Kira log does not confirm successful completion; structural reduction, target, master, map, and coefficient-domain closure remains authoritative."]
     ];
    If[! AssociationQ[manifest] || ! dsRuleListQ[repJ2Kira] || ! dsRuleListQ[repKira2J] || ! dsRuleListQ[reductionRulesBackend],
-    Message[DSKiraImport::invalid, "malformed manifest/map/reduction expression"]; dsErrorPrint["Kira 文件不是预期的 Wolfram 表达式。 The Kira files are not the expected Wolfram expressions."]; Return[<|"status" -> "failed", "reason" -> "malformedExpressions", "workspace" -> workspace|>]
+    Message[DSKiraImport::invalid, "Kira manifest、映射或 reduction 文件不是预期的 Wolfram 表达式：manifest 必须是 Association，repJ2kira 与 repkira2J 必须是规则列表，reduction 必须是规则列表；请核对 workspace 文件后重新导入。 The Kira manifest, map, or reduction file is not the expected Wolfram expression: the manifest must be an Association and repJ2kira, repkira2J, and the reduction must be rule lists; check the workspace files and import again."]; dsErrorPrint["Kira 文件不是预期的 Wolfram 表达式。 The Kira files are not the expected Wolfram expressions."]; Return[<|"status" -> "failed", "reason" -> "malformedExpressions", "workspace" -> workspace|>]
     ];
    coefficientVariableMap = Lookup[manifest, "coefficientVariableMap", {}];
    backendImaginaryUnit = Lookup[manifest, "backendImaginaryUnit", None];
@@ -468,7 +468,7 @@ DSKiraImport[root_String, context_: Automatic, OptionsPattern[]] := Module[
      |>;
    issues = Keys @ Select[checks, ! TrueQ[#] &];
    If[issues =!= {},
-    Message[DSKiraImport::mismatch, issues]; dsErrorPrint["Kira 结果未通过同源性/完整性门禁。 The Kira results failed the provenance or completeness gate."]; Return[<|"status" -> "failed", "reason" -> "validationFailed", "workspace" -> workspace, "files" -> files, "validationReport" -> <|"checks" -> checks, "issues" -> issues|>|>]
+    Message[DSKiraImport::mismatch, StringRiffle[dsKiraCheckSentence /@ issues, "；"]]; dsErrorPrint["Kira 结果未通过同源性/完整性门禁。 The Kira results failed the provenance or completeness gate."]; Return[<|"status" -> "failed", "reason" -> "validationFailed", "workspace" -> workspace, "files" -> files, "validationReport" -> <|"checks" -> checks, "issues" -> issues|>|>]
     ];
    backendMasters = dsKiraBackendMasterObject[#, relationIDs, idToJ] & /@ masterIDs;
    boundaryMasterIDs = Complement[masterIDs, relationIDs];
@@ -481,7 +481,7 @@ DSKiraImport[root_String, context_: Automatic, OptionsPattern[]] := Module[
      reductionRules = reductionRules /. activeBackendToUserMIRules
      ];
     If[Cases[reductionRules, Tuserweight[_Integer], Infinity] =!= {},
-     Message[DSKiraImport::invalid, "active basis backend token remains after userMI restoration"];
+     Message[DSKiraImport::invalid, "约化右端在 userMI 恢复之后仍残留 active basis 的 backend token；请使用同一次导出的文件重新运行，或核对 active basis 与 userMI 映射。 Reduction right-hand sides still contain active-basis backend tokens after userMI restoration; rerun with files from the same export, or verify the active-basis and userMI maps."];
      dsErrorPrint["Active basis 的 Kira token 未能恢复为 userMI。 Active-basis Kira tokens were not restored to userMI."];
      Return[<|"status" -> "failed", "reason" -> "activeBasisTokenRestorationFailed", "workspace" -> workspace|>]
      ];

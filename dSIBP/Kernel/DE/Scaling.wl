@@ -200,7 +200,7 @@ DSScaleCheck[deData_Association, spec_: <||>, OptionsPattern[]] := Module[
    If[ListQ[degrees], degrees = degrees /. degreeRules];
    If[! ListQ[variables] || ! ListQ[weights] || Length[variables] =!= Length[weights] ||
      ! ListQ[degrees] || Length[degrees] =!= Length[masters] || MemberQ[degrees, $Failed],
-    Message[DSScaleCheck::badspec, <|"relation" -> relation, "variables" -> variables, "weights" -> weights, "degrees" -> degrees|>];
+    Message[DSScaleCheck::badspec, dsScaleSpecSentence[<|"relation" -> relation, "variables" -> variables, "weights" -> weights, "degrees" -> degrees|>]];
     dsErrorPrint["标度检查规格无效。 The scaling-check specification is invalid."]; Return[<|"status" -> "failed", "reason" -> "invalidScalingSpecification"|>]
     ];
    matrices = deData["matrices"];

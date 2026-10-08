@@ -793,9 +793,10 @@ def run_ep_requests(
         raise ValueError("parallel_task_count must be a positive integer")
     effective_count = min(parallel_task_count, len(requests))
     print(
-        "FlintNDE ep task pool: "
-        f"requested={parallel_task_count}, effective={effective_count}; "
-        "default parallel_task_count=12."
+        "FlintNDE ep task pool: you requested "
+        f"{parallel_task_count} parallel workers and {effective_count} of them will run, "
+        "because only that many requests were submitted; the default request is 12, and "
+        "queued requests start automatically as workers finish."
     )
     payloads = [(index, request) for index, request in enumerate(requests)]
     with get_context("spawn").Pool(
@@ -856,7 +857,12 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as error:  # noqa: BLE001 - 桥接把任何失败回传给 Wolfram 端
         failure = f'FlintNDEBridgeResult = <| "schema" -> "{RESULT_SCHEMA}", "status" -> "error", "message" -> {_mma_string(str(error))} |>;\n'
         Path(args.output).write_text(failure, encoding="utf-8")
-        print(f"flintnde.mathematica_bridge: {error}", file=sys.stderr)
+        print(
+            f"The FlintNDE Wolfram bridge failed: {error} "
+            "Check the request file path and its schema field, correct the problem, "
+            "then rerun the bridge.",
+            file=sys.stderr,
+        )
         return 1
     return 0
 

@@ -467,7 +467,15 @@ DSInit[input_Association, OptionsPattern[]] := Module[
     ];
    subsetSummary = Lookup[topologyData, "precomputedShrinkSectorSummary", <||>];
    If[Lookup[subsetSummary, "status", "missing"] =!= "generated" || ! TrueQ[Lookup[subsetSummary, "completeCoverageQ", False]],
-    Message[DSInit::sectorincomplete, subsetSummary]; dsErrorPrint["contact-reachable sector 未完整初始化。 Contact-reachable sectors were not initialized completely."];
+    Message[DSInit::sectorincomplete,
+     Module[{st, statusCN, statusEN},
+      st = Lookup[subsetSummary, "status", "missing"];
+      {statusCN, statusEN} = Switch[st,
+        "generated", {"已生成", "generated"},
+        "skipped", {"已跳过", "skipped"},
+        _, {"缺失", "missing"}];
+      "contact-reachable sector 预枚举" <> statusCN <> "，且覆盖检查未通过。 Pre-enumeration of contact-reachable sectors was " <> statusEN <> " and the coverage check failed."
+      ]]; dsErrorPrint["contact-reachable sector 未完整初始化。 Contact-reachable sectors were not initialized completely."];
     Return[dsFailedInitializationData[
       "incompleteSectorMetadata",
       <|"inputHash" -> inputHash, "topologyData" -> topologyData|>
@@ -517,10 +525,8 @@ DSInit[input_Association, OptionsPattern[]] := Module[
       |>];
    If[parityRequestedQ && parityFailures =!= {},
     dsErrorPrint[
-     "显式 parity 约束无法在全部 sector 上定义，初始化已拒绝：" <>
-      ToString[parityFailures, InputForm] <>
-      ". Explicit parity constraints are not defined on every sector; initialization was rejected: " <>
-      ToString[parityFailures, InputForm]
+     "显式 parity 约束无法在全部 sector 上定义，初始化已拒绝。 Explicit parity constraints are not defined on every sector; initialization was rejected. " <>
+      dsParityFailureSentence[parityFailures]
      ];
     Return[dsFailedInitializationData[
       "invalidParityConstraints",

@@ -99,7 +99,11 @@ class LocalSolutionBasis:
         """由最近指数根差估计形式渐近起点的保守匹配距离。"""
 
         if self._match_distance_report is None:
-            raise ValueError(f"{self.method} does not use a formal-asymptotic match estimate")
+            raise ValueError(
+                f"the local basis built with method '{self.method}' does not "
+                f"produce a formal-asymptotic match estimate; request a match "
+                f"estimate only for the formal exponential asymptotic basis"
+            )
         if target_order <= 0:
             raise ValueError("target_order must be positive")
         if minimum_order_factor <= 1:
@@ -1038,8 +1042,9 @@ def _formal_exponential_asymptotic_basis(
                     matches.append((branch_index, scale))
             if len(matches) != 1:
                 raise ValueError(
-                    f"formal exponential boundary term {position}: {{a,C}} must select exactly one "
-                    "exactly one exponential sector"
+                    f"the formal exponential boundary term at position {position} "
+                    f"must select exactly one exponential sector in its {{a,C}} "
+                    f"data; supply a single sector coefficient pair"
                 )
             branch_index, scale = matches[0]
             expected_phi = () if branches[branch_index].k.is_zero else ((-1, -branches[branch_index].k),)

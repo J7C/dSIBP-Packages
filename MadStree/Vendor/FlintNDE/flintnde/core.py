@@ -32,11 +32,13 @@ def require_exact_keys(
     if missing or unexpected:
         details = []
         if missing:
-            details.append(f"missing={missing}")
+            details.append(f"it is missing the required fields {missing}")
         if unexpected:
-            details.append(f"unexpected={unexpected}")
+            details.append(f"it contains the unrecognized fields {unexpected}")
         raise ValueError(
-            f"{field_name} does not match the current schema: " + "; ".join(details)
+            f"The {field_name} record does not match the current schema, because "
+            + " and ".join(details)
+            + "; supply exactly the required fields of the current schema."
         )
     return record
 

@@ -127,7 +127,7 @@ MSInitVertexFamily[spec_Association, OptionsPattern[]] := Module[
    nuConvention = OptionValue[NuConvention]},
   inputIssues = msVertexFamilyInputSchemaIssues[spec];
   If[inputIssues =!= {},
-    Message[MSInitVertexFamily::badinput, inputIssues];
+    Message[MSInitVertexFamily::badinput, StringRiffle[msIssueSentence /@ inputIssues, "\n"]];
     Return[msFailure["InvalidVertexFamilyInputFields", <|"issues" -> inputIssues|>]]
   ];
   normalized = msNormalizeVertexFamilyInput[spec];
@@ -151,7 +151,7 @@ MSInitVertexFamily[spec_Association, OptionsPattern[]] := Module[
     ]
   ];
   If[issues =!= {},
-    Message[MSInitVertexFamily::badinput, issues];
+    Message[MSInitVertexFamily::badinput, StringRiffle[msIssueSentence /@ issues, "\n"]];
     Return[msFailure["InvalidVertexFamilyInput", <|"issues" -> issues|>]]
   ];
   hBlocks = MapIndexed[msNormalizeVertexFamilyHBlock[#1, First[#2]] &, rawHBlocks];

@@ -1110,7 +1110,10 @@ serializer；必须先得到成功的 backend-neutral \texttt{linearData}。
 
 \subsection{Kira 两阶段计划}
 
-\texttt{DSKiraPlan[linearData,spec]} 只生成计划和导出数据，不运行 Kira。
+\texttt{DSKiraPlan[linearData,spec]} 只在内存中构造计划并返回，成功状态为
+\texttt{"planned"}；它不运行 Kira，也不写任何文件。计划里记录的 \texttt{outputDirectory}
+只是传给后续步骤的参数，实际写出 Kira 输入目录的是 \texttt{DSKiraExport}：它既接受该计划
+（\texttt{DSKiraExport[plan]}），也接受 backend-neutral \texttt{linearData}。
 \texttt{spec} 必须显式给出 \texttt{"stage"}，并可使用
 \begin{verbatim}
 preferredIntegrals, candidateIntegrals, activeBasis
@@ -1140,11 +1143,13 @@ prePlan = DSKiraPlan[linearData, <|
 |>];
 preExport = DSKiraExport[prePlan];
 \end{verbatim}
-成功结果为 \texttt{status->"planned"}，主要字段是
+成功的 \texttt{prePlan} 状态为 \texttt{status->"planned"}，主要字段是
 \begin{verbatim}
 integralOrder, orderingConvention, preferredIntegrals
 targetIntegrals, targetCount, numericStage, phaseIsolation
 \end{verbatim}
+\texttt{preExport} 成功时状态为 \texttt{status->"ready"}，并附带
+\texttt{dSIBPExportManifest} 与实际写出的 \texttt{dSIBPExportManifestPath}。
 预约化结果用于外部 backend 识别候选 masters；它不是正式 DE reduction。
 
 用户取得并检查预约化 master 后，用 package 建立有序 \texttt{userMI} basis：

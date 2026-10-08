@@ -112,13 +112,14 @@ DSUserMI[linearData_Association, expressions_List, spec_Association : <||>] := M
      ! DuplicateFreeQ[names] || ! And @@ (StringQ[#] && # =!= "" & /@ names) ||
      ! ListQ[activeIndices] || activeIndices === {} || ! DuplicateFreeQ[activeIndices] ||
      ! And @@ (IntegerQ[#] && 1 <= # <= Length[expressions] & /@ activeIndices),
-    Message[DSUserMI::badbasis, "invalid names or activeIndices"];
+    Message[DSUserMI::badbasis, "spec 的 names 或 activeIndices 无效：names 必须是与表达式等长且互不重复的非空字符串，activeIndices 必须是 1 到 basis 元素个数之间互不重复的整数位置；请修正后重新调用 DSUserMI。 The spec names or activeIndices are invalid: names must be unique nonempty strings matching the expression count, and activeIndices must be unique integer positions between 1 and the number of basis elements; correct them and call DSUserMI again."];
     Return[<|"status" -> "failed", "reason" -> "invalidNamesOrActiveIndices"|>]
     ];
    coordinateData = dsUserMICoordinateData[expressions, activeIndices, linearData["integralList"]];
    If[Lookup[coordinateData, "status", "failed"] =!= "configured" ||
      ! TrueQ[Lookup[coordinateData, "reversibleQ", False]],
-    Message[DSUserMI::badbasis, Lookup[coordinateData, "reason", "coordinate map is not reversible"]];
+    Message[DSUserMI::badbasis, dsReasonSentence[Lookup[coordinateData, "reason", "coordinate map is not reversible"],
+      "userMI 坐标映射不可逆，无法把 userMI token 换回 J 线性组合；请检查 basis 表达式的独立性与 linearData 积分列表后重试。 The userMI coordinate map is not reversible, so userMI tokens cannot be mapped back to J linear combinations; check the independence of the basis expressions and the linearData integral list, then retry."]];
     Return[coordinateData]
     ];
    setting = <|
@@ -131,7 +132,8 @@ DSUserMI[linearData_Association, expressions_List, spec_Association : <||>] := M
      |>;
    prepared = dsKiraAttachActiveBasis[linearData, setting];
    If[Lookup[prepared, "status", "failed"] =!= "generated",
-    Message[DSUserMI::badbasis, Lookup[prepared, "reason", "active-basis preparation failed"]]
+    Message[DSUserMI::badbasis, dsReasonSentence[Lookup[prepared, "reason", "active-basis preparation failed"],
+      "userMI active basis 未能附加到 linearData；请检查 basis 表达式与 linearData 的同源性后重试。 The userMI active basis could not be attached to linearData; check the basis expressions and that they come from the same linearData source, then retry."]]
     ];
    prepared
    ];
@@ -147,4 +149,4 @@ DSUserMI[data_Association] := Lookup[
 DSUserMI[data_Association, key_String] := Lookup[DSUserMI[data], key, Missing["UnknownUserMIKey", key]];
 
 
-DSUserMI[_, ___] := (Message[DSUserMI::badbasis, "expected linearData, an ordered expression list, and an optional Association"]; <|"status" -> "failed", "reason" -> "invalidArguments"|>);
+DSUserMI[_, ___] := (Message[DSUserMI::badbasis, "DSUserMI 调用格式无效：需要 DSLinear 返回的 linearData、按顺序排列的 basis 表达式列表和可选的 spec Association；请按该格式重新调用。 The DSUserMI call is malformed: it requires linearData from DSLinear, an ordered basis-expression list, and an optional spec Association; call it again in that form."]; <|"status" -> "failed", "reason" -> "invalidArguments"|>);

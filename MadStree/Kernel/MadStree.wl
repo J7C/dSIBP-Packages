@@ -73,11 +73,11 @@ MSReconstructEpSeries::usage = "MSReconstructEpSeries[context,ep,pointSequence,M
 
 MSInitTree::badinput = "Invalid tree topology input: `1`.";
 MSInitVertexFamily::badinput = "Invalid single-vertex function family input: `1`.";
-MSFormulaMatrices::nosector = "Sector `1` not found.";
-MSContactMaps::nosector = "Sector `1` not found.";
+MSFormulaMatrices::nosector = "找不到区段 `1`；请使用 MSSectors[context] 返回的 sectorKey。 Sector `1` not found; use a sectorKey returned by MSSectors[context].";
+MSContactMaps::nosector = "找不到区段 `1`；请使用 MSSectors[context] 返回的 sectorKey。 Sector `1` not found; use a sectorKey returned by MSSectors[context].";
 MSRecurrenceStep::badint = "Integral does not match the context: `1`.";
 MSReduce::cycle = "Iterative reduction detected a repeated state: `1`.";
-MSConvertBasis::unsupported = "This basis transformation is not implemented: `1`.";
+MSConvertBasis::unsupported = "不支持的基变换 `1`；MSConvertBasis 只接受 \"H\"->\"h\" 或 \"h\"->\"H\"。 Unsupported basis transformation `1`; MSConvertBasis only accepts \"H\"->\"h\" or \"h\"->\"H\".";
 MSEvaluatePath::backendLaunchFailed = "FlintNDE backend could not be launched under Python command `1`. Captured backend output tail: `2`.";
 MSEvaluatePath::pythonFlintMissing = "Python command `1` started but cannot import python-flint. Captured backend output tail: `2`.";
 MSEvaluatePath::backendOutputMissing = "FlintNDE backend exited without creating its output file under Python command `1`. Captured backend output tail: `2`.";
@@ -128,12 +128,24 @@ $MadStreeModuleLoadFailure = Catch[
           ],
           $Failed
         ] === $Failed,
-        Throw[System`Failure["ModuleLoadFailed", <|"module" -> First[moduleContract]|>]]
+        Throw[System`Failure["ModuleLoadFailed", <|
+          "module" -> First[moduleContract],
+          "MessageTemplate" -> "MadStree 模块 " <> First[moduleContract] <>
+            " 加载失败，程序包未加载；请重新安装完整的当前版本后重试。 MadStree module " <>
+            First[moduleContract] <>
+            " failed to load, so the package was not loaded; reinstall the complete current version and try again."
+        |>]]
       ];
       If[! $MadStreeDefinitionPresentQ[Last[moduleContract]],
         Throw[System`Failure["ModuleContractMissing", <|
           "module" -> First[moduleContract],
-          "symbol" -> Last[moduleContract]
+          "symbol" -> Last[moduleContract],
+          "MessageTemplate" -> "MadStree 模块 " <> First[moduleContract] <>
+            " 未提供必需定义 " <> Last[moduleContract] <>
+            "，程序包未加载；请重新安装完整的当前版本后重试。 MadStree module " <>
+            First[moduleContract] <> " did not provide its required definition " <>
+            Last[moduleContract] <>
+            "; the package was not loaded. Reinstall the complete current version and try again."
         |>]]
       ]
     ],

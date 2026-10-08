@@ -571,7 +571,7 @@ parseTopology[case_Association] := Module[
    If[caseInputPreflightErrorQ[case],
     If[caseInputMissingRequiredKeysQ[case],
      Message[parseTopology::missingkeys, caseInputRequirementReport[case]["missingRequiredKeys"]],
-     Message[parseTopology::badinput, Lookup[caseInputErrorReport[case], "issues", {}]]
+     Message[parseTopology::badinput, StringRiffle[dsInitializationIssueText /@ Lookup[caseInputErrorReport[case], "issues", {}], "\n"]]
      ];
     Return[$Failed]
     ];
@@ -586,7 +586,13 @@ parseTopology[case_Association] := Module[
      KeyExistsQ[#, "status"] && #["status"] =!= "compiled" &
      ];
    If[badFunctionLines =!= {},
-    Message[parseTopology::badfunction, Lookup[badFunctionLines, {"lineIndex", "lineId", "issues"}]];
+    Message[parseTopology::badfunction,
+     StringRiffle[
+      ("线 " <> dsTreeFieldText[#, "lineId", "unknown"] <> " / line " <>
+        dsTreeFieldText[#, "lineId", "unknown"] <> ": " <>
+        StringRiffle[dsInitializationIssueText /@ Lookup[#, "issues", {}], " "]) & /@
+       badFunctionLines,
+      "\n"]];
     Return[$Failed]
     ];
    loopMomenta = case["loopMomenta"];
@@ -5368,7 +5374,9 @@ makeKiraExportData[linearData_Association, OptionsPattern[]] := Module[
    strings = makeKiraInputStrings[linearForExport, OptionValue[KiraCoefficientRules], OptionValue[KiraJobOptions], OptionValue[KiraTargetIntegrals]];
    If[Lookup[strings, "status", "missing"] =!= "generated",
     If[! MemberQ[{"invalidKiraJobOptions", "invalidCoefficientRules"}, Lookup[strings, "status", Missing["status"]]],
-     Message[makeKiraExportData::badlinear, Lookup[strings, "status", Missing["status"]]]
+     Message[makeKiraExportData::badlinear,
+      dsReasonSentence[Lookup[strings, "status", Missing["status"]],
+       "Kira 输入字符串未生成；请检查积分映射和系数规则。 Kira input strings were not generated; check the integral map and coefficient rules."]]
      ];
     Return[<|"status" -> "notReady", "caseName" -> linearForExport["caseName"], "topologyValidationReport" -> Lookup[linearForExport, "topologyValidationReport", topologyReport], "reason" -> "linear system is not exportable", "linearSystem" -> linearForExport, "kiraInput" -> strings|>]
     ];
@@ -5842,10 +5850,10 @@ publicExpressionIntegrals[expr_] := DeleteDuplicates[Cases[expr, _J, {0, Infinit
 validatePublicExpression[expr_, topo_Association, requireDiscreteQ_: False] := Module[
    {integrals = publicExpressionIntegrals[expr], shapeIssues, stateIssues},
    shapeIssues = Flatten[publicIntegralShapeIssues[topo, #] & /@ integrals];
-   If[shapeIssues =!= {}, Message[dSIBPPublicAPI::badshape, shapeIssues]; Return[False]];
+   If[shapeIssues =!= {}, Message[dSIBPPublicAPI::badshape, dsPublicShapeIssueSentence[shapeIssues]]; Return[False]];
    If[TrueQ[requireDiscreteQ],
     stateIssues = Flatten[publicResolvedDiscreteStateIssues[topo, #] & /@ integrals];
-    If[stateIssues =!= {}, Message[dSIBPPublicAPI::badstate, stateIssues]; Return[False]]
+    If[stateIssues =!= {}, Message[dSIBPPublicAPI::badstate, dsPublicStateIssueSentence[stateIssues]]; Return[False]]
     ];
    True
    ];
@@ -5959,14 +5967,14 @@ rep2innerform[expr_, topoSpec_Association] := Module[{topo, audit},
    (* 反向映射同时受动量声明层和坐标 Jacobian 层约束；局部坐标可逆不能覆盖
       过完备 loop/无圈动量声明已经关闭的 topology capability。 *)
    If[! dsTopologyCapabilityQ[topo, "inverseKinematicsUsableQ"],
-    Message[dSIBPPublicAPI::noinverse, <|
-      "capabilities" -> Lookup[topo, "capabilities", <||>],
-      "coordinateAudit" -> KeyTake[audit, {"status", "constraintResiduals", "parameterDependencies"}]
-      |>];
+    Message[dSIBPPublicAPI::noinverse,
+     dsCapabilitySentence[Lookup[topo, "capabilities", <||>]] <>
+      " 坐标审计没有唯一反解；请用 DSKinematics 检查约束残差。 The coordinate audit found no unique inverse; use DSKinematics to inspect the constraint residuals."];
     Return[$Failed]
     ];
    If[AssociationQ[audit] && ! TrueQ[Lookup[audit, "inverseAvailableQ", True]],
-    Message[dSIBPPublicAPI::noinverse, KeyTake[audit, {"status", "constraintResiduals", "parameterDependencies"}]];
+    Message[dSIBPPublicAPI::noinverse,
+     "坐标审计没有唯一反解；请用 DSKinematics 检查约束残差。 The coordinate audit found no unique inverse; use DSKinematics to inspect the constraint residuals."];
     Return[$Failed]
     ];
    If[! validatePublicExpression[expr, topo], Return[$Failed]];
@@ -6136,13 +6144,13 @@ treeVertexIssues[vertex_Association] := Module[{issues = {}, legs, required, mis
 makeTreeFamilyData[spec_Association] := Module[{vertices, issues, ids, normalized},
    vertices = Lookup[spec, "vertices", Missing["vertices"]];
    If[! ListQ[vertices] || ! And @@ (AssociationQ /@ vertices),
-    Message[makeTreeFamilyData::badinput, {<|"code" -> "badVertices"|>}];
+    Message[makeTreeFamilyData::badinput, dsTreeIssueSentence[{<|"code" -> "badVertices"|>}]];
     Return[$Failed]
     ];
    issues = Flatten[treeVertexIssues /@ vertices];
    ids = Lookup[vertices, "id", Missing["id"]];
    If[DuplicateFreeQ[ids] =!= True, AppendTo[issues, <|"code" -> "duplicateVertexIds", "ids" -> ids|>]];
-   If[issues =!= {}, Message[makeTreeFamilyData::badinput, issues]; Return[$Failed]];
+   If[issues =!= {}, Message[makeTreeFamilyData::badinput, dsTreeIssueSentence[issues]]; Return[$Failed]];
    normalized = Map[
      Join[#, <|
           "signedExternalLegEnergy" -> treeSignedExternalLegEnergy[#],
@@ -6344,7 +6352,7 @@ treeLoopIntegralFromTree[int_J, data_Association] := Module[
       "shrunk",
       If[lineIndexedPowerQ[line], {Lookup[baseline, line["id"], 0]}, {}],
       _,
-      Message[treeLoopIntegralFromTree::unsupported, <|"line" -> line["id"], "packType" -> line["packType"]|>];
+      Message[treeLoopIntegralFromTree::unsupported, dsTreeBackProjectionSentence[line["id"], line["packType"]]];
       Return[$Failed]
       ],
      {e, topo["nE"]}
@@ -6369,7 +6377,7 @@ treeSourceAwareStepFromTopology[int_J, vertexIndex_Integer, endpoint_Integer, da
    rules = Lookup[ruleData, If[current < endpoint, "minus", "plus"], {}];
    result = Replace[int, rules];
    If[result === int,
-    Message[makeTreeFamilyData::badinput, {<|"code" -> "missingSourceAwareStep", "integral" -> int, "vertex" -> vertexId|>}];
+    Message[makeTreeFamilyData::badinput, dsTreeIssueSentence[{<|"code" -> "missingSourceAwareStep", "integral" -> int, "vertex" -> vertexId|>}]];
     $Failed,
     result
     ]
@@ -6391,7 +6399,7 @@ treeSingleStepIntegral[int_J, vertexIndex_Integer, endpoint_Integer, data_Associ
    directResult = Replace[int, directRules];
    If[directResult =!= int, Return[directResult]];
    If[TrueQ[Lookup[data, "requiresSourceRules", False]],
-    Message[makeTreeFamilyData::badinput, {<|"code" -> "missingSourceAwareStep", "integral" -> int, "vertex" -> vertex["id"]|>}];
+    Message[makeTreeFamilyData::badinput, dsTreeIssueSentence[{<|"code" -> "missingSourceAwareStep", "integral" -> int, "vertex" -> vertex["id"]|>}]];
     Return[$Failed]
     ];
    Which[
@@ -6494,14 +6502,16 @@ repIterativeData[expr_, end_: Automatic, data_Association, OptionsPattern[]] := 
     If[replacement === $Failed, Return[<|"status" -> "singular", "result" -> $Failed, "steps" -> steps|>]];
     progressData = treeSingleFamilyStepProgress[firstInt, replacement, endpoints, data];
     If[! TrueQ[progressData["passQ"]],
-     Message[repIterativeData::noprogress, progressData];
+     Message[repIterativeData::noprogress,
+      dsTreeIssueSentence[<|"code" -> "noprogress", "integral" -> firstInt, "steps" -> steps|>]];
      Return[<|"status" -> "error", "reason" -> "nonDecreasingRecurrence", "result" -> $Failed,
        "steps" -> steps, "progressData" -> progressData|>]
      ];
     result = Expand[result /. firstInt -> replacement];
     stateHash = treeRecurrenceStateHash[result];
     If[KeyExistsQ[seenStates, stateHash],
-     Message[repIterativeData::cycle, stateHash];
+     Message[repIterativeData::cycle,
+      dsTreeIssueSentence[<|"code" -> "cycle", "steps" -> steps|>]];
      Return[<|"status" -> "error", "reason" -> "recurrenceCycle", "result" -> $Failed,
        "steps" -> steps, "stateHash" -> stateHash|>]
      ];
@@ -6547,7 +6557,7 @@ repIterative[expr_, end_: Automatic, OptionsPattern[]] := If[
      repIterativeSectorData[expr, end, $dSIBPTreeFamilyContext]["result"],
      repIterativeData[expr, end, $dSIBPTreeFamilyContext]["result"]
     ],
-   Message[makeTreeFamilyData::badinput, {<|"code" -> "treeContextNotSet"|>}];
+   Message[makeTreeFamilyData::badinput, dsTreeIssueSentence[{<|"code" -> "treeContextNotSet"|>}]];
    $Failed
    ];
 
@@ -6697,7 +6707,7 @@ DSTreeSeeds[vertex_, int : J[_, _, _], topoSpec_Association] := Module[
       ],
      DeleteDuplicates[Flatten[Values[shrunkByTerm]]]
      ];
-   If[AnyTrue[contactAudit, ! TrueQ[#"thetaAllowedQ"] &], Message[loopToTreeProjection::mixedcontact, contactAudit]; Return[$Failed]];
+   If[AnyTrue[contactAudit, ! TrueQ[#"thetaAllowedQ"] &], Message[loopToTreeProjection::mixedcontact, dsMixedContactSentence[contactAudit]]; Return[$Failed]];
    treeSeed = projectLoopTimeEquationToTree[loopSeed, topo, int];
    projectedReference = projectLoopIntegralToTree[int, topo, int];
    <|
@@ -6755,7 +6765,7 @@ makeTreeTimeReductionRules[records_List, data_Association] := Module[
      ordered = SortBy[group, Function[record,
         treeStateIndex[Rest[First[First[Cases[record["treeIntegral"], _J, {0, Infinity}]]][[vertexIndex]]]]
         ]];
-     If[Length[ordered] =!= Length[states], Message[makeTreeTimeReductionRules::incomplete, <|"key" -> key, "expected" -> Length[states], "actual" -> Length[ordered]|>]; Return[]];
+     If[Length[ordered] =!= Length[states], Message[makeTreeTimeReductionRules::incomplete, dsTreeTimeGroupSentence[<|"key" -> key, "expected" -> Length[states], "actual" -> Length[ordered]|>]]; Return[]];
      currentInts = First[Cases[#"treeIntegral", _J, {0, Infinity}]] & /@ ordered;
      minusInts = MapThread[
        Function[{int, state}, J[ReplacePart[First[int], vertexIndex -> Prepend[state, First[int][[vertexIndex, 1]] - 1]]]],
@@ -6809,7 +6819,7 @@ makeTreeFamilyDataFromTopology[topoSpec_Association] := Module[
      originalClass = Select[topo["vertexIds"], Lookup[repMap, #, #] === active[[v]] &];
      signs = DeleteDuplicates[Lookup[topo["vertexSignAssoc"], originalClass]];
      If[Length[signs] =!= 1,
-      Message[makeTreeFamilyData::badinput, {<|"code" -> "mixedSignMergedVertex", "vertices" -> originalClass|>}];
+      Message[makeTreeFamilyData::badinput, dsTreeIssueSentence[{<|"code" -> "mixedSignMergedVertex", "vertices" -> originalClass|>}]];
       Return[$Failed]
       ];
      legs = Flatten@Table[
@@ -6880,7 +6890,7 @@ treeFamilyForIntegral[int_J, context_Association] := Module[{matches},
     matches === {}, Missing["NoTreeSectorFamily", int],
     Length[matches] === 1, First[matches],
     True,
-    Message[treeFamilyForIntegral::ambiguous, <|"integral" -> int, "sectors" -> Lookup[matches, "sector"]|>];
+    Message[treeFamilyForIntegral::ambiguous, dsTreeFamilyAmbiguousSentence[<|"integral" -> int, "sectors" -> Lookup[matches, "sector"]|>]];
     Missing["AmbiguousTreeSectorFamily", int, Lookup[matches, "sector"]]
     ]
    ];
@@ -6945,12 +6955,12 @@ repIterativeSectorData[expr_, end_: Automatic, context_Association, OptionsPatte
     Do[
      family = treeFamilyForIntegral[item, context];
      If[Head[family] === Missing,
-      Message[repIterativeData::nosector, item];
+      Message[repIterativeData::nosector, dsTreeNoSectorSentence[item]];
       scanFailure = <|"status" -> "error", "result" -> $Failed, "steps" -> steps|>;
       Break[]
       ];
      If[! And @@ (IntegerQ /@ First[item][[All, 1]]),
-      Message[repIterativeData::badindex, First[item][[All, 1]]];
+      Message[repIterativeData::badindex, dsTreeBadIndexSentence[First[item][[All, 1]]]];
       scanFailure = <|"status" -> "error", "result" -> $Failed, "steps" -> steps|>;
       Break[]
       ];
@@ -6974,14 +6984,16 @@ repIterativeSectorData[expr_, end_: Automatic, context_Association, OptionsPatte
     If[replacement === $Failed, Return[<|"status" -> "error", "reason" -> "recurrenceSingular", "result" -> $Failed, "steps" -> steps|>]];
     progressData = treeSectorStepProgress[item, replacement, end, context];
     If[! TrueQ[progressData["passQ"]],
-     Message[repIterativeData::noprogress, progressData];
+     Message[repIterativeData::noprogress,
+      dsTreeIssueSentence[<|"code" -> "noprogress", "integral" -> item, "steps" -> steps|>]];
      Return[<|"status" -> "error", "reason" -> "nonDecreasingRecurrence", "result" -> $Failed,
        "steps" -> steps, "progressData" -> progressData|>]
      ];
     result = Expand[result /. item -> replacement];
     stateHash = treeRecurrenceStateHash[result];
     If[KeyExistsQ[seenStates, stateHash],
-     Message[repIterativeData::cycle, stateHash];
+     Message[repIterativeData::cycle,
+      dsTreeIssueSentence[<|"code" -> "cycle", "steps" -> steps|>]];
      Return[<|"status" -> "error", "reason" -> "recurrenceCycle", "result" -> $Failed,
        "steps" -> steps, "stateHash" -> stateHash|>]
      ];

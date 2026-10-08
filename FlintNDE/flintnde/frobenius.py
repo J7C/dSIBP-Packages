@@ -326,7 +326,11 @@ def build_exact_power_log_series(
     if series_order <= 0:
         raise ValueError("exact power-log series order must be positive")
     if manifest.get("status") != "passed" or manifest.get("system_name") != system.name:
-        raise ValueError("exact power-log manifest identity/status mismatch")
+        raise ValueError(
+            "the supplied exact power-log manifest does not belong to this system or "
+            "has not passed validation; regenerate the manifest for the current "
+            "system before solving"
+        )
     _residue, regular = system.exact_data()
     dimension = system.dimension
     regular = list(regular[:series_order])
@@ -374,7 +378,11 @@ def build_exact_power_log_series(
         return ExactPowerLogSeries(tuple(root for _ in range(dimension)), tuple(solutions))
 
     if route != "diagonalizable_roots_exact_gate":
-        raise ValueError(f"unsupported exact power-log route: {route}")
+        raise ValueError(
+            f"the exact power-log manifest declares route '{route}', which this "
+            f"solver does not recognize; regenerate the manifest with a supported "
+            f"route (a single Jordan root or diagonalizable roots)"
+        )
     roots = [gaussian_rational(value) for value in manifest["roots_exact"]]
     projectors = {
         root: GaussianMatrix.from_records(records)
@@ -571,7 +579,12 @@ def _build_diagonalizable_basis(
                     corrected -= coefficients[log_degree + 1] * acb(log_degree + 1)
                     gate_key = f"{solution_index}:{degree}:{log_degree}"
                     if gate_key not in gates:
-                        raise ValueError(f"exact Frobenius manifest misses resonance gate {gate_key}")
+                        raise ValueError(
+                            f"the exact Frobenius manifest is missing the resonance "
+                            f"decision encoded as '{gate_key}' (solution index, "
+                            f"series degree, log degree); regenerate the manifest so "
+                            f"every resonance gate is recorded"
+                        )
                     if gates[gate_key]:
                         defect = resonant_projector * corrected
                         coefficients[log_degree + 1] += defect / acb(log_degree + 1)
@@ -681,7 +694,12 @@ def _build_numeric_diagonalizable_basis(
                     corrected -= coefficients[log_degree + 1] * (log_degree + 1)
                     gate_key = f"{solution_index}:{degree}:{log_degree}"
                     if gate_key not in gates:
-                        raise ValueError(f"numerical Frobenius manifest misses gate {gate_key}")
+                        raise ValueError(
+                            f"the numerical Frobenius manifest is missing the "
+                            f"resonance decision encoded as '{gate_key}' (solution "
+                            f"index, series degree, log degree); regenerate the "
+                            f"manifest so every resonance gate is recorded"
+                        )
                     if gates[gate_key]:
                         defect = projectors[target_position] * corrected
                         coefficients[log_degree + 1] += defect / (log_degree + 1)
@@ -722,7 +740,11 @@ def build_power_log_basis(
     """按 exact manifest 构造正则奇点的 FLINT power-log fundamental matrix。"""
 
     if manifest.get("status") != "passed" or manifest.get("system_name") != system.name:
-        raise ValueError("Frobenius manifest identity/status mismatch")
+        raise ValueError(
+            "the supplied Frobenius manifest does not belong to this system or has "
+            "not passed validation; regenerate it for the current system before "
+            "solving"
+        )
     route = manifest.get("route")
     if route == "single_root_jordan_exact_gate":
         return _build_single_root_basis(system, manifest, series_order)
@@ -749,4 +771,7 @@ def build_power_log_basis(
         if not isinstance(system, NumericalRegularSingularSystem):
             raise TypeError("numeric Frobenius manifest requires NumericalRegularSingularSystem")
         return _build_numeric_diagonalizable_basis(system, manifest, series_order)
-    raise ValueError(f"unsupported Frobenius manifest route: {route}")
+    raise ValueError(
+        f"the Frobenius manifest declares route '{route}', which this solver does "
+        f"not recognize; regenerate the manifest with a supported route"
+    )

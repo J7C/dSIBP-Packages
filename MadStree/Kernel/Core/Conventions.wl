@@ -63,7 +63,10 @@ MSConvertBasis[
 ];
 
 MSConvertBasis[object_, direction_, ___] := (
-  Message[MSConvertBasis::unsupported, <|"object" -> HoldForm[object], "direction" -> direction|>];
+  (* ToString 是 HoldAll，这里不再额外包 HoldForm，避免打印出 HoldForm[...] 包装。 *)
+  Message[MSConvertBasis::unsupported,
+    ToString[direction, InputForm] <> "（对象 object: " <>
+      ToString[object, InputForm] <> "）"];
   msFailure["UnsupportedBasisConversion", <|"direction" -> direction|>]
 );
 

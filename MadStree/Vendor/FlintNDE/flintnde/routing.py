@@ -47,6 +47,26 @@ def _normalize_singularity_mode(value: str) -> str:
         )
     return value
 
+
+_CLASSIFICATION_KIND_LABELS: dict[str, tuple[str, str]] = {
+    "ordinary": ("普通点", "an ordinary point"),
+    "regular_singular": ("正则奇点", "a regular singular point"),
+    "non_fuchsian_input_basis": (
+        "输入基下的高阶（非 Fuchs）奇点",
+        "a high-order (non-Fuchsian) singularity in the input basis",
+    ),
+}
+
+
+def _classification_kind_label(kind: str, language: str) -> str:
+    """把分类 kind 键翻译成提示语中的自然语言名词短语；未知 kind 原样返回。"""
+
+    labels = _CLASSIFICATION_KIND_LABELS.get(kind)
+    if labels is None:
+        return str(kind)
+    return labels[0] if language == "CN" else labels[1]
+
+
 class AdaptivePathSingularityError(ValueError):
     """缺省避奇点模式发现内部奇点时返回结构化路段报告。"""
 
@@ -539,7 +559,12 @@ def adaptive_path_to_json(path: AdaptivePath, *, digits: int = 80) -> dict[str, 
                 }
             )
         else:
-            raise ValueError(f"unsupported adaptive transition method: {method}")
+            raise ValueError(
+                f"the serialized adaptive path declares transition method "
+                f"'{method}', which this version does not recognize; regenerate "
+                f"the plan with the current version (supported methods are "
+                f"'ordinary_taylor' and 'regular_singular_bridge')"
+            )
     return {
         "schema": "flintnde_adaptive_path_serialized_v1",
         "planning_precision_digits": digits,
@@ -640,7 +665,12 @@ def adaptive_path_from_json(
             )
             transitions.append({"method": method, "singularity": singularity})
         else:
-            raise ValueError(f"unsupported adaptive transition method: {method}")
+            raise ValueError(
+                f"the serialized adaptive path declares transition method "
+                f"'{method}', which this version does not recognize; regenerate "
+                f"the plan with the current version (supported methods are "
+                f"'ordinary_taylor' and 'regular_singular_bridge')"
+            )
     start_classification = _adaptive_classification_from_json(
         record["start_classification"], inventory, "start_classification"
     )
@@ -1021,8 +1051,10 @@ def build_adaptive_path(
         )
         if not local_basis.continuation_ready and role != "start":
             raise LocalReductionError(
-                f"{classification.name}: {local_basis.method} is start-only; "
-                "internal/target continuation requires Stokes connection data"
+                f"at '{classification.name}' the local basis built with method "
+                f"'{local_basis.method}' can only initialize a path at that point; "
+                f"continuing through it or to it needs explicit Stokes connection "
+                f"data, so supply a detour path or an exact rational system instead"
             )
         if local_basis.method == "formal_exponential_asymptotic" and role == "start":
             if formal_asymptotic_order is not None:
@@ -1052,8 +1084,10 @@ def build_adaptive_path(
                 if resolved_singularity_mode == "singularity_jump"
                 else "当前使用避开奇点模式（缺省）。"
             ),
-            f"起点 '{start.name}' 分类为 {route_classifications[0].kind}",
-            f"终点 '{target.name}' 分类为 {route_classifications[-1].kind}",
+            f"起点 '{start.name}' 分类为"
+            f"{_classification_kind_label(route_classifications[0].kind, 'CN')}",
+            f"终点 '{target.name}' 分类为"
+            f"{_classification_kind_label(route_classifications[-1].kind, 'CN')}",
             f"步长不超过收敛半径的 {max_step_over_radius} 倍",
         ]
     else:
@@ -1066,19 +1100,29 @@ def build_adaptive_path(
                 if resolved_singularity_mode == "singularity_jump"
                 else "Singularity mode: avoid (default)."
             ),
-            f"start '{start.name}' is {route_classifications[0].kind}",
-            f"target '{target.name}' is {route_classifications[-1].kind}",
+            f"start '{start.name}' is "
+            f"{_classification_kind_label(route_classifications[0].kind, 'EN')}",
+            f"target '{target.name}' is "
+            f"{_classification_kind_label(route_classifications[-1].kind, 'EN')}",
             f"step length is limited by {max_step_over_radius} times the convergence radius",
         ]
     if inverted:
-        messages.append("path points use sinv=1/s")
+        messages.append(
+            "路径点使用 sinv=1/s 坐标"
+            if language == "CN"
+            else "path points use sinv=1/s"
+        )
     if route_classifications[0].kind == "non_fuchsian_input_basis":
         messages.append(
-            "the high-pole start requires the five-order asymptotic convergence report"
+            "高阶极点起点需要五阶渐近收敛报告"
+            if language == "CN"
+            else "the high-pole start requires the five-order asymptotic convergence report"
         )
         if formal_start_estimate is not None:
             messages.append(
-                "formal start match distance uses the nearest exponential-root gap and places "
+                "形式起点匹配距离使用最近的指数根间隙，并把所请求的阶数置于估计最小项次数的三分之一处"
+                if language == "CN"
+                else "formal start match distance uses the nearest exponential-root gap and places "
                 "the requested order at one third of the estimated least-term degree"
             )
     if mapped_detours:
@@ -1293,10 +1337,16 @@ def build_adaptive_path(
     actual_maximum_ratio = max(finite_ratios, default=None)
     if actual_maximum_ratio is not None and actual_maximum_ratio > max_step_over_radius + 1.0e-12:
         raise ArithmeticError("generated path violates max_step_over_radius")
+    ratios = [
+        record["step_over_convergence_radius"] for record in segment_records
+    ]
     ratio_message = (
-        "step/R ratios in path order: "
-        + repr([record["step_over_convergence_radius"] for record in segment_records])
-        + f"; maximum step/R: {actual_maximum_ratio}"
+        f"每一步输运都不超过局部收敛半径的 {max_step_over_radius} 倍；"
+        f"路径上实际的步长/半径比为 {ratios!r}，最大值为 {actual_maximum_ratio}"
+        if language == "CN"
+        else f"every transport step stays within {max_step_over_radius} times the local "
+        f"convergence radius; the actual step-to-radius ratios along the path are "
+        f"{ratios!r}, with a maximum of {actual_maximum_ratio}"
     )
     messages.append(ratio_message)
     save_requests: list[dict[str, Any]] = []
@@ -1456,8 +1506,10 @@ def build_adaptive_path_plan(
                 if resolved_singularity_mode == "singularity_jump"
                 else "当前使用避开奇点模式（缺省）。"
             ),
-            f"起点 '{start.name}' 分类为 {start_classification.kind}",
-            f"终点 '{target.name}' 分类为 {target_classification.kind}",
+            f"起点 '{start.name}' 分类为"
+            f"{_classification_kind_label(start_classification.kind, 'CN')}",
+            f"终点 '{target.name}' 分类为"
+            f"{_classification_kind_label(target_classification.kind, 'CN')}",
         ]
     else:
         messages = [
@@ -1469,8 +1521,10 @@ def build_adaptive_path_plan(
                 if resolved_singularity_mode == "singularity_jump"
                 else "Singularity mode: avoid (default)."
             ),
-            f"start '{start.name}' is {start_classification.kind}",
-            f"target '{target.name}' is {target_classification.kind}",
+            f"start '{start.name}' is "
+            f"{_classification_kind_label(start_classification.kind, 'EN')}",
+            f"target '{target.name}' is "
+            f"{_classification_kind_label(target_classification.kind, 'EN')}",
         ]
     if inverted:
         messages.append(
@@ -1501,7 +1555,10 @@ def build_adaptive_path_plan(
             local_methods[identifier] = local_basis.method
             if not local_basis.continuation_ready and role != "start":
                 unresolved_local_points[identifier] = (
-                    f"{local_basis.method} is start-only; Stokes connection data are unavailable"
+                    f"the local basis built with method '{local_basis.method}' can "
+                    f"only be used as a path start because the needed Stokes "
+                    f"connection data are unavailable; reroute the path or provide "
+                    f"exact rational input"
                 )
 
     if internal:

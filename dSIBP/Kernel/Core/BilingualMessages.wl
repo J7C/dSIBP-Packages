@@ -125,3 +125,476 @@ DSTreeNaiveIBP::nonsquare = "tree IBP 方程数 `1` 与待约化对象数 `2` �
 DSTreeNaiveIBP::solvefailed = "tree IBP 线性系统无法求解。请检查当前参数是否奇异，以及 master 列表是否完整。 The tree-IBP linear system could not be solved. Check for singular parameters and an incomplete master list.";
 DSTreeNaiveDE::badibp = "DSTreeNaiveDE 需要 DSTreeNaiveIBP 成功返回的数据或有效 DSInit context。请先完成 tree IBP。 DSTreeNaiveDE requires data returned by a successful DSTreeNaiveIBP call or a valid DSInit context. Complete tree IBP first.";
 DSTreeNaiveDE::badvars = "tree 微分变量必须属于当前 family 的外部独立变量：`1`。请从初始化变量列表中选择。 Tree differentiation variables must be independent external variables of the current family: `1`. Choose variables from the initialized list.";
+
+
+(* ::Chapter:: *)
+(*运行时双语渲染器*)
+
+(* 以下 Private 渲染器把内部 capability/reason/check/code 标签翻译成逐句中英文本，只改变
+   Message 与 dsErrorPrint 的展示参数；任何返回 Association、tag 字符串、hash 或数值都不变。
+   渲染器只输出完整句子，绝不拼接原始内部标识或倾倒 Association。未知标签退回到仍然点名该值的
+   通用句子，便于诊断，但已知标签一律翻译成面向用户的句子。这些定义在 Private 上下文内，
+   BilingualMessages.wl 最后加载，因此所有模块运行时都能调用。 *)
+
+
+(* ::Section:: *)
+(*capability 渲染*)
+
+dsCapabilitySentence[key_String] := Switch[key,
+   "initializationUsableQ",
+   "初始化不可用：topology 或 ISP 坐标未通过认证。 Initialization is disabled: the topology or ISP coordinates are not certified.",
+   "timeIBPUsableQ",
+   "时间 IBP 不可用：函数系统或小 t 边界未通过认证。 Time IBP is disabled: the function system or small-t boundary is not certified.",
+   "momentumIBPUsableQ",
+   "动量 IBP 不可用：圈动量声明或标量积坐标未通过认证。 Momentum IBP is disabled: the loop-momentum declaration or scalar-product coordinates are not certified.",
+   "derivativeUsableQ",
+   "积分导数不可用：独立外部变量或坐标映射未通过认证。 Integral differentiation is disabled: the independent external variables or coordinate map are not certified.",
+   "inverseKinematicsUsableQ",
+   "反向运动学不可用：用户坐标到基础标量积没有唯一反解。 Inverse kinematics is disabled: user coordinates have no unique inverse map to the base scalar products.",
+   "backendExportUsableQ",
+   "后端导出不可用：动力学参数欠完备或过完备，linearData 不能序列化到 Kira。 Backend export is disabled: the kinematic parameters are undercomplete or overcomplete, so linearData cannot be serialized to Kira.",
+   "parityUsableQ",
+   "parity 筛选不可用：函数系统没有已证明可运输的 parity 闭合。 Parity filtering is disabled: the function system has no proved transportable parity closure.",
+   _,
+   "能力 " <> ToString[key, InputForm] <> " 不可用：该能力未通过认证。 Capability " <> ToString[key, InputForm] <> " is disabled: it is not certified."
+   ];
+
+dsCapabilitySentence[caps_Association] := Module[
+   {order = {"initializationUsableQ", "timeIBPUsableQ", "momentumIBPUsableQ",
+      "derivativeUsableQ", "inverseKinematicsUsableQ", "backendExportUsableQ", "parityUsableQ"},
+    disabled, extra, all},
+   disabled = Select[order, KeyExistsQ[caps, #] && ! TrueQ[caps[#]] &];
+   extra = Select[Keys[caps], ! MemberQ[order, #] && ! TrueQ[caps[#]] &];
+   all = Join[disabled, extra];
+   If[all === {},
+    "当前 context 未通过能力门禁，但没有识别到具体被禁用的能力；请检查其 capabilities。 The current context failed a capability gate, but no specific disabled capability was recognized; inspect its capabilities.",
+    StringRiffle[dsCapabilitySentence /@ all, " "]
+    ]
+   ];
+
+dsCapabilitySentence[other_] := "能力 " <> ToString[other, InputForm] <> " 不可用：该能力未通过认证。 Capability " <> ToString[other, InputForm] <> " is disabled: it is not certified.";
+
+
+(* ::Section:: *)
+(*seed、linear 与 active-basis reason 渲染*)
+
+dsReasonSentence[tag_String, fallback_: Automatic] := Switch[tag,
+   "templateGenerationFailed",
+   "seed 模板未能生成；请检查 topology、sector 和离散态输入后重试。 Seed templates could not be generated; check the topology, sectors, and discrete-state input, then try again.",
+   "timeOnlyPublicConversionFailed",
+   "timeOnly 公开数据无法转换回内部表示；请确认 J[sectorKey,timeShifts,stateBits] 输入由当前 context 生成。 The timeOnly public data could not be converted back to the internal form; check that the J[sectorKey,timeShifts,stateBits] input came from the current context.",
+   "treeActiveBasisNotSupported",
+   "当前 tree 表示不支持 active basis 导出；请使用 loop 表示或移除 active basis 设置。 The current tree representation does not support active-basis export; use a loop representation or remove the active-basis setting.",
+   "expressionsMustBeNonemptyList",
+   "active basis 表达式必须是非空列表；请为每个 basis 元素提供一个 J 线性组合。 The active-basis expressions must be a nonempty list; supply one J linear combination per basis element.",
+   "namesMustBeUniqueNonemptyStrings",
+   "active basis 名称必须是唯一且非空的字符串；请为每个 basis 元素指定不重复的名称。 The active-basis names must be unique nonempty strings; give each basis element a distinct name.",
+   "activeIndicesMustBeUniqueValidPositions",
+   "activeIndices 必须是唯一且有效的 basis 位置；请从 1 到 basis 元素个数中选择。 The activeIndices must be unique valid basis positions; choose them from 1 to the number of basis elements.",
+   "missingParsedTopology",
+   "active basis 导出缺少已解析的 topology；请先成功调用 DSInit 并使用同源 linearData。 Active-basis export has no parsed topology; run DSInit successfully first and use same-source linearData.",
+   "invalidDerivativeVariables",
+   "导数变量不在当前 family 允许的独立外部变量集合内；请从初始化返回的变量列表中选择。 The derivative variables are not in the allowed independent external-variable set; choose variables from the initialized list.",
+   "scalingDegreesLengthMismatch",
+   "scalingDegrees 的长度与 basis 元素个数不一致；请为每个 basis 元素提供一个标度次数。 The scalingDegrees length differs from the basis-element count; supply one scaling degree per basis element.",
+   "integralMapShiftFailed",
+   "active basis 的积分映射移位失败；请检查 basis 表达式和积分顺序后重试。 The active-basis integral-map shift failed; check the basis expressions and integral order, then try again.",
+   "basisExpressionsMustBeHomogeneousLinearCombinationsOfMappedJ",
+   "basis 表达式必须是已映射 J 的齐次线性组合；请把每个 basis 元素写成 J 的线性组合。 The basis expressions must be homogeneous linear combinations of mapped J; write each basis element as a linear combination of J.",
+   "basisDerivativeFailed",
+   "active basis 的一阶导数未能生成；请检查导数变量和 basis 闭合。 The active-basis first derivatives could not be generated; check the derivative variables and basis closure.",
+   "basisDerivativeContainsInternalHelpers",
+   "active basis 的导数仍含内部辅助对象；请先补齐 target closure 再导出。 The active-basis derivatives still contain internal helper objects; complete the target closure before exporting.",
+   "derivativeTargetOutsideLinearSystem",
+   "导数 target 落在当前线性系统之外；请扩大 seed 范围或补齐 target closure。 A derivative target lies outside the current linear system; enlarge the seed range or complete the target closure.",
+   "basisSupportOutsideLinearData",
+   "userMI basis 引用的积分不在 linearData 的积分列表中；请只使用当前 linearData 的 J。 The userMI basis refers to integrals outside the linearData integral list; use only J from the current linearData.",
+   "basisMustBeHomogeneousLinearInJ",
+   "userMI basis 必须是 J 的齐次线性组合；请移除非线性或非多项式项。 The userMI basis must be a homogeneous linear combination of J; remove nonlinear or nonpolynomial terms.",
+   "basisRankComputationFailed",
+   "userMI basis 的秩无法计算；请检查 basis 表达式是否含有奇异或不可化简的系数。 The userMI basis rank could not be computed; check whether the basis expressions contain singular or non-reducible coefficients.",
+   "basisRowsMustBeIndependent",
+   "userMI basis 的行必须线性独立；请移除冗余的 basis 元素。 The userMI basis rows must be linearly independent; remove redundant basis elements.",
+   "invalidOutputDirectory",
+   "Kira 导出目录无效；请把 OutputDirectory 设为可写目录字符串或 None。 The Kira output directory is invalid; set OutputDirectory to a writable directory string or None.",
+   _,
+   If[StringQ[fallback], fallback,
+    "操作未通过门禁，原因代码为 " <> ToString[tag, InputForm] <> "；请查看返回结果中的结构化详情并修正输入。 The operation failed a gate with reason code " <> ToString[tag, InputForm] <> "; inspect the structured details in the returned result and correct the input."]
+   ];
+
+dsReasonSentence[tag_, fallback_: Automatic] /; ! StringQ[tag] :=
+  If[StringQ[fallback], fallback,
+   "操作未通过门禁，原因代码为 " <> ToString[tag, InputForm] <> "；请查看返回结果中的结构化详情并修正输入。 The operation failed a gate with reason code " <> ToString[tag, InputForm] <> "; inspect the structured details in the returned result and correct the input."];
+
+
+(* ::Section:: *)
+(*seed 模板完整性渲染*)
+
+dsSeedIntegritySentence[reason_String] := Switch[reason,
+   "rawExpressions",
+   "模板是裸表达式而不是 DSSeeds 密封记录；请重新调用 DSSeeds 生成密封模板。 Templates are raw expressions rather than sealed DSSeeds records; regenerate sealed templates with DSSeeds.",
+   "metadataMismatch",
+   "模板携带的批次元数据不一致，可能混入了不同批次的 seed；请只使用同一次 DSSeeds 的结果。 Template batch metadata is inconsistent and may mix batches; use a single DSSeeds result.",
+   "recordIntegrityMismatch",
+   "至少一条模板的内容哈希或序号与密封记录不符，模板可能被手工修改；请重新生成。 At least one template hash or ordinal disagrees with its sealed record; regenerate the templates.",
+   _,
+   "seed 模板未通过完整性检查；请重新生成同源模板，不要混合不同 context 的 seed。 The seed templates failed the integrity check; regenerate same-source templates and do not mix seeds from different contexts."
+   ];
+
+dsSeedIntegritySentence[reason_] := dsSeedIntegritySentence[ToString[reason, InputForm]];
+
+
+(* ::Section:: *)
+(*DSKiraImport validationReport check 渲染*)
+
+dsKiraCheckSentence[name_String] := Switch[name,
+   "inverseIntegralMaps" | "manifestIntegralMap",
+   "Kira 积分双向映射与 manifest 不一致；请使用同一次导出的文件重新导入。 The Kira integral maps disagree with the manifest; re-import using files from the same export.",
+   "contextConventionMatch" | "exportArtifactIdentity",
+   "Kira 结果与当前 context 或导出 artifact 不匹配；请使用同一次导出和初始化产生的文件。 The Kira results do not match the current context or export artifact; use files from the same export and initialization.",
+   "activeBasisManifest" | "activeBasisIDsAreMasters" | "activeBasisMasterOrder" |
+    "auxiliaryBasisIDsNotMasters" | "nonemptyMasterOrder",
+   "active basis 的 manifest、master 顺序或 auxiliary 集合未通过检查；请核对 active basis 与 master 列表。 The active-basis manifest, master order, or auxiliary set failed its check; verify the active basis against the master list.",
+   "masterIDsRecognized" | "allReductionIDsRecognized" | "completeTargetCoverage" | "rhsContainsOnlyMasters",
+   "存在未识别的 master，或 target 覆盖与约化右端不完整；请补齐 masters 与约化关系。 Some masters are unrecognized, or target coverage and reduction right-hand sides are incomplete; complete the masters and reduction relations.",
+   "coefficientVariablesRecognized" | "backendCoefficientVariablesRecognized",
+   "约化系数含有 manifest 允许集合之外的变量；请只使用 manifest 声明的系数变量。 The reduction coefficients contain variables outside the manifest-allowed set; use only the coefficient variables declared in the manifest.",
+   "backendKinematicConventionManifest" | "backendKinematicRuleDataManifest" |
+    "physicalCoefficientRulesConsistent" | "physicalKinematicVariablesRestored",
+   "backend 运动学约定或物理系数规则不一致；请核对 backend 约定与物理系数规则。 The backend kinematic convention or physical coefficient rules are inconsistent; verify the backend convention and physical coefficient rules.",
+   "gaussianPhaseGaugeManifest" | "physicalIntegralPhaseRestored",
+   "Gaussian 相位规范未恢复；请检查相位规范 manifest 与物理积分相位。 The Gaussian phase gauge was not restored; check the phase-gauge manifest and the physical integral phase.",
+   _,
+   "Kira 结果检查 " <> ToString[name, InputForm] <> " 未通过；请查看 validationReport 中的结构化详情。 The Kira result check " <> ToString[name, InputForm] <> " failed; inspect the structured details in the validationReport."
+   ];
+
+dsKiraCheckSentence[name_] := dsKiraCheckSentence[ToString[name, InputForm]];
+
+
+(* ::Section:: *)
+(*tree issue 渲染*)
+
+dsTreeFieldText[issue_Association, key_String, default_String] :=
+  Replace[Lookup[issue, key, $Failed],
+   {
+    $Failed -> default,
+    v_String :> v,
+    v_ :> ToString[v, InputForm]
+    }];
+
+dsTreeIssueSentence[issues_List] := StringRiffle[dsTreeIssueSentence /@ issues, " "];
+
+dsTreeIssueSentence[issue_Association] := Module[
+   {code, sector, integral, vertex, ids, value, leg, verts, steps},
+   code = Lookup[issue, "code", "unknownTreeIssue"];
+   Switch[code,
+    "missingSectorTaggedSourceStep",
+    sector = dsTreeFieldText[issue, "sector", "unknown"];
+    integral = dsTreeFieldText[issue, "integral", "unknown"];
+    vertex = dsTreeFieldText[issue, "vertex", "unknown"];
+    "sector " <> sector <> " 的积分 " <> integral <> " 在顶点 " <> vertex <>
+     " 缺少 sector-tagged source 递推规则；请检查该 sector 的 tree seed 是否完整。 The integral " <>
+     integral <> " of sector " <> sector <> " has no sector-tagged source recurrence at vertex " <>
+     vertex <> "; check that the tree seeds of this sector are complete.",
+
+    "missingSourceAwareStep",
+    integral = dsTreeFieldText[issue, "integral", "unknown"];
+    vertex = dsTreeFieldText[issue, "vertex", "unknown"];
+    "积分 " <> integral <> " 在顶点 " <> vertex <>
+     " 缺少 source-aware 递推规则；请检查 tree family 的 source 规则是否完整。 The integral " <>
+     integral <> " has no source-aware recurrence at vertex " <> vertex <>
+     "; check that the tree-family source rules are complete.",
+
+    "treeContextNotSet",
+    "尚未设置 tree family context；请先运行 DSTreeSeeds，或把 tree family 数据显式传给 repIterative。 No tree-family context is set; run DSTreeSeeds first or pass tree-family data explicitly to repIterative.",
+
+    "mixedSignMergedVertex",
+    verts = dsTreeFieldText[issue, "vertices", "unknown"];
+    "被缩并合并的顶点 " <> verts <>
+     " 同时含有正负号，无法构造 tree family；请检查顶点符号与缩并规则。 The merged vertices " <>
+     verts <> " carry mixed signs, so no tree family can be built; check the vertex signs and contraction rules.",
+
+    "badVertices",
+    "tree family 的顶点声明无效；vertices 必须是非空的顶点 Association 列表。 The tree-family vertex declaration is invalid; vertices must be a nonempty list of vertex Associations.",
+
+    "badVertexType",
+    value = dsTreeFieldText[issue, "value", "unknown"];
+    "某个顶点的 vertexType 无效，收到 " <> value <> "；vertexType 必须是 + 或 -。 A vertex has an invalid vertexType, received " <> value <> "; vertexType must be + or -.",
+
+    "badMassiveLegs",
+    "某个顶点的 massiveLegs 无效；massiveLegs 必须是 leg Association 的列表。 A vertex has invalid massiveLegs; massiveLegs must be a list of leg Associations.",
+
+    "missingLegKeys",
+    leg = dsTreeFieldText[issue, "leg", "unknown"];
+    "第 " <> leg <> " 条 massive leg 缺少必需字段；请为每条 leg 提供 id、nu 和 momentumMagnitude。 Massive leg " <> leg <> " is missing required fields; give every leg an id, nu, and momentumMagnitude.",
+
+    "duplicateVertexIds",
+    ids = dsTreeFieldText[issue, "ids", "unknown"];
+    "tree family 含有重复的顶点 id：" <> ids <> "；请为每个顶点使用唯一 id。 The tree family has duplicate vertex ids: " <> ids <> "; use a unique id for every vertex.",
+
+    "noprogress",
+    integral = dsTreeFieldText[issue, "integral", "unknown"];
+    "积分 " <> integral <> " 的 tree 递推没有严格趋近指定终点；请更换终点，或检查参数是否位于奇异层。 The tree recurrence for integral " <> integral <> " does not strictly approach the requested endpoint; choose another endpoint or check for singular parameters.",
+
+    "cycle",
+    steps = dsTreeFieldText[issue, "steps", "unknown"];
+    "tree 递推在第 " <> steps <> " 步重复到达同一状态，计算已停止；请检查终点和奇异参数。 The tree recurrence reached the same state again at step " <> steps <> " and stopped; check the endpoint and singular parameters.",
+
+    _,
+    "tree 递推遇到无法归类的问题，代码为 " <> ToString[code, InputForm] <>
+     "；请检查 tree family 输入与终点设置。 The tree recurrence hit an unclassified problem with code " <>
+     ToString[code, InputForm] <> "; check the tree-family input and endpoint settings."
+    ]
+   ];
+
+dsTreeIssueSentence[other_] := "tree 递推遇到无法归类的问题；请检查 tree family 输入与终点设置。 The tree recurrence hit an unclassified problem; check the tree-family input and endpoint settings.";
+
+
+(* ::Section:: *)
+(*公开 J shape 与离散态 issue 渲染*)
+
+dsPublicShapeIssueSentence[issues_List] := StringRiffle[dsPublicShapeIssueSentence /@ issues, " "];
+
+dsPublicShapeIssueSentence[issue_Association] := Module[{slot, expected, actual, lineIndex},
+   slot = dsTreeFieldText[issue, "slot", "unknown"];
+   lineIndex = dsTreeFieldText[issue, "lineIndex", "unknown"];
+   Which[
+    Lookup[issue, "reason", None] === "notList",
+    "第 " <> lineIndex <> " 条线的 pack 必须是列表。 The pack of line " <> lineIndex <> " must be a list.",
+
+    Lookup[issue, "reason", None] === "invalidPublicTimeOnlyIntegral",
+    "timeOnly 公开积分 J[sectorKey,timeShifts,stateBits] 的形状无效。 The public timeOnly integral J[sectorKey,timeShifts,stateBits] has an invalid shape.",
+
+    slot === "sector",
+    "该积分无法唯一匹配当前 sector；请使用本次 DSInit 返回的 sector-tagged 积分。 The integral does not match a unique sector; use a sector-tagged integral returned by the current DSInit.",
+
+    True,
+    expected = dsTreeFieldText[issue, "expected", "unknown"];
+    actual = dsTreeFieldText[issue, "actual", "unknown"];
+    "槽 " <> slot <> " 期望 " <> expected <> " 项，实际 " <> actual <> " 项。 Slot " <> slot <> " expects " <> expected <> " entries but has " <> actual <> "."
+    ]
+   ];
+
+dsPublicShapeIssueSentence[other_] := "公开积分 J 的形状与当前 topology 不兼容；请使用该 context 生成的积分表示。 The public integral J is incompatible with the current topology; use the integral representation generated by this context.";
+
+
+dsPublicStateIssueSentence[issues_List] := StringRiffle[dsPublicStateIssueSentence /@ issues, " "];
+
+dsPublicStateIssueSentence[issue_Association] := Module[{lineIndex, packPosition, value, slot},
+   lineIndex = dsTreeFieldText[issue, "lineIndex", "unknown"];
+   packPosition = dsTreeFieldText[issue, "packPosition", "unknown"];
+   value = dsTreeFieldText[issue, "value", "unknown"];
+   slot = dsTreeFieldText[issue, "slot", "unknown"];
+   Which[
+    KeyExistsQ[issue, "value"],
+    "第 " <> lineIndex <> " 条线位置 " <> packPosition <> " 的离散态必须是 0 或 1，收到 " <> value <>
+     "；请先运行 DSSeeds 完成离散态枚举。 The discrete state at line " <> lineIndex <> ", position " <>
+     packPosition <> " must be 0 or 1 but is " <> value <> "; run DSSeeds to enumerate discrete states first.",
+
+    Lookup[issue, "reason", None] === "invalidPublicTimeOnlyIntegral",
+    "timeOnly 公开积分 J[sectorKey,timeShifts,stateBits] 的形状无效。 The public timeOnly integral J[sectorKey,timeShifts,stateBits] has an invalid shape.",
+
+    slot === "sector",
+    "该积分无法唯一匹配当前 sector；请使用本次 DSInit 返回的 sector-tagged 积分。 The integral does not match a unique sector; use a sector-tagged integral returned by the current DSInit.",
+
+    True,
+    "full line 的离散态必须显式为 0 或 1；请先运行 DSSeeds 完成离散态枚举。 The discrete state of every full line must be explicitly 0 or 1; run DSSeeds to enumerate discrete states first."
+    ]
+   ];
+
+dsPublicStateIssueSentence[other_] := "full line 的离散态必须显式为 0 或 1；请先运行 DSSeeds 完成离散态枚举。 The discrete state of every full line must be explicitly 0 or 1; run DSSeeds to enumerate discrete states first.";
+
+
+(* ::Section:: *)
+(*parity、mixed-contact 与 tree 反投影渲染*)
+
+dsParityFailureSentence[failures_List] := StringRiffle[DeleteDuplicates[dsParityFailureSentence /@ failures], " "];
+
+dsParityFailureSentence[failure_Association] := Switch[
+   Lookup[failure, "reason", "unknown"],
+   "unsupportedParityFunctionSystem",
+   "该 sector 的函数系统不支持可运输的 parity 闭合。 The function system of this sector has no transportable parity closure.",
+   "constraintTransportFailed",
+   "显式 parity 约束无法运输到该 sector。 The explicit parity constraint could not be transported to this sector.",
+   _,
+   "该 sector 的 parity 数据无法构造。 The parity data of this sector could not be constructed."
+   ];
+
+dsParityFailureSentence[other_] := "该 sector 的 parity 数据无法构造。 The parity data of this sector could not be constructed.";
+
+
+dsMixedContactSentence[audit_List] := Module[{offending},
+   offending = DeleteDuplicates[dsTreeFieldText[#, "lineId", "unknown"] & /@
+      Select[audit, AssociationQ[#] && ! TrueQ[Lookup[#, "thetaAllowedQ", False]] &]];
+   If[offending === {}, offending = {"unknown"}];
+   "线 " <> StringRiffle[offending, ", "] <>
+    " 连接的 contact sector 带有不同的 theta 参数，不能混入同一个 tree 投影；请分别处理这些 sector。 Lines " <>
+    StringRiffle[offending, ", "] <>
+    " join contact sectors with different theta arguments and cannot be mixed into one tree projection; treat these sectors separately."
+   ];
+
+dsMixedContactSentence[other_] := "异分支传播子连接的 contact sector 带有不同的 theta 参数，不能混入同一个 tree 投影；请分别处理这些 sector。 Mixed-branch propagators join contact sectors with different theta arguments and cannot be mixed into one tree projection; treat these sectors separately.";
+
+
+dsTreeBackProjectionSentence[lineId_, packType_] := Module[{words},
+   words = Switch[packType,
+     "massiveFull", "massive full / massive full",
+     "massiveCross", "massive cross / massive cross",
+     "masslessFull", "massless full / massless full",
+     "masslessCross", "massless cross / massless cross",
+     "shrunk", "shrunk / shrunk",
+     _, ToString[packType, InputForm]
+     ];
+   "线 " <> ToString[lineId, InputForm] <> " 的 pack 类型（" <> words <>
+    "）不能从 tree 表示反投影到 loop seed；请使用当前支持的 massive-only tree family。 Line " <>
+    ToString[lineId, InputForm] <> " has pack type (" <> words <>
+    ") which cannot be back-projected from the tree representation to a loop seed; use a currently supported massive-only tree family."
+   ];
+
+
+(* ::Section:: *)
+(*range coverage、DE 变量规则、tree 分组与 scaling 规格审计渲染*)
+
+(* 以下渲染器把 KeyTake 审计 Association 或字面 <|...|> 翻译成逐句中英文本，
+   只用于 Message 参数；审计 Association 本身的键与值保持不变。 *)
+
+dsAuditListText[expr_List] := StringRiffle[ToString[#, InputForm] & /@ expr, ", "];
+
+dsAuditListText[expr_] := ToString[expr, InputForm];
+
+dsAuditJoinZh[parts_List] := If[Length[parts] <= 1, First[parts, ""],
+   StringRiffle[Most[parts], "、"] <> " 和 " <> Last[parts]];
+
+dsAuditJoinEn[parts_List] := If[Length[parts] <= 1, First[parts, ""],
+   StringRiffle[Most[parts], ", "] <> " and " <> Last[parts]];
+
+dsAuditFragments[audit_Association, categories_List] := Module[{present},
+   present = Select[categories, Lookup[audit, First[#], {}] =!= {} &];
+   {
+    (#[[2]] <> " " <> dsAuditListText[Lookup[audit, #[[1]], {}]]) & /@ present,
+    (#[[3]] <> " " <> dsAuditListText[Lookup[audit, #[[1]], {}]]) & /@ present
+    }
+   ];
+
+
+dsCoverageAuditSentence[audit_Association] := Module[
+   {zh, en},
+   {zh, en} = dsAuditFragments[audit, {
+      {"unknownIndices", "未声明指标", "unknown indices"},
+      {"missingIndices", "缺失指标", "missing indices"},
+      {"duplicateIndices", "重复指标", "duplicate indices"},
+      {"invalidRanges", "非法区间", "invalid ranges"}}];
+   If[zh === {},
+    "逐指标范围已精确覆盖模板中的全部连续指标，覆盖检查本身通过，但本次调用仍返回了范围审计；无需修正范围参数。 The per-index ranges exactly cover every continuous template index, so the coverage check itself passed, but the range audit was still returned for this call; no range correction is needed.",
+    "指标范围声明含有" <> dsAuditJoinZh[zh] <>
+     "；请修正 DSGenerateIBP 的范围参数后重试。 The range declaration contains " <>
+     dsAuditJoinEn[en] <> "; correct the DSGenerateIBP range arguments and retry."
+    ]
+   ];
+
+dsCoverageAuditSentence[other_] := "指标范围声明未通过覆盖审计；请修正 DSGenerateIBP 的范围参数后重试。 The range declaration failed its coverage audit; correct the DSGenerateIBP range arguments and retry.";
+
+
+dsDeVarRulesSentence[audit_Association] := Module[
+   {zh, en},
+   {zh, en} = dsAuditFragments[audit, {
+      {"deVariables", "微分变量", "DE variables"},
+      {"numericRuleLHSIntersection", "数值规则左端与方程交集", "numeric-rule left-hand sides intersecting the equations"},
+      {"numericRuleRHSDependencies", "右端依赖", "right-hand-side dependencies"}}];
+   If[zh === {},
+    "数值或系数规则与微分阶段合同冲突，但没有识别出具体的触及对象；请检查 KiraCoefficientRules 与微分变量后重试。 Numeric or coefficient rules conflict with the differentiation-stage contract, but no specific offending object was recognized; check KiraCoefficientRules and the differentiation variables, then retry.",
+    "数值或系数规则触及符号阶段合同禁止的对象：" <> dsAuditJoinZh[zh] <>
+     "；请在解析导数与 target closure 生成前保留微分变量。 The numeric or coefficient rules touch objects forbidden by the symbolic-stage contract: " <>
+     dsAuditJoinEn[en] <>
+     "; preserve the differentiation variables until analytic derivatives and the target closure have been generated."
+    ]
+   ];
+
+dsDeVarRulesSentence[other_] := "数值或系数规则与微分阶段合同冲突；请在解析导数与 target closure 生成前保留微分变量。 Numeric or coefficient rules conflict with the differentiation-stage contract; preserve the differentiation variables until analytic derivatives and the target closure have been generated.";
+
+
+dsTreeTimeGroupSentence[issue_Association] := Module[{key, expected, actual},
+   key = dsTreeFieldText[issue, "key", "unknown"];
+   expected = dsTreeFieldText[issue, "expected", "unknown"];
+   actual = dsTreeFieldText[issue, "actual", "unknown"];
+   "时间约化规则组 " <> key <> " 期望 " <> expected <> " 条状态，实际只有 " <> actual <>
+    " 条；请检查 DSTreeSeeds 对该 sector 的状态枚举。 The time-reduction rule group " <> key <>
+    " expects " <> expected <> " states but has " <> actual <>
+    "; check the DSTreeSeeds state enumeration for this sector."
+   ];
+
+dsTreeTimeGroupSentence[other_] := "某个时间约化规则组的离散态不完整；请从同一次 DSTreeSeeds 结果重新生成约化规则。 A discrete-state group of the time-reduction rules is incomplete; regenerate the reduction rules from the same DSTreeSeeds result.";
+
+
+dsTreeNoSectorSentence[issue_Association] := Module[{sector, integral},
+   integral = dsTreeFieldText[issue, "integral", "unknown"];
+   If[KeyExistsQ[issue, "sectorKey"],
+    sector = dsTreeFieldText[issue, "sectorKey", "unknown"];
+    "sector " <> sector <> " 中没有积分 " <> integral <>
+     "；请使用本次 DSInit 返回的 sector-tagged 积分。 Sector " <> sector <>
+     " does not contain the integral " <> integral <>
+     "; use a sector-tagged integral returned by the current DSInit.",
+    "当前 tree family 中没有积分 " <> integral <>
+     "；请使用本次 DSInit 返回的 sector-tagged 积分。 The current tree families do not contain the integral " <>
+     integral <> "; use a sector-tagged integral returned by the current DSInit."
+    ]
+   ];
+
+dsTreeNoSectorSentence[other_] := "当前 tree family 中没有积分 " <> ToString[other, InputForm] <>
+   "；请使用本次 DSInit 返回的 sector-tagged 积分。 The current tree families do not contain the integral " <>
+   ToString[other, InputForm] <> "; use a sector-tagged integral returned by the current DSInit.";
+
+
+dsTreeBadIndexSentence[issue_Association] := Module[{sector, integral},
+   integral = dsTreeFieldText[issue, "integral", "unknown"];
+   If[KeyExistsQ[issue, "sectorKey"],
+    sector = dsTreeFieldText[issue, "sectorKey", "unknown"];
+    "sector " <> sector <> " 的积分 " <> integral <>
+     " 的时间幂次必须是可判定整数；请先固定这些指标，或加入符号 regulator 后再选择整数移位。 The time-power shifts of the integral " <>
+     integral <> " in sector " <> sector <>
+     " must be decidable integers; fix these indices first, or introduce a symbolic regulator before choosing integer shifts.",
+    "积分 " <> integral <>
+     " 的时间幂次必须是可判定整数；请先固定这些指标，或加入符号 regulator 后再选择整数移位。 The time-power shifts of the integral " <>
+     integral <>
+     " must be decidable integers; fix these indices first, or introduce a symbolic regulator before choosing integer shifts."
+    ]
+   ];
+
+dsTreeBadIndexSentence[other_] := "tree 的时间幂次 " <> ToString[other, InputForm] <>
+   " 必须是可判定整数；请先固定这些指标，或加入符号 regulator 后再选择整数移位。 The tree time powers " <>
+   ToString[other, InputForm] <>
+   " must be decidable integers; fix these indices first, or introduce a symbolic regulator before choosing integer shifts.";
+
+
+dsTreeFamilyAmbiguousSentence[issue_Association] := Module[{integral, sectors},
+   integral = dsTreeFieldText[issue, "integral", "unknown"];
+   sectors = dsTreeFieldText[issue, "sectors", "unknown"];
+   "积分 " <> integral <> " 同时匹配多个 tree family sector " <> sectors <>
+    "；请显式指定 sector。 The integral " <> integral <> " matches several tree-family sectors " <>
+    sectors <> "; specify the sector explicitly."
+   ];
+
+dsTreeFamilyAmbiguousSentence[other_] := "该 tree 积分同时匹配多个 tree family sector；请显式指定 sector。 The tree integral matches several tree-family sectors; specify the sector explicitly.";
+
+
+dsScaleFieldText[issue_Association, key_String] := Replace[
+   If[KeyExistsQ[issue, key], issue[[key]], Missing[key]],
+   {
+    Missing[_] -> "missing",
+    v_String :> v,
+    v_ :> ToString[v, InputForm]
+    }];
+
+dsScaleSpecSentence[issue_Association] := Module[{relation, variables, weights, degrees},
+   relation = dsScaleFieldText[issue, "relation"];
+   variables = dsScaleFieldText[issue, "variables"];
+   weights = dsScaleFieldText[issue, "weights"];
+   degrees = dsScaleFieldText[issue, "degrees"];
+   "scaling 检查的规格不完整：关系 " <> relation <> "、变量 " <> variables <> "、权重 " <>
+    weights <> "、次数 " <> degrees <>
+    " 必须同时给出且互相匹配；请补齐后重试。 The scaling-check specification is incomplete: relation " <>
+    relation <> ", variables " <> variables <> ", weights " <> weights <> " and degrees " <>
+    degrees <> " must all be given and mutually consistent; complete them and retry."
+   ];
+
+dsScaleSpecSentence[other_] := "scaling 检查的规格不完整；请补齐 relation、variables、weights 和 degrees 后重试。 The scaling-check specification is incomplete; complete the relation, variables, weights, and degrees, then retry.";

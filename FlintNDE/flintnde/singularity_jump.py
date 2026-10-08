@@ -1158,7 +1158,16 @@ def plan_transport_path(
     for pole in singularities:
         if (start_point - pole).contains(0):
             raise ValueError(
-                f"the path start coincides with pole {pole.str(30)}; singular data required"
+                (
+                    f"路径起点与极点 {pole.str(30)} 重合，不能把极点当作普通起点输运；"
+                    "请把起点移到极点之外，或改用奇点局部数据后重试。"
+                )
+                if language == "CN"
+                else (
+                    f"the path start coincides with pole {pole.str(30)} and cannot be "
+                    "transported as an ordinary start; move the start off the pole or "
+                    "supply singular local data, then try again"
+                )
             )
     regular_waypoints: list[acb] = []
     regular_user_indices: list[int] = []
@@ -1180,14 +1189,28 @@ def plan_transport_path(
         pole_index, pole = matching_poles[0]
         if waypoint_index == len(waypoints) - 1:
             raise ValueError(
-                f"terminal user point {waypoint_index} coincides with pole {pole.str(30)}; "
-                "use evaluate_singular_target for a terminal singular value"
+                (
+                    f"终点用户点 {waypoint_index} 与极点 {pole.str(30)} 重合，不能把极点当作普通终点；"
+                    "请改用 evaluate_singular_target 求终点的奇异值后重试。"
+                )
+                if language == "CN"
+                else (
+                    f"terminal user point {waypoint_index} coincides with pole {pole.str(30)}; "
+                    "use evaluate_singular_target for a terminal singular value"
+                )
             )
         if mode != "singularity_jump":
             previous = start_point if not regular_waypoints else regular_waypoints[-1]
             raise SingularPathError(
-                f"user point {waypoint_index} coincides with pole {pole.str(30)}; "
-                "select singularity_mode='singularity_jump' explicitly",
+                (
+                    f"用户点 {waypoint_index} 与极点 {pole.str(30)} 重合，避开奇点模式无法直接通过；"
+                    "请显式改用 singularity_mode='singularity_jump' 后重试。"
+                )
+                if language == "CN"
+                else (
+                    f"user point {waypoint_index} coincides with pole {pole.str(30)}; "
+                    "select singularity_mode='singularity_jump' explicitly"
+                ),
                 [(previous, waypoint)],
             )
         next_waypoint = waypoints[waypoint_index + 1]
@@ -1354,13 +1377,30 @@ def direct_user_point_path(
     for pole in system.singularities:
         if (start_point - pole).contains(0):
             raise ValueError(
-                f"the path start coincides with pole {pole.str(30)}; singular data required"
+                (
+                    f"路径起点与极点 {pole.str(30)} 重合，不能把极点当作普通起点输运；"
+                    "请把起点移到极点之外，或改用奇点局部数据后重试。"
+                )
+                if language == "CN"
+                else (
+                    f"the path start coincides with pole {pole.str(30)} and cannot be "
+                    "transported as an ordinary start; move the start off the pole or "
+                    "supply singular local data, then try again"
+                )
             )
         for waypoint_index, waypoint in enumerate(waypoints):
             if (waypoint - pole).contains(0):
                 raise ValueError(
-                    f"user point {waypoint_index} coincides with pole {pole.str(30)}; "
-                    "values diverge on the singular locus"
+                    (
+                        f"用户点 {waypoint_index} 与极点 {pole.str(30)} 重合，函数值在奇异轨迹上发散，"
+                        "无法把该点用作输运节点；请把该用户点移开极点后重试。"
+                    )
+                    if language == "CN"
+                    else (
+                        f"user point {waypoint_index} coincides with pole {pole.str(30)} and "
+                        "values diverge on the singular locus, so it cannot be used as a "
+                        "transport node; move that user point off the pole, then try again"
+                    )
                 )
     nodes = [start_point, *waypoints]
     _, _, minimum_path_distance = _plan_singularity_jump_segments(

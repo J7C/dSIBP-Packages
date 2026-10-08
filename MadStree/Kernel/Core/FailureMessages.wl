@@ -184,11 +184,247 @@ msFailureDefaultText[tag_String] := Switch[tag,
       "MadStree did not load all required modules. Reinstall the complete current version and load the package again",
       "MadStree 未能加载全部必需模块。请重新安装完整的当前版本，然后再次加载程序包"
     },
+  "BadStateBits",
+    {
+      "The stateBits of this MSIntegral do not occur in the state order of the requested sector. Use a state-bit vector listed in that sector's stateOrder and build the integral again",
+      "该 MSIntegral 的 stateBits 不在所请求区段的 stateOrder 中。请使用该区段 stateOrder 列出的状态位向量重新构造积分"
+    },
+  "ComponentTimeCount",
+    {
+      "MSConvertBasis received a componentTimes list whose length differs from the number of vertex components of the requested sector. Pass exactly one component time per vertex component of that sector and try again",
+      "MSConvertBasis 收到的 componentTimes 长度与所请求区段的顶点分量个数不一致。请为该区段的每个顶点分量各传入一个分量时间后重试"
+    },
+  "StateVectorDimension",
+    {
+      "MSConvertBasis received a state vector whose length differs from the master count of the requested sector. Pass a vector with exactly one entry per master of that sector and try again",
+      "MSConvertBasis 收到的状态向量长度与所请求区段的主积分个数不一致。请传入长度恰等于该区段主积分个数的向量后重试"
+    },
+  "DSIBPExpressionConversionFailed",
+    {
+      "MSFromDSIBPExpression found dSIBP J integrals in the expression that are not valid in this MadStree context. Inspect the attached per-integral failures, correct the sector keys, time shifts, or state bits, and convert the expression again",
+      "MSFromDSIBPExpression 在表达式中发现无法归属于当前 MadStree 上下文的 dSIBP J 积分。请检查附带的逐积分失败记录，修正 sectorKey、时间平移或状态位后重新转换表达式"
+    },
+  "ComputedEvaluationRequired",
+    {
+      "MSExportEvaluationData needs a completed MSEvaluatePath result whose status is computed. Run MSEvaluatePath successfully first and then pass its full result association to the export function again",
+      "MSExportEvaluationData 需要状态为 computed 的完整 MSEvaluatePath 结果。请先成功运行 MSEvaluatePath，再把其完整结果 Association 重新传入导出函数"
+    },
+  "OutputDirectoryRequired",
+    {
+      "The output directory option must be Automatic or a path string. Replace the attached value with Automatic or a valid directory path and call the function again",
+      "输出目录选项必须是 Automatic 或路径字符串。请把附带的值改为 Automatic 或有效目录路径后重新调用该函数"
+    },
+  "TimePowerRulesRequired",
+    {
+      "The TimePowerRules option must be Automatic or a list of substitution rules for the vertex time powers. Replace the attached value and call MSFormulaData again",
+      "TimePowerRules 选项必须是 Automatic 或顶点时间幂的替换规则列表。请替换附带的值后重新调用 MSFormulaData"
+    },
+  "ExactSingularConnectionRequired",
+    {
+      "The pullback of the dlog connection along the automatic boundary curve must stay an exact Q(i)(t) matrix, but an approximate real number entered through the target rules. Provide exact rational or Gaussian-rational parameter values and generate the boundary data again",
+      "dlog 联络沿自动边界曲线的回拉必须保持为精确的 Q(i)(t) 矩阵，但目标替换规则引入了近似实数。请提供精确的有理或高斯有理参数值后重新生成边界数据"
+    },
+  "SectorLeadingSystemFailed",
+    {
+      "The linear system that fixes the Frobenius leading vector of the attached sector could not be solved, so the infinity boundary is not certified. Check this sector's leading exponent and root index, or choose another boundary target point",
+      "无法求解固定所附区段 Frobenius 领头向量的线性方程组，因此无穷远边界未通过认证。请检查该区段的领头指数与根指标，或改选其它边界目标点"
+    },
+  "SectorLeadingSystemResidual",
+    {
+      "The solved Frobenius leading vector of the attached sector left a nonzero residual, so this boundary solution is not certified. Review the sector residue matrix and the requested exponent, or choose another boundary target point",
+      "所附区段求解出的 Frobenius 领头向量残差不为零，因此该边界解未通过认证。请检查该区段的残差矩阵与所请求的指数，或改选其它边界目标点"
+    },
+  "FlintNDEExactPathRequired",
+    {
+      "FlintNDE transport requires the dlog letters and path parameters along each complex-affine segment to be exact affine Q(i) data, but the attached letter or point parameters are not. Use exact rational or Gaussian-rational coordinate values along the path and evaluate again",
+      "FlintNDE 输运要求每个复仿射段上的 dlog 字母与路径参数是精确的仿射 Q(i) 数据，但所附字母或点参数不满足。请沿路径使用精确的有理或高斯有理坐标值后重新求值"
+    },
+  "FlintNDEExactFrobeniusBoundaryRequired",
+    {
+      "The regular-singular Frobenius boundary sent to FlintNDE must consist of exact Q(i)(t) connection and branch data, but approximate numbers entered the attached boundary. Provide exact target parameter rules and generate the boundary again",
+      "送往 FlintNDE 的正则奇点 Frobenius 边界必须由精确的 Q(i)(t) 联络与分支数据构成，但所附边界中出现了近似数。请提供精确的目标参数替换规则后重新生成边界"
+    },
+  "RuntimeDirectoryRequired",
+    {
+      "The MSRuntimeDirectory setting must be Automatic or a path string. Replace the attached value with Automatic or a valid directory path and try again",
+      "MSRuntimeDirectory 设置必须是 Automatic 或路径字符串。请把附带的值改为 Automatic 或有效目录路径后重试"
+    },
+  "InvalidEpSeriesArguments",
+    {
+      "MSReconstructEpSeries was called with arguments that do not match its usage contract. Call it as MSReconstructEpSeries[context, ep, pointSequence, MaximumEpPower->n] with an initialized context, the regulator symbol, and a valid pointSequence table",
+      "MSReconstructEpSeries 的调用参数不符合其用法约定。请按 MSReconstructEpSeries[context, ep, pointSequence, MaximumEpPower->n] 的形式调用，并传入已初始化的上下文、正规化符号和有效的 pointSequence 表"
+    },
+  "VertexFamilyHankelBranches",
+    {
+      "The hankelBranches list of this compact vertex-family input must contain one entry per h block, that is Length[ki]-1 entries, each equal to 1 or 2. Correct the attached list and initialize the family again",
+      "该紧凑顶点函数族输入的 hankelBranches 列表必须为每个 h 块提供一个条目，即共 Length[ki]-1 个、每个取值 1 或 2。请修正所附列表后重新初始化函数族"
+    },
+  "InvalidContactBundleLines",
+    {
+      "The explicit thetaBundles must list each full-line id at most once and may only use ids of actual full lines. Correct the attached explicit line-id list against the reported full-line ids and initialize the tree again",
+      "显式 thetaBundles 中每个 full 线 id 至多出现一次，且只能使用实际 full 线的 id。请对照所报告的 full 线 id 修正附带的显式线 id 列表后重新初始化树图"
+    },
+  "ContactBundleMustShareThetaArgument",
+    {
+      "Every explicit theta bundle must be nonempty and its full lines must share one common pair of endpoints, which fixes their shared theta argument. Correct the attached bundle groups and initialize the tree again",
+      "每个显式 theta 束必须非空，且束内 full 线必须共享同一对端点，以固定其共享的 theta 参数。请修正所附的束分组后重新初始化树图"
+    },
   _,
     {
       "MadStree stopped because an input or capability check failed. Review the attached fields, correct the reported input, and try again",
       "MadStree 因输入或能力检查未通过而停止。请查看附带字段，修正所列输入后重试"
     }
+];
+
+
+(* ::Chapter:: *)
+(*issue Association 的双语句子渲染*)
+
+(* 只渲染 Message 文本；返回数据中的 issue Association 与 code 键保持不变。 *)
+msIssueValueText[value_] := ToString[value, InputForm];
+
+msIssueValueListText[values_List] := StringRiffle[
+  Map[msIssueValueText, values],
+  ", "
+];
+
+msIssueSentence[text_String] := text;
+
+msIssueSentence[issue_Association] := Module[
+  {code = Lookup[issue, "code", None], defaults, allowedBlockKeys},
+  Switch[code,
+    "missingTreeFields",
+      "树图输入缺少必需字段 " <> msIssueValueListText[Lookup[issue, "fields", {}]] <>
+        "；请补齐这些字段后重新初始化。 The tree input is missing the required fields " <>
+        msIssueValueListText[Lookup[issue, "fields", {}]] <>
+        "; add them and initialize again.",
+    "missingVertexFields",
+      "第 " <> msIssueValueText[Lookup[issue, "position", Missing["Absent"]]] <>
+        " 个顶点缺少必需字段 " <> msIssueValueListText[Lookup[issue, "fields", {}]] <>
+        "；请补齐这些字段后重新初始化。 Vertex " <>
+        msIssueValueText[Lookup[issue, "position", Missing["Absent"]]] <>
+        " is missing the required fields " <>
+        msIssueValueListText[Lookup[issue, "fields", {}]] <>
+        "; add them and initialize again.",
+    "missingLineFields",
+      "第 " <> msIssueValueText[Lookup[issue, "position", Missing["Absent"]]] <>
+        " 条线缺少必需字段 " <> msIssueValueListText[Lookup[issue, "fields", {}]] <>
+        "；请补齐这些字段后重新初始化。 Line " <>
+        msIssueValueText[Lookup[issue, "position", Missing["Absent"]]] <>
+        " is missing the required fields " <>
+        msIssueValueListText[Lookup[issue, "fields", {}]] <>
+        "; add them and initialize again.",
+    "vertexIdsMustBePresentAndUnique",
+      "顶点 id 必须全部存在且互不重复，当前 id 列表为 " <>
+        msIssueValueListText[Lookup[issue, "ids", {}]] <>
+        "；请修正后重新初始化。 Vertex ids must all be present and unique; the current id list is " <>
+        msIssueValueListText[Lookup[issue, "ids", {}]] <>
+        ". Correct it and initialize again.",
+    "vertexTypeMustBePlusOrMinus",
+      "顶点 " <> msIssueValueText[Lookup[issue, "vertex", Missing["Absent"]]] <>
+        " 的 vertexType 值 " <> msIssueValueText[Lookup[issue, "value", Missing["Absent"]]] <>
+        " 无效，只允许 \"+\" 或 \"-\"；请修正后重新初始化。 Vertex " <>
+        msIssueValueText[Lookup[issue, "vertex", Missing["Absent"]]] <>
+        " has the invalid vertexType " <>
+        msIssueValueText[Lookup[issue, "value", Missing["Absent"]]] <>
+        "; only \"+\" or \"-\" are allowed. Correct it and initialize again.",
+    "unsupportedLineType",
+      "第 " <> msIssueValueText[Lookup[issue, "line", Missing["Absent"]]] <>
+        " 条线的 type 值 " <> msIssueValueText[Lookup[issue, "type", Missing["Absent"]]] <>
+        " 不受支持，只允许 " <> msIssueValueListText[Lookup[issue, "allowed", {}]] <>
+        "；请修正后重新初始化。 Line " <>
+        msIssueValueText[Lookup[issue, "line", Missing["Absent"]]] <>
+        " has the unsupported type " <>
+        msIssueValueText[Lookup[issue, "type", Missing["Absent"]]] <>
+        "; only " <> msIssueValueListText[Lookup[issue, "allowed", {}]] <>
+        " are allowed. Correct it and initialize again.",
+    "lineMustHaveOneOrTwoEndpoints",
+      "第 " <> msIssueValueText[Lookup[issue, "line", Missing["Absent"]]] <>
+        " 条线的 endpoints 含有 " <>
+        msIssueValueText[Lookup[issue, "actual", Missing["Absent"]]] <>
+        " 个端点，只允许 1 个（外腿）或 2 个（内线）；请修正后重新初始化。 Line " <>
+        msIssueValueText[Lookup[issue, "line", Missing["Absent"]]] <> " has " <>
+        msIssueValueText[Lookup[issue, "actual", Missing["Absent"]]] <>
+        " endpoints; only one (external leg) or two (internal line) are allowed. Correct it and initialize again.",
+    "unknownEndpoint",
+      "第 " <> msIssueValueText[Lookup[issue, "line", Missing["Absent"]]] <>
+        " 条线的端点 " <> msIssueValueListText[Lookup[issue, "endpoints", {}]] <>
+        " 中含有未定义的顶点 id；请定义这些顶点或修正端点后重新初始化。 Line " <>
+        msIssueValueText[Lookup[issue, "line", Missing["Absent"]]] <>
+        " references undefined vertex ids in its endpoints " <>
+        msIssueValueListText[Lookup[issue, "endpoints", {}]] <>
+        "; define these vertices or correct the endpoints and initialize again.",
+    "missingNuMagnitude",
+      "第 " <> msIssueValueText[Lookup[issue, "line", Missing["Absent"]]] <>
+        " 条 massive 线缺少 nu（Hankel 阶）；请补充该字段后重新初始化。 Massive line " <>
+        msIssueValueText[Lookup[issue, "line", Missing["Absent"]]] <>
+        " is missing its nu (Hankel order); add this field and initialize again.",
+    "missingMomentum",
+      "第 " <> msIssueValueText[Lookup[issue, "line", Missing["Absent"]]] <>
+        " 条线缺少 momentum；请补充该字段后重新初始化。 Line " <>
+        msIssueValueText[Lookup[issue, "line", Missing["Absent"]]] <>
+        " is missing its momentum; add this field and initialize again.",
+    "invalidHankelBranches",
+      "第 " <> msIssueValueText[Lookup[issue, "line", Missing["Absent"]]] <>
+        " 条 massive 线的 hankelBranches 值 " <>
+        msIssueValueText[Lookup[issue, "value", Missing["Absent"]]] <>
+        " 无效；massive 外腿线需要 1 个、内线需要 2 个取值 1 或 2 的分支指标。请修正后重新初始化。 Line " <>
+        msIssueValueText[Lookup[issue, "line", Missing["Absent"]]] <>
+        " has the invalid hankelBranches " <>
+        msIssueValueText[Lookup[issue, "value", Missing["Absent"]]] <>
+        "; a massive external line needs one and a massive internal line needs two branch labels, each equal to 1 or 2. Correct it and initialize again.",
+    "unknownGraphMode",
+      "graphMode 的值 " <> msIssueValueText[Lookup[issue, "value", Missing["Absent"]]] <>
+        " 不受支持，只允许 \"Tree\" 或 \"TimeOnly\"；请修正后重新初始化。 The graphMode value " <>
+        msIssueValueText[Lookup[issue, "value", Missing["Absent"]]] <>
+        " is not supported; only \"Tree\" or \"TimeOnly\" are allowed. Correct it and initialize again.",
+    "internalGraphMustBeConnected",
+      "内线构成的图必须连通，当前内线数为 " <>
+        msIssueValueText[Lookup[issue, "edgeCount", Missing["Absent"]]] <>
+        "；请检查各内线的端点后重新初始化。 The graph formed by the internal lines must be connected; the current internal-line count is " <>
+        msIssueValueText[Lookup[issue, "edgeCount", Missing["Absent"]]] <>
+        ". Check the internal-line endpoints and initialize again.",
+    "internalGraphMustBeATree",
+      "在 \"Tree\" 模式下内线图必须是树：当前有 " <>
+        msIssueValueText[Lookup[issue, "vertexCount", Missing["Absent"]]] <>
+        " 个顶点和 " <>
+        msIssueValueText[Lookup[issue, "edgeCount", Missing["Absent"]]] <>
+        " 条内线，而树要求内线数恰为顶点数减一。请修正拓扑后重新初始化。 In \"Tree\" mode the internal-line graph must be a tree: there are " <>
+        msIssueValueText[Lookup[issue, "vertexCount", Missing["Absent"]]] <>
+        " vertices and " <>
+        msIssueValueText[Lookup[issue, "edgeCount", Missing["Absent"]]] <>
+        " internal lines, while a tree requires exactly vertexCount-1 internal lines. Correct the topology and initialize again.",
+    "MalformedContactBundles" | "InvalidContactBundleLines" |
+    "ContactBundleMustShareThetaArgument",
+      defaults = msFailureDefaultText[code];
+      Last[defaults] <> " " <> First[defaults],
+    "unknownVertexFamilyFields",
+      "输入含有当前模式（" <> msIssueValueText[Lookup[issue, "inputMode", Missing["Absent"]]] <>
+        "）不支持的字段 " <> msIssueValueListText[Lookup[issue, "fields", {}]] <>
+        "；请删除这些字段或改用对应模式后重新初始化。 Input contains fields " <>
+        msIssueValueListText[Lookup[issue, "fields", {}]] <> " not allowed in the " <>
+        msIssueValueText[Lookup[issue, "inputMode", Missing["Absent"]]] <>
+        " mode; remove them or switch mode and initialize again.",
+    "unknownVertexFamilyBlockFields",
+      allowedBlockKeys = Switch[
+        Lookup[issue, "blockKind", None],
+        "h", $msVertexFamilyHBlockKeys,
+        "exponential", $msVertexFamilyExponentialBlockKeys,
+        _, {}
+      ];
+      "第 " <> msIssueValueText[Lookup[issue, "position", Missing["Absent"]]] <> " 个 " <>
+        msIssueValueText[Lookup[issue, "blockKind", Missing["Absent"]]] <>
+        " 块含有未知字段 " <> msIssueValueListText[Lookup[issue, "fields", {}]] <>
+        "；允许的字段为 " <> msIssueValueListText[allowedBlockKeys] <>
+        "。请修正后重新初始化。 Block " <>
+        msIssueValueText[Lookup[issue, "position", Missing["Absent"]]] <> " of kind " <>
+        msIssueValueText[Lookup[issue, "blockKind", Missing["Absent"]]] <>
+        " contains unknown fields " <> msIssueValueListText[Lookup[issue, "fields", {}]] <>
+        "; the allowed fields are " <> msIssueValueListText[allowedBlockKeys] <>
+        ". Correct it and initialize again.",
+    _,
+      "输入未通过 MadStree 的模式检查；请查看返回 Failure 中 issues 字段列出的详情，修正输入后重新初始化。 The input failed a MadStree schema check; see the issues field of the returned Failure for details, correct the input, and initialize again."
+  ]
 ];
 
 

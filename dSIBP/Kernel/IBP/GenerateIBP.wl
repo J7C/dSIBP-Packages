@@ -936,14 +936,14 @@ DSGenerateIBP[seeds_, specs__List, OptionsPattern[]] := Module[
    If[Lookup[audit, "status", "failed"] =!= "passed",
     If[Lookup[audit, "reason", None] === "invalidRangeShape",
      Message[DSGenerateIBP::badrange, Lookup[audit, "invalidRanges", {specs}]],
-     Message[DSGenerateIBP::coverage, KeyTake[audit, {"unknownIndices", "missingIndices", "duplicateIndices", "invalidRanges"}]]
+     Message[DSGenerateIBP::coverage, dsCoverageAuditSentence[KeyTake[audit, {"unknownIndices", "missingIndices", "duplicateIndices", "invalidRanges"}]]]
      ];
     dsErrorPrint["请修正范围格式并完整覆盖所有连续指标。 Correct the ranges and cover every continuous index exactly once."];
     Return[Join[audit, <|"status" -> "failed", "reason" -> Lookup[audit, "reason", "rangeCoverageFailed"]|>]]
     ];
    integrity = dsSeedTemplateIntegrityAudit[entries, auditLevel];
    If[AssociationQ[First[entries]] && ! TrueQ[Lookup[integrity, "passQ", False]],
-    Message[DSGenerateIBP::integrity, integrity];
+    Message[DSGenerateIBP::integrity, dsSeedIntegritySentence[Lookup[integrity, "reason", "unknown"]]];
     dsErrorPrint["模板集合被删改或不完整。 The template set was modified or is incomplete."];
     Return[<|"status" -> "failed", "reason" -> "templateIntegrityFailed", "templateIntegrityAudit" -> integrity|>]
     ];
@@ -1159,7 +1159,7 @@ DSGenerateIBP[seeds_, specs__List, OptionsPattern[]] := Module[
 
 
 DSGenerateIBP[seeds_, ___] := (
-   Message[DSGenerateIBP::badrange, "expected {min,max} or {index,min,max},..."];
+   Message[DSGenerateIBP::badrange, "DSGenerateIBP 调用格式无效：撒点范围必须是统一的 {min,max}，或每个连续指标一项的完整 {index,min,max},... 序列；请按该格式重新调用。 The DSGenerateIBP call is malformed: the sampling range must be a uniform {min,max} or a complete sequence of {index,min,max},... with one entry per continuous index; call it again in that form."];
    dsErrorPrint["调用格式应为 {min,max} 或完整的 {index,min,max},...。 Use {min,max} or a complete sequence of {index,min,max},...."];
    <|"status" -> "failed", "reason" -> "invalidCall"|>
    );

@@ -104,7 +104,7 @@ DSKiraPlan[linearData_Association, spec_Association, OptionsPattern[]] := Module
    outputDirectory = Lookup[spec, "outputDirectory", None];
    jobOptions = Lookup[spec, "jobOptions", Automatic];
    If[! MemberQ[{None, Automatic}, outputDirectory] && ! StringQ[outputDirectory],
-    Message[DSKiraPlan::badspec, "outputDirectory must be a string or None"];
+    Message[DSKiraPlan::badspec, "spec 的 \"outputDirectory\" 必须是可写目录字符串、None 或 Automatic；请修正该字段后重新调用 DSKiraPlan。 The spec \"outputDirectory\" must be a writable directory string, None, or Automatic; correct this field and call DSKiraPlan again."];
     Return[<|"status" -> "failed", "reason" -> "invalidOutputDirectory"|>]
     ];
    If[stage === "preReduction",
@@ -112,7 +112,7 @@ DSKiraPlan[linearData_Association, spec_Association, OptionsPattern[]] := Module
     If[! ListQ[candidates], candidates = {candidates}];
     candidates = dsKiraPlanIntegralList[candidates, ordered];
     If[candidates === {},
-     Message[DSKiraPlan::badspec, "empty candidateIntegrals"];
+     Message[DSKiraPlan::badspec, "preReduction 计划的 candidateIntegrals 为空，没有可约化的目标积分；请从 linearData 的 integralList 中选择候选积分后重新调用 DSKiraPlan。 The candidateIntegrals of the preReduction plan are empty, so no target integral remains to reduce; choose candidates from the linearData integralList and call DSKiraPlan again."];
      Return[<|"status" -> "failed", "reason" -> "emptyCandidateIntegrals"|>]
      ];
     Return[<|
@@ -132,7 +132,7 @@ DSKiraPlan[linearData_Association, spec_Association, OptionsPattern[]] := Module
        activeSetting === Automatic &&
         Lookup[Lookup[ordered, "activeBasis", <||>], "status", "disabled"] === "configured"
        ),
-    Message[DSKiraPlan::badbasis, "missing activeBasis Association"];
+    Message[DSKiraPlan::badbasis, "formal 计划缺少 activeBasis Association，且 linearData 也没有已配置的 active basis；请提供有效的 activeBasis Association，或先配置 active basis 再以 Automatic 重试。 The formal plan has no activeBasis Association and linearData carries no configured active basis; supply a valid activeBasis Association, or configure an active basis first and retry with Automatic."];
     Return[<|"status" -> "failed", "reason" -> "missingActiveBasis"|>]
     ];
    preview = dsStageRun[
@@ -142,14 +142,15 @@ DSKiraPlan[linearData_Association, spec_Association, OptionsPattern[]] := Module
      ];
    If[Lookup[preview, "status", "missing"] =!= "generated" ||
      Lookup[Lookup[preview, "activeBasis", <||>], "status", "failed"] =!= "configured",
-    Message[DSKiraPlan::badbasis, Lookup[preview, "reason", "closure failed"]];
+    Message[DSKiraPlan::badbasis, dsReasonSentence[Lookup[preview, "reason", "closure failed"],
+      "active basis 的一阶导数或 target closure 未能生成；请检查导数变量与 basis 闭合后重试。 The active-basis first derivatives or target closure could not be generated; check the derivative variables and basis closure, then retry."]];
     Return[<|"status" -> "failed", "reason" -> "activeBasisClosureFailed", "preview" -> preview|>]
     ];
    activeData = preview["activeBasis"];
    targets = activeData["targetIntegralIDs"];
    numericStage = Lookup[spec, "numericStage", "symbolic"];
    If[! MemberQ[{"symbolic", "postDerivative"}, numericStage],
-    Message[DSKiraPlan::badspec, "numericStage"];
+    Message[DSKiraPlan::badspec, "spec 的 \"numericStage\" 只能是 \"symbolic\" 或 \"postDerivative\"；请修正后重新生成计划。 spec \"numericStage\" must be \"symbolic\" or \"postDerivative\"; correct it and regenerate the plan."];
     Return[<|"status" -> "failed", "reason" -> "invalidNumericStage"|>]
     ];
    certificate = dsKiraPlanCertificate[activeData];

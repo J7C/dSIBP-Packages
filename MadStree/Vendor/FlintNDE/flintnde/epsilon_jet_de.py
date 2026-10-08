@@ -118,7 +118,11 @@ class FlintLocalEpsilonPreinverseSystem:
             exact_inputform_to_acb(point["iw3"]),
         ]
         if not abs(self.iws[2] - self.iws[1] - self.iws[0]).contains(0):
-            raise ValueError("epsilon route requires exact EC frequencies")
+            raise ValueError(
+                "the epsilon route requires exact frequencies: iw1, iw2 and iw3 must be "
+                "exact numbers satisfying iw3 = iw1 + iw2, but the supplied values do not; "
+                "convert numeric frequencies to exact input before calling"
+            )
         self.cls = [
             exact_inputform_to_acb(point[f"cl2{leg}"])
             for leg in range(1, 4)
@@ -145,11 +149,19 @@ class FlintLocalEpsilonPreinverseSystem:
         self.active_z_sector = int(metadata.get("active_z_sector", 0))
         if self.basis_mode == "subsector16":
             if self.active_z_sector != 0:
-                raise ValueError("subsector16 metadata must use active_z_sector=0")
+                raise ValueError(
+                    "the 16-dimensional subsector basis has no active Z direction, so its "
+                    "metadata must declare active_z_sector = 0; set active_z_sector to 0 "
+                    "for this basis"
+                )
             self.active_z_coefficient = acb(1)
         else:
             if self.active_z_sector not in {1, 2, 3}:
-                raise ValueError("top24 metadata requires active_z_sector in {1,2,3}")
+                raise ValueError(
+                    "the 24-dimensional top-block basis must declare exactly one active Z "
+                    "direction, so metadata active_z_sector must be 1, 2 or 3; set it "
+                    "accordingly"
+                )
             expected_z_powers = [0, 0, 0]
             expected_z_powers[self.active_z_sector - 1] = 1
             if any(
@@ -350,7 +362,11 @@ class FlintLocalEpsilonPreinverseSystem:
             )
 
         if z_block is None:
-            raise ValueError("top24 DE assembly requires the active-Z source block")
+            raise ValueError(
+                "assembling the 24-dimensional top-block differential equation needs "
+                "the source block of the declared active Z direction; supply that "
+                "block in the payload"
+            )
         inverse_two_z = acb(1) / (acb(2) * self.active_z_coefficient)
         z_diagonal = acb(1) + acb(3) * inverse_two_z
         rows: list[list[acb]] = []
@@ -454,7 +470,11 @@ def watson_epsilon_boundary_coefficients(
         exact_inputform_to_acb(point["iw3"]),
     ]
     if not abs(iws_scalar[2] - iws_scalar[1] - iws_scalar[0]).contains(0):
-        raise ValueError("epsilon Watson boundary requires exact EC frequencies")
+        raise ValueError(
+            "the epsilon Watson boundary requires exact frequencies: iw1, iw2 and iw3 "
+            "must be exact numbers satisfying iw3 = iw1 + iw2, but the supplied "
+            "values do not; convert numeric frequencies to exact input before calling"
+        )
     iws = [_constant_epsilon_series(value, epsilon_order) for value in iws_scalar]
     cls = [exact_inputform_to_acb(point[f"cl2{leg}"]) for leg in range(1, 4)]
     leg_u = [
@@ -483,7 +503,11 @@ def watson_epsilon_boundary_coefficients(
         z_powers = key[5:]
         active_legs = [index for index, power in enumerate(z_powers) if power != 0]
         if len(active_legs) > 1:
-            raise ValueError(f"multiple active Z factors are unsupported: {key}")
+            raise ValueError(
+                f"the basis entry {key} carries more than one nonzero Z power "
+                f"({z_powers}), which this solver does not support; keep at most one "
+                f"nonzero Z power per basis entry"
+            )
         x_factor = [
             _constant_epsilon_series(value, epsilon_order)
             for value in _integer_binomial_series(-a_x, taylor_order)
@@ -522,7 +546,10 @@ def watson_epsilon_boundary_coefficients(
             gamma_argument = sigma + degree + 1
             if abs(gamma_argument[0]).contains(0):
                 raise ArithmeticError(
-                    f"epsilon Watson Gamma argument contains zero for {key}, degree {degree}"
+                    f"for the basis entry {key} at series degree {degree} the "
+                    f"Watson-boundary Gamma function would be evaluated at zero, "
+                    f"which is a pole; remove this entry or shift its degree so the "
+                    f"Gamma argument stays nonzero"
                 )
             laplace_power = (gamma_argument * z_value.log()).exp()
             component += endpoint[degree] * gamma_argument.gamma() * laplace_power
@@ -693,7 +720,9 @@ def solve_epsilon_k0_finite_parts(
     ):
         if int(rational_payload[key]) != expected:
             raise ValueError(
-                f"rational payload {key}={rational_payload[key]!r}, expected {expected!r}"
+                f"the rational payload field '{key}' holds "
+                f"{rational_payload[key]!r}, but this basis entry requires "
+                f"{expected!r}; correct that field in the payload"
             )
     if int(rational_payload["epsilon_order"]) < epsilon_order:
         raise ValueError("rational payload does not cover the requested epsilon order")

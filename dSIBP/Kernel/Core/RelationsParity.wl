@@ -1034,7 +1034,7 @@ DSSeeds[context_: Automatic, opts : OptionsPattern[]] := Module[
    If[! dsContextCapabilityQ[resolved, "timeIBPUsableQ"] ||
      (Lookup[resolved["topology"], "ibpMode", "full"] === "full" &&
        ! dsContextCapabilityQ[resolved, "momentumIBPUsableQ"]),
-    Message[DSSeeds::capability, dsContextCapabilities[resolved]];
+    Message[DSSeeds::capability, dsCapabilitySentence[dsContextCapabilities[resolved]]];
     Return[<|"status" -> "failed", "reason" -> "capabilityGate"|>]
     ];
     seedSkeleton = <|
@@ -1054,7 +1054,7 @@ DSSeeds[context_: Automatic, opts : OptionsPattern[]] := Module[
       progress
       ];
    If[Lookup[templateData, "status", "failed"] =!= "generated",
-    Message[DSSeeds::failed, Lookup[templateData, "reason", "templateGenerationFailed"]];
+    Message[DSSeeds::failed, dsReasonSentence[Lookup[templateData, "reason", "templateGenerationFailed"]]];
     Return[Join[seedSkeleton, <|"status" -> "failed", "templateData" -> templateData|>]]
     ];
     If[Lookup[resolved["topology"], "ibpMode", "full"] === "timeOnly",
@@ -1064,7 +1064,7 @@ DSSeeds[context_: Automatic, opts : OptionsPattern[]] := Module[
         "allSeeds" -> dsTimeOnlyDataToPublic020[Lookup[templateData, "allSeeds", {}], resolved]
         |>];
      If[Lookup[templateData, "allSeeds", $Failed] === $Failed,
-      Message[DSSeeds::failed, "timeOnlyPublicConversionFailed"];
+      Message[DSSeeds::failed, dsReasonSentence["timeOnlyPublicConversionFailed"]];
       Return[Join[seedSkeleton, <|"status" -> "failed", "reason" -> "timeOnlyPublicConversionFailed"|>]]
       ]
      ];

@@ -279,7 +279,8 @@ def _assess_formal_evaluation(
         if decreasing is not True:
             ratio_label = "undefined" if ratio_text is None else ratio_text
             issues.append(
-                f"sector {sector_index}: five-order block ratio={ratio_label} is not < 1"
+                f"in sector {sector_index} the ratio between consecutive "
+                f"five-term blocks is {ratio_label}, which is not below 1"
             )
         refinement_text = diagnostic.get("five_order_relative_refinement")
         if target_relative_error is not None:
@@ -292,14 +293,16 @@ def _assess_formal_evaluation(
             if not meets_target:
                 refinement_label = "undefined" if refinement_text is None else refinement_text
                 issues.append(
-                    f"sector {sector_index}: five-order relative refinement={refinement_label} "
-                    f"does not meet {target_relative_error.str(12)}"
+                    f"in sector {sector_index} the five-term relative refinement "
+                    f"{refinement_label} does not meet the target "
+                    f"{target_relative_error.str(12)}"
                 )
     evaluation["formal_accuracy_checks_passed"] = not issues
     evaluation["formal_accuracy_issues"] = issues
     if issues:
         warnings.warn(
-            "formal-asymptotic convergence warning; result retained: " + "; ".join(issues),
+            "the formal-asymptotic series is not converging reliably, so the "
+            "result is retained but not certified: " + "; ".join(issues),
             UserWarning,
             stacklevel=3,
         )
@@ -475,7 +478,10 @@ def _write_singular_target_request(
         basis = build_local_solution_basis(working_system, record.location_exact, order)
         if not basis.continuation_ready:
             raise NotImplementedError(
-                f"saved singular target requires continuation-ready local data, got {basis.method}"
+                f"saving a singular target requires a local basis that supports "
+                f"continuation, but the basis built with method '{basis.method}' "
+                f"does not; remove this save request or supply an exact rational "
+                f"system"
             )
         constants = basis.evaluate(path[-1] - record.location).solve(vector)
         result_type, result = singular_boundary_record_from_constants(
@@ -753,7 +759,10 @@ def transport_path(
             basis = build_local_solution_basis(working_system, record.location_exact, order)
             if not basis.continuation_ready:
                 raise NotImplementedError(
-                    f"{basis.method} cannot bridge an internal singularity without Stokes data"
+                    f"the local basis built with method '{basis.method}' cannot "
+                    f"carry the path through this internal singularity because the "
+                    f"required Stokes connection data are unavailable; reroute the "
+                    f"path around the singularity or use an exact rational system"
                 )
             incoming_basis = basis.evaluate(start - record.location)
             constants = incoming_basis.solve(vector)

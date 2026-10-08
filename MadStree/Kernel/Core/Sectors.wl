@@ -578,19 +578,23 @@ MSInitTree[spec_Association, OptionsPattern[]] := Module[
   ];
   inputIssues = msInputSchemaIssues[spec, rawVertices, rawLines];
   If[inputIssues =!= {},
-    Message[MSInitTree::badinput, inputIssues];
+    Message[MSInitTree::badinput, StringRiffle[msIssueSentence /@ inputIssues, "\n"]];
     Return[msFailure["InvalidTreeInputFields", <|"issues" -> inputIssues|>]]
   ];
   nuConvention = OptionValue[NuConvention];
   If[! MemberQ[{"Positive", "Negative"}, nuConvention],
-    Message[MSInitTree::badinput, <|"code" -> "unknownNuConvention", "value" -> nuConvention|>];
+    Message[MSInitTree::badinput,
+      "NuConvention 的值 " <> ToString[nuConvention, InputForm] <>
+        " 不受支持；请改为 \"Positive\" 或 \"Negative\" 后重新初始化。 NuConvention value " <>
+        ToString[nuConvention, InputForm] <>
+        " is not supported; set it to \"Positive\" or \"Negative\" and initialize again."];
     Return[msFailure["UnknownNuConvention", <|"value" -> nuConvention|>]]
   ];
   vertices = MapIndexed[msNormalizeVertex[#1, First[#2]] &, rawVertices];
   lines = MapIndexed[msNormalizeLine[#1, First[#2], nuConvention, vertices] &, rawLines];
   issues = msValidateTreeInput[spec, vertices, lines];
   If[issues =!= {},
-    Message[MSInitTree::badinput, issues];
+    Message[MSInitTree::badinput, StringRiffle[msIssueSentence /@ issues, "\n"]];
     Return[msFailure["InvalidTreeTopology", <|"issues" -> issues|>]]
   ];
   rootNormalization = Lookup[spec, "normalization", 1];

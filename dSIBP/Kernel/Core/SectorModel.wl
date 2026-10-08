@@ -394,7 +394,9 @@ materializeSectorPrefactor018[data_Association] := Module[
     {powerHead, powers, expressions, residualParts},
     powerHead = Lookup[data, "kEPower", Missing["NoStructuralKEPower"]];
     If[Head[powerHead] === Missing,
-     Return[Failure["MissingStructuralKEPower", <|"requiredKey" -> "kEPower"|>]]
+     Return[Failure["MissingStructuralKEPower", <|"requiredKey" -> "kEPower",
+        "MessageTemplate" ->
+         "无法构造该 sector 的正规化前置因子，因为传入的 sector 数据缺少结构性 kEPower 记录，只靠表达式无法还原幂向量。请使用当前 context 的 sector 生成入口重新产生这份数据，不要手工拼装或跨 context 复用。 The normalized prefactor of this sector cannot be built because the supplied sector data has no structural kEPower record, so the power vector cannot be recovered from expressions alone. Regenerate the data with the sector producer of the current context instead of assembling it by hand or reusing it across contexts."|>]]
      ];
    powers = List @@ powerHead;
    expressions = Lookup[data, "kEParameterExpressions", {}];
@@ -639,10 +641,10 @@ publicResolvedDiscreteStateIssues[topo_Association, int : J[_String, _List, _Lis
 validatePublicExpression[expr_, topo_Association, requireDiscreteQ_: False] := Module[
    {integrals = publicExpressionIntegrals[expr], shapeIssues, stateIssues},
    shapeIssues = Flatten[publicIntegralShapeIssues[topo, #] & /@ integrals];
-   If[shapeIssues =!= {}, Message[dSIBPPublicAPI::badshape, shapeIssues]; Return[False]];
+   If[shapeIssues =!= {}, Message[dSIBPPublicAPI::badshape, dsPublicShapeIssueSentence[shapeIssues]]; Return[False]];
    If[TrueQ[requireDiscreteQ],
     stateIssues = Flatten[publicResolvedDiscreteStateIssues[topo, #] & /@ integrals];
-    If[stateIssues =!= {}, Message[dSIBPPublicAPI::badstate, stateIssues]; Return[False]]
+    If[stateIssues =!= {}, Message[dSIBPPublicAPI::badstate, dsPublicStateIssueSentence[stateIssues]]; Return[False]]
     ];
    True
    ];

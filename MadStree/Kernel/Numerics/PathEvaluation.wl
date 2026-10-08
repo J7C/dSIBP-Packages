@@ -1468,8 +1468,14 @@ MSReconstructEpSeries[
       messageLanguage,
       "Warning: " <> precisionWarning <>
         " The returned coefficients are the current best fit and are not precision-certified.",
-      "警告：正规化拟合未达到目标精度（" <> precisionFailureReason <>
-        "）。仍返回当前最佳系数，但这些系数未通过目标精度认证。"
+      Switch[precisionFailureReason,
+        "candidate_pool_exhausted",
+          "警告：正规化拟合未达到目标精度，因为用户提供的 EpSamplePoints 候选池已用尽且没有生成池外采样点。仍返回当前最佳系数，但这些系数未通过目标精度认证。",
+        "maximum_samples_reached",
+          "警告：正规化拟合未达到目标精度，因为自动采样点数已达上限。仍返回当前最佳系数，但这些系数未通过目标精度认证。可提高 EpGoalDigits 容差或缩小 MaximumEpPower 后重试。",
+        _,
+          "警告：正规化拟合未达到目标精度，因为拟合轮数已达 EpFitMaximumRounds 上限。仍返回当前最佳系数，但这些系数未通过目标精度认证。可增大 EpFitMaximumRounds 或 EpFitOrderIncrement 后重试。"
+      ]
     ]]
   ];
   <|

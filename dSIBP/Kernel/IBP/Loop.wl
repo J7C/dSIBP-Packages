@@ -79,7 +79,7 @@ DSLinear[seedData_Association, context_: Automatic, opts : OptionsPattern[]] := 
       ! dsContextCapabilityQ[resolved, "timeIBPUsableQ"] ||
       (Lookup[resolved["topology"], "ibpMode", "full"] === "full" &&
         ! dsContextCapabilityQ[resolved, "momentumIBPUsableQ"]),
-     Message[DSLinear::capability, dsContextCapabilities[resolved]];
+     Message[DSLinear::capability, dsCapabilitySentence[dsContextCapabilities[resolved]]];
      dsErrorPrint["seed 或 context 未通过 linearData 能力门禁。 The seed or context failed the linearData capability gate."]; Return[<|
        "status" -> "failed", "reason" -> "capabilityGate",
        "capabilities" -> dsContextCapabilities[resolved]
@@ -132,7 +132,7 @@ DSLinear[seedData_Association, context_: Automatic, opts : OptionsPattern[]] := 
      progress
      ];
    If[Lookup[linearData, "status", "missing"] =!= "generated",
-    Message[DSLinear::failed, Lookup[linearData, "status", Missing["status"]]];
+    Message[DSLinear::failed, dsReasonSentence[Lookup[linearData, "reason", Lookup[linearData, "status", "unknown"]]]];
     dsErrorPrint["linearData 未通过 canonical/linearity 门禁。 linearData failed the canonical or linearity gate."];
     Return[Join[linearData, <|"dSIBPStatus" -> "failed", "dSIBPContextSummary" -> dsContextSummary[resolved]|>]]
     ];

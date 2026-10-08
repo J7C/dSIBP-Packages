@@ -126,7 +126,11 @@ def _frobenius_terms_from_manifest(
                 )
         return terms
     if route != "single_root_jordan_exact_gate":
-        raise NotImplementedError(f"unsupported saved Frobenius route: {route}")
+        raise NotImplementedError(
+            f"the saved Frobenius record declares route '{route}', which this "
+            f"version cannot reload; re-run the computation with the current "
+            f"version to produce a supported record"
+        )
 
     nilpotent = GaussianMatrix.from_records(manifest["nilpotent_exact"])
     remaining = acb_mat(constants)
@@ -286,7 +290,9 @@ def singular_boundary_record_from_constants(
         terms = _formal_exponential_terms(local_basis, constants, digits)
     else:
         raise NotImplementedError(
-            f"saved singular output does not support local basis method {local_basis.method}"
+            f"the saved singular output was produced with the local basis method "
+            f"'{local_basis.method}', which this version cannot reload; regenerate "
+            f"the save point with the current version"
         )
     return "exponential_boundary", {
         "schema": "flintnde_exponential_boundary_v1",
@@ -313,7 +319,14 @@ class SavePointWriter:
 
         self.output_directory = Path(self.output_directory).resolve()
         validate_single_path_name(self.summary_filename, "save summary filename")
-        self.output_directory.mkdir(parents=True, exist_ok=True)
+        try:
+            self.output_directory.mkdir(parents=True, exist_ok=True)
+        except FileExistsError as error:
+            raise FileExistsError(
+                f"the save output directory '{self.output_directory}' cannot be created "
+                "because a non-directory file already occupies that path; remove the "
+                "blocking file or pass a different save_output_directory, then rerun"
+            ) from error
 
     def write(self, request: dict[str, Any], payload: dict[str, Any]) -> Path:
         """完成一个标记点后立即写文件，并把同一记录加入内存汇总。"""

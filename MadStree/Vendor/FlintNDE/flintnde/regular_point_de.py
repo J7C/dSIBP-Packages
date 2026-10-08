@@ -820,7 +820,11 @@ def watson_boundary_terms(
         z_powers = key[5:]
         active_legs = [index for index, power in enumerate(z_powers) if power != 0]
         if len(active_legs) > 1:
-            raise ValueError(f"multiple active Z factors are unsupported: {key}")
+            raise ValueError(
+                f"the basis entry {key} carries more than one nonzero Z power "
+                f"({z_powers}), which this solver does not support; keep at most "
+                f"one nonzero Z power per basis entry"
+            )
         x_factor = _integer_binomial_series(-a_x, order)
         if not active_legs:
             z_factor = [acb(1)] + [acb(0) for _ in range(order)]
@@ -1621,7 +1625,11 @@ def _solve_projected_degree(
         corrected -= coefficients[log_degree + 1] * acb(log_degree + 1)
         gate_key = f"{solution_index}:{absolute_power}:{log_degree}"
         if gate_key not in resonance_gates:
-            raise ValueError(f"exact resonance manifest misses gate {gate_key}")
+            raise ValueError(
+                f"the exact resonance manifest is missing the gate encoded as "
+                f"'{gate_key}' (solution index, absolute power, log degree); "
+                f"regenerate the manifest so every resonance gate is recorded"
+            )
         if bool(resonance_gates[gate_key]):
             defect = resonant_projector * corrected
             coefficients[log_degree + 1] += defect / acb(log_degree + 1)
@@ -1825,7 +1833,11 @@ def solve_k0_finite_part(
     """提取 ``k=0`` finite part，并返回实际 ``k^0 log(k)^q`` 审计向量。"""
 
     if manifest.get("status") != "passed" or manifest.get("request_id") != system.request_id:
-        raise ValueError(f"{system.request_id}: exact k0 manifest identity/status mismatch")
+        raise ValueError(
+            f"request {system.request_id}: the supplied k=0 manifest either "
+            f"belongs to a different request or did not pass validation; "
+            f"regenerate it for this request before extracting the finite part"
+        )
     route = manifest.get("route")
     if route == "single_root_jordan_exact_gate":
         return _solve_single_root_jordan_k0(
@@ -1849,4 +1861,8 @@ def solve_k0_finite_part(
             stability_index_1based=stability_index_analytic_leading,
             validation_indices_1based=validation_indices_1based,
         )
-    raise ValueError(f"{system.request_id}: unsupported exact k0 manifest route {route}")
+    raise ValueError(
+        f"request {system.request_id}: the k=0 manifest declares route '{route}', "
+        f"which this solver does not recognize; regenerate the manifest with a "
+        f"supported route (a single Jordan root or diagonalizable real roots)"
+    )

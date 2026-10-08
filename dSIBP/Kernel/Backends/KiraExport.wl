@@ -492,7 +492,7 @@ DSKiraExport[linearData_Association, opts : OptionsPattern[]] := Module[
      ];
    preparedLinearData = dsKiraAttachActiveBasis[linearData, activeSetting];
     If[Lookup[preparedLinearData, "status", "missing"] =!= "generated",
-    Message[DSKiraExport::badbasis, Lookup[preparedLinearData, "reason", "unknown"]];
+    Message[DSKiraExport::badbasis, dsReasonSentence[Lookup[preparedLinearData, "reason", "unknown"]]];
     dsErrorPrint["active basis 或其导数 target closure 未通过导出门禁。 The active basis or its derivative target closure failed the export gate."]; Return[preparedLinearData]
      ];
     If[! MemberQ[{"symbolic", "postDerivative"}, numericStage],
@@ -500,7 +500,7 @@ DSKiraExport[linearData_Association, opts : OptionsPattern[]] := Module[
      ];
     deVariableRuleAudit = dsKiraDEVariableRuleAudit[preparedLinearData, OptionValue[KiraCoefficientRules], numericStage];
     If[! TrueQ[Lookup[deVariableRuleAudit, "passQ", False]],
-     Message[DSKiraExport::devarrules, KeyTake[deVariableRuleAudit, {"deVariables", "numericRuleLHSIntersection", "numericRuleRHSDependencies"}]];
+     Message[DSKiraExport::devarrules, dsDeVarRulesSentence[KeyTake[deVariableRuleAudit, {"deVariables", "numericRuleLHSIntersection", "numericRuleRHSDependencies"}]]];
      If[
       Lookup[deVariableRuleAudit, "reason", None] === "imaginaryAxisKinematicsAlreadyNumerical",
       dsErrorPrint[
@@ -531,7 +531,8 @@ DSKiraExport[linearData_Association, opts : OptionsPattern[]] := Module[
      progress
      ];
    If[Lookup[exportData, "status", "missing"] =!= "ready",
-    Message[DSKiraExport::failed, Lookup[exportData, "reason", Lookup[exportData, "status", Missing["status"]]]];
+    Message[DSKiraExport::failed, dsReasonSentence[Lookup[exportData, "reason", Lookup[exportData, "status", Missing["status"]]],
+      "Kira 输入序列化未通过导出门禁；请检查返回结果中的 kiraInput 字段。 Kira-input serialization failed the export gate; inspect the kiraInput field of the returned result."]];
     dsErrorPrint["package 未运行 Kira；当前只报告导出门禁失败。 The package did not run Kira; only the failed export gate is reported."]; Return[exportData]
     ];
    manifest = dsKiraExportManifest[exportData, Lookup[exportData, "linearSystem", preparedLinearData]];

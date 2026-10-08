@@ -223,7 +223,7 @@ dsMakeTreeTaggedTimeReductionRules[records_List, data_Association] := Module[
         treeStateIndex[Rest[First[First[Cases[record["treeIntegral"], _J, {0, Infinity}]]][[vertexIndex]]]]
         ]];
      If[Length[ordered] =!= Length[states],
-      Message[makeTreeTimeReductionRules::incomplete, <|"key" -> key, "expected" -> Length[states], "actual" -> Length[ordered]|>];
+      Message[makeTreeTimeReductionRules::incomplete, dsTreeTimeGroupSentence[<|"key" -> key, "expected" -> Length[states], "actual" -> Length[ordered]|>]];
       Return[]
       ];
      currentInts = First[Cases[#"treeIntegral", _J, {0, Infinity}]] & /@ ordered;
@@ -299,13 +299,15 @@ dsTreeTaggedSourceAwareStep[
    ruleData = dsMakeTreeTaggedTimeReductionRules[records, family];
    If[Lookup[ruleData, "status", "failed"] === "singular",
     Return[Failure["TreeRecurrenceSingular", <|"sector" -> sectorKey, "integral" -> int,
-       "vertex" -> vertexId|>]]
+       "vertex" -> vertexId,
+       "MessageTemplate" ->
+        "tree 时间递推在所列 sector、积分和顶点处遇到奇异层：该层的两项递推矩阵有对角元为零，无法求逆，因此闭式递推不能继续。请把该顶点的时间幂移开这一层，或对它加入解析正规化后重新生成；也可以改用 general time IBP seed 路线，不依赖这条闭式递推。 The tree time recurrence hit a singular layer at the listed sector, integral and vertex: a diagonal entry of the two-term recurrence matrix vanishes there, so it cannot be inverted and the closed recurrence cannot continue. Move the time power of that vertex off this layer, or add an analytic regulator to it and regenerate; alternatively use the general time IBP seed route, which does not rely on this closed recurrence."|>]]
     ];
    rules = Lookup[ruleData, If[current < endpoint, "minus", "plus"], {}];
    result = Replace[token, rules];
    If[result === token,
-    Message[makeTreeFamilyData::badinput, {<|"code" -> "missingSectorTaggedSourceStep", "sector" -> sectorKey,
-       "integral" -> int, "vertex" -> vertexId|>}];
+    Message[makeTreeFamilyData::badinput, dsTreeIssueSentence[{<|"code" -> "missingSectorTaggedSourceStep", "sector" -> sectorKey,
+       "integral" -> int, "vertex" -> vertexId|>}]];
     $Failed,
     result
     ]
@@ -383,11 +385,11 @@ dsRepIterativeTreeLinearData[data_Association, end_: Automatic, context_Associat
     int = token[[2]];
     family = dsTreeFamilyBySector[sectorKey, familyContext];
     If[Head[family] === Missing,
-     Message[repIterativeData::nosector, <|"sectorKey" -> sectorKey, "integral" -> int|>];
+     Message[repIterativeData::nosector, dsTreeNoSectorSentence[<|"sectorKey" -> sectorKey, "integral" -> int|>]];
      Return[<|"status" -> "error", "reason" -> "unknownSector", "steps" -> steps|>]
      ];
     If[! treeIntegralQ[int, family] || ! And @@ (IntegerQ /@ First[int][[All, 1]]),
-     Message[repIterativeData::badindex, <|"sectorKey" -> sectorKey, "integral" -> int|>];
+     Message[repIterativeData::badindex, dsTreeBadIndexSentence[<|"sectorKey" -> sectorKey, "integral" -> int|>]];
      Return[<|"status" -> "error", "reason" -> "invalidTaggedIntegral", "steps" -> steps|>]
      ];
     endpoints = normalizeTreeEndpoints[treeSectorEndpoints[end, family, familyContext], family];
@@ -401,14 +403,14 @@ dsRepIterativeTreeLinearData[data_Association, end_: Automatic, context_Associat
     If[replacement === $Failed, Return[<|"status" -> "error", "reason" -> "taggedStepFailed", "steps" -> steps|>]];
     progressData = dsTreeTaggedStepProgress[token, replacement, end, familyContext];
     If[! TrueQ[progressData["passQ"]],
-     Message[repIterativeData::noprogress, progressData];
+     Message[repIterativeData::noprogress, dsTreeIssueSentence[<|"code" -> "noprogress", "integral" -> int, "steps" -> steps|>]];
      Return[<|"status" -> "error", "reason" -> "nonDecreasingRecurrence", "steps" -> steps,
        "progressData" -> progressData|>]
      ];
     result = Expand[result /. token -> replacement];
     stateHash = treeRecurrenceStateHash[result];
     If[KeyExistsQ[seenStates, stateHash],
-     Message[repIterativeData::cycle, stateHash];
+     Message[repIterativeData::cycle, dsTreeIssueSentence[<|"code" -> "cycle", "steps" -> steps|>]];
      Return[<|"status" -> "error", "reason" -> "recurrenceCycle", "steps" -> steps,
        "stateHash" -> stateHash|>]
      ];
