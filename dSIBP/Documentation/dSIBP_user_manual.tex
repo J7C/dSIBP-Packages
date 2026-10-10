@@ -120,6 +120,22 @@ linearData = DSLinear[seeds,context];
 
 \path{01_mixed_bubble_workflow.wl} 只在内存中构造 pre-reduction plan；03 与 05 不运行 Kira，05 也不写初始化目录。\path{04_pure_massive_bubble_closed_loop/main.wl} 展示外部 Kira 回读、DE 与 scaling；\path{06_mix_bubble_tree/} 同时给出其 81-master 完整流程的轻量输入/结果摘要。examples 不含独立 expected，也不启动 reduction。真实输入工作树由 Windows Wolfram 写入仓库外目录，Kira 2.3 在 WSL 的对应目录运行；发布副本只保留可读输入与摘要，已删除 \texttt{init/}、\texttt{kira/}、database、save、日志、reduction table、cache 和 DE 运行目录。
 
+\subsection*{关于 AI 使用的说明}
+本 package 的 notation、功能与接口由作者设计；作者指导多种 agent 软件与大语言模型完成代码与文档的实现，并设计验证任务以确认所开发程序包的可靠性。验证任务均为计算结果的交叉验证，逐项说明其覆盖对象（IBP 关系、微分方程 DE、scaling 关系）与数据来源：
+\begin{itemize}
+  \item \textbf{massive 两顶点函数族}（IBP 与 DE）：general IBP seeds 与 DE 与文献
+    \href{https://arxiv.org/abs/2411.03088}{arXiv:2411.03088} 的解析结果比较；该族有 5 个 normalized master，三张 $5\times5$ DE 矩阵逐元 exact 相等（每张 $25/25$）。vertex basis 与 master 排序取自文献
+    \href{https://arxiv.org/abs/2401.00129}{arXiv:2401.00129}。
+  \item \textbf{massive 三顶点树图}（tree IBP 与 tree DE）：公式先由 agent 在此前手写两顶点代码的基础上独立推广推导，与文献
+    \href{https://arxiv.org/abs/2604.14549}{arXiv:2604.14549} 对上后再与程序包结果比较。
+  \item \textbf{单圈 bubble 全流程}（IBP、DE、scaling）：外部 Kira 约化闭合（无 unreduced target），返回 19 个 master；两张 $19\times19$ DE 矩阵对 \texttt{\{ss11,P0\}} 保持符号，在记录的精确点上与文献
+    \href{https://arxiv.org/abs/2604.14549}{arXiv:2604.14549} 的矩阵逐元相等（三种变量约定各 $361/361$）；scaling 恒等式符号成立（source-level $33/33$、active basis $19/19$）。
+  \item \textbf{mix bubble+tree 全流程}（IBP、DE、scaling）：81 个 master 的外部 Kira 约化闭合；六张 $81\times81$ DE 无残留符号；$81/81$ 个 source-level Euler scaling 与 IBP 恒等式严格为零，提供独立于数值约化的 scaling 证据；约化自身的 scaling 证书在记录的精确点给出。
+  \item \textbf{通用公式对 naive 撒点}（IBP 与 DE）：程序包直接代入推导所得的通用公式，其输出与同一函数族 naive IBP 种子撒点的约化结果比较一致。
+  \item \textbf{树图 DE 对 MadStree}（tree DE）：直接 $d\log$ 路线与 naive IBP 路线结果一致；另对 15 个 master 的 mixed 三顶点树图族，把 \texttt{dSIBP} 的参数导数送入 MadStree（MadStree package paper, arXiv identifier pending）对 $k_1,k_2,k_3,\texttt{sE}1,\texttt{sE}2$ 五个变量约化，75 个导数全部闭合，五张 $15\times15$ 矩阵与 MadStree 直接 $d\log$ 公式路线逐元相等。
+\end{itemize}
+程序包发布版见 \url{https://github.com/J7C/dSIBP-Packages}。
+
 \section{完整例子：mix bubble+tree}
 
 \subsection{先按独立相位能量走通基准流程}
