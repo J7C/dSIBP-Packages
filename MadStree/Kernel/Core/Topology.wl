@@ -146,13 +146,13 @@ msNormalizeLine[
   momentum = Lookup[line, "momentum", Missing["Momentum", position]];
   nuMagnitude = Lookup[line, "nu", If[inputType === "massless", 1/2, Missing["NuMagnitude", position]]];
   hankelOrder = nuMagnitude;
-  formulaNu = If[nuConvention === "Positive", -nuMagnitude, nuMagnitude];
+  formulaNu = If[nuConvention === "Positive", nuMagnitude, -nuMagnitude];
   contourType = If[And @@ StringQ /@ endpointTypes, StringJoin[endpointTypes], Missing["ContourType"]];
   fullContourSign = msFullContourSign[contourType];
   contactRawPower = Lookup[
     line,
     "contactRawPower",
-    Switch[type, "massiveFull", -2 formulaNu - 1, "masslessFull", 0, _, Missing["NoContact"]]
+    Switch[type, "massiveFull", 2 formulaNu - 1, "masslessFull", 0, _, Missing["NoContact"]]
   ];
   pinchNormalization = Lookup[
     line,
@@ -160,8 +160,9 @@ msNormalizeLine[
     Switch[
       type,
       (* MadStree 两个端点使用共同 Hankel 阶，因此不重复加入 paper endpoint basis 的
-         Boltzmann 因子；但 ++/-- 收缩定义的物理 child master 相差 fullContourSign。 *)
-      "massiveFull", -(4 I/Pi) fullContourSign momentum^(-2 formulaNu - 1),
+         Boltzmann 因子；但 ++/-- 收缩定义的物理 child master 相差 fullContourSign。
+         pinch 幂次取 +nu 基准形状 k^(2 formulaNu-1)（等价于论文的 k^(-2 nu_ref-1)）。 *)
+      "massiveFull", -(4 I/Pi) fullContourSign momentum^(2 formulaNu - 1),
       "masslessFull", 1,
       _, 1
     ]
@@ -181,6 +182,8 @@ msNormalizeLine[
     "momentum" -> momentum,
     "nu" -> nuMagnitude,
     "hankelOrder" -> hankelOrder,
+    (* hPrefactorPower 是 h=z^(s_nu nu) 的带号 prefactor 幂，外部记录与 Sectors 的小 t 幂表依赖它；
+       新语义下 formulaNu=s_nu nu 与它数值恒等，此处仍保留独立字段不变。 *)
     "hPrefactorPower" -> If[nuConvention === "Positive", nuMagnitude, -nuMagnitude],
     "formulaNu" -> formulaNu,
     "nuConvention" -> nuConvention,

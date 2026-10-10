@@ -2,7 +2,7 @@
 
 (***
 File: DLog.wl
-Purpose: Directly assembles the ordered master integrals and the block-triangular dlog potential according to 2401 Eqs. (3.55), (3.65) and (3.68).
+Purpose: Directly assembles the ordered master integrals and the block-triangular dlog potential according to 2401.00129 Eqs. (3.55), (3.65) and (3.68).
 Gate: dlog is certified only when R^(1) lies exactly in the child zero shift, normalization is absorbed, and the residue does not depend on kinematics.
 ***)
 
@@ -13,7 +13,7 @@ msOmegaEx[sector_Association] := DiagonalMatrix@Map[
   Function[bits,
     -Total@MapIndexed[
        If[#1["kind"] === "massiveEndpoint",
-        bits[[First[#2]]] (2 #1["formulaNu"] + 1) Log[#1["momentum"]],
+        bits[[First[#2]]] (1 - 2 #1["formulaNu"]) Log[#1["momentum"]],
         0
       ] &,
       sector["slots"]

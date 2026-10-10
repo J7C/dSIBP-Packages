@@ -55,7 +55,7 @@ EpValidationPoints::usage = "EpValidationPoints specifies exact nonzero regulato
 EpInitialInternalMaximumPower::usage = "EpInitialInternalMaximumPower optionally specifies the highest regulator power fitted in the first round. Automatic (default) preserves the existing EpFitExtraOrder and empirical planning rule; an explicit value must not be below MaximumEpPower.";
 EpFitOrderIncrement::usage = "EpFitOrderIncrement specifies how many additional internal powers and production points are added after a failed independent validation. The default is 2; existing point values are reused.";
 EpFitMaximumRounds::usage = "EpFitMaximumRounds specifies the maximum number of incremental fitting rounds. The default is 3; reaching the limit without validation fails closed.";
-NuConvention::usage = "NuConvention selects the prefactor of h=z^(+/-|nu|) H_|nu|; the default is \"Positive\", while \"Negative\" corresponds to 2401.";
+NuConvention::usage = "NuConvention selects the prefactor of h=z^(+/-|nu|) H_|nu|; the default is \"Positive\", while \"Negative\" corresponds to 2401.00129.";
 BoundaryScale::usage = "BoundaryScale controls the distance of the finite starting point of the infinity Frobenius series from the boundary; it must be greater than 1.";
 BoundarySeriesOrder::usage = "BoundarySeriesOrder specifies the total degree truncation of the infinity Frobenius boundary series.";
 RankOrder::usage = "RankOrder specifies the vertex id order from largest to smallest damping energy; by default it is determined by the target point.";

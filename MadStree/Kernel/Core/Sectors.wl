@@ -634,6 +634,8 @@ MSInitTree[spec_Association, OptionsPattern[]] := Module[
       "functionBasis" -> "h",
       "nuConvention" -> nuConvention,
       "hDefinition" -> If[nuConvention === "Positive", "z^nu H_nu", "z^-nu H_nu"],
+      (* paperFormulaReplacement 是"论文印刷式 -> 本包基准式"的换算记录（读论文原式时把 nu_paper 代成 -nu），
+         仅供外部对照手册用；程序内部基准公式直接以 formulaNu=s_nu nu 的 +nu 形状组装，不读取此字段。 *)
       "paperFormulaReplacement" -> If[nuConvention === "Positive", "nuPaper -> -nu", "nuPaper -> nu"]
     |>,
     "vertices" -> vertices,

@@ -3,7 +3,7 @@
 (***
 文件：TensorAtoms.wl
 用途：从 sector slot registry 直接组装 Kronecker 原子、M1/M0、M0 局部张量对角基与能量 letters。
-公式约定：正 prefactor 时 2401 矩阵读取 formulaNu=-nu，负 prefactor 时读取 +nu。massive
+公式约定：包的基准公式即 +nu convention 形状，formulaNu = s_nu nu 是代入其中的带号 Hankel 阶（正 prefactor 给 +nu，负 prefactor 给 -nu）；arXiv:2401.00129 的印刷形状由 nu_ref=-nu 得到。M1 的 massive endpoint 原子取 (1-2 formulaNu)；massive
 endpoint 只含 sigma2，massless shared slot 只含 sigma1；若 exact 张量变换不能对角化 M0，立即拒绝。
 ***)
 
@@ -59,7 +59,7 @@ msM1Matrix[sector_Association, componentPosition_Integer, integerShift_: 0] := M
   matrix = (sector["baseTimePowers"][[componentPosition]] + integerShift) msRawIdentityForSector[sector];
   slots = msHankelSlotsAtComponent[sector, componentPosition];
   Do[
-    matrix -= (2 slot["formulaNu"] + 1) msEmbedMatrix[
+    matrix -= (1 - 2 slot["formulaNu"]) msEmbedMatrix[
       msProjector1,
       slot["slotPosition"],
       sector["slotCount"]

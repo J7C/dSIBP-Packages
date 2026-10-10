@@ -3,7 +3,7 @@
 (***
 File: Conventions.wl
 Purpose: Centralizes the Pauli atoms, the h-prefactor convention and the local H/h transformations.
-Conventions: nu=|nu| is always enforced. The default is h=z^nu H_nu; the negative prefactor h=z^(-nu) H_nu corresponds to 2401.
+Conventions: The package's baseline formulas are written in the +nu (s_nu=+1) convention: h=z^(s_nu nu) H_nu, where the input nu is used verbatim as the Hankel order (real, pure imaginary i mu or complex; no |nu| and no Re is ever taken). The Hankel order never changes with the prefactor convention; only the sign s_nu carried by formulaNu:=s_nu nu does. "Positive" (default) gives formulaNu=+nu and "Negative" gives formulaNu=-nu; the printed arXiv:2401.00129 / arXiv:2411.03088 shape is recovered from the baseline by the replacement nu_ref=-nu.
 ***)
 
 (* ::Chapter:: *)
@@ -75,14 +75,15 @@ MSConvertBasis[object_, direction_, ___] := (
 (* Function-system presets *)
 
 msFunctionSystemPreset["h", nu_, variable_: z, nuConvention_: "Positive"] := Module[{formulaNu},
- formulaNu = If[nuConvention === "Positive", -nu, nu];
+ formulaNu = If[nuConvention === "Positive", nu, -nu];
  <|
   "basis" -> "h",
   "nu" -> nu,
   "formulaNu" -> formulaNu,
   "nuConvention" -> nuConvention,
   "variable" -> variable,
-  "P" -> (2 formulaNu + 1)/variable,
+  (* +nu baseline EOM h''+(1-2 nu) h'/z+h=0: the P coefficient is (1-2 formulaNu)/variable. *)
+  "P" -> (1 - 2 formulaNu)/variable,
   "Q" -> 1,
   "hToH" -> msHToHMatrix[nu, variable, nuConvention],
   "HToh" -> msHTohMatrix[nu, variable, nuConvention]

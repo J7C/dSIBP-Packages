@@ -244,7 +244,7 @@ MSBoundaryChartCertificate[
 
 
 (* ::Chapter:: *)
-(* 2411 Sec. 3.3 single-vertex Frobenius coefficients *)
+(* 2411.03088 Sec. 3.3 single-vertex Frobenius coefficients *)
 
 msPaperC[nu_] := 2^(-nu) Gamma[-nu]/(I Pi);
 
@@ -460,7 +460,7 @@ msGenericSectorLeadingRecord[
       timePower + 1 - Total[
         Function[slot,
           slotBit = stateBits[[slot["slotPosition"]]];
-          slotBit (2 (slot["formulaNu"] /. targetRules) + 1)
+          slotBit (1 - 2 (slot["formulaNu"] /. targetRules))
         ] /@ hSlots
       ]
     ];
@@ -498,7 +498,7 @@ msGenericSectorLeadingRecord[
             physicalNu = line["nu"] /. targetRules;
             formulaNu = line["formulaNu"] /. targetRules;
             branch = msBoundaryHankelBranch[slot, sector, rank, context];
-            (-I momentum)^(-slotBit (2 formulaNu + 1))
+            (-I momentum)^(-slotBit (1 - 2 formulaNu))
               msVertexEndpointCoefficient[
                 context["convention", "nuConvention"], branch, slotBit, physicalNu
               ]

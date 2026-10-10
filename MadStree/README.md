@@ -154,3 +154,28 @@ wolframscript -file Examples/01_massless_full_edge.wl
 same handbook in Chinese. Both cover the conventions, the integral normalization, the formula
 construction, the boundary certificates and the numerical interface, and both are built from the
 `.tex` sources in the same directory with `references.bib`.
+
+## Statement on AI use
+
+The notation, the functionality and the public interfaces of this package were designed by the
+authors, who also specified the derivation recorded in the handbook above and audited every formula
+against it. The implementation was written under their direction by several agent programs driven by
+large language models. Its reliability rests on verification tasks that the authors designed; only
+the ones that cross-check computed results are listed here, together with the source of the
+reference data in each case.
+
+- **Single-vertex families and the massive two-vertex correlator**: the exact differential equations,
+  the boundary coefficients and the numerically transported results are compared with the known
+  results of [arXiv:2411.03088](https://arxiv.org/abs/2411.03088), which are computed by an
+  independent multivariate hypergeometric construction.
+- **The massive three-vertex tree graph**: the reference data were produced by an agent program that
+  received only the previously hand-written two-vertex code and generalized it to three vertices
+  along an independent route. Its output was first checked against the published eight-branch result
+  of [arXiv:2309.10849](https://arxiv.org/abs/2309.10849), and only then used to check the package,
+  so the reference and the package share no derivation.
+- **IBP relations and differential equations**: these are compared with the `dSIBP` package (in
+  preparation, released in the same repository as this one,
+  [github.com/J7C/dSIBP-Packages](https://github.com/J7C/dSIBP-Packages)). `dSIBP` samples naive IBP
+  seeds and solves the resulting linear reduction system, whereas the present package applies the
+  general formulas derived in the handbook directly and never re-solves an IBP system, so the
+  agreement tests the closed formulas themselves.

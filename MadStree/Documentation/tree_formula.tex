@@ -19,6 +19,9 @@
 \newcommand{\cR}{\mathcal R}
 \newcommand{\cN}{\mathcal N}
 \newcommand{\Emb}{\operatorname{Emb}}
+% unreduced: 文献 \cite{Chen:2023eic} 的原式，已按式 (paper-to-positive-order) 写在本文
+% +nu convention 中，但尚未代入本文的 massless 额外约化关系。定义见第 2 节。
+\newcommand{\unred}{{\rm unreduced}}
 
 \title{MadStree: tree formula}
 \author{\texttt{MadStree} 公式手册}
@@ -29,7 +32,7 @@
 
 \begin{abstract}
 本手册对应 \texttt{MadStree}；time-only sector 继续由 root propagator 顺序的定长字符串标识。
-本文是 \texttt{MadStree} 的公式手册。该程序包面向任意 massive/massless 混合 dS 树图，不生成一般 IBP 方程组，而由 topology 直接组装主积分、迭代约化和 block-triangular dlog 微分方程；具体使用指南在公开接口稳定后补入。本文从局部函数系统的张量积结构重新推导所需公式。Chen--Feng 的纯 massive 公式可统一理解为若干一维无 theta 指数系统与二维 Hankel 系统的 Kronecker 和；每个 $\ii\chi_bq_b$ 都是一维指数生成元与其余单位矩阵的张量积。含 theta 的 massless full propagator 不能等同于无 theta 的单指数因子：约化前，它在两个端点同样具有 $2\otimes2=4$ 个 Hankel 状态；利用 massless 的 $00/11$、$10/01$ 关系后，这四态被一个常数投影压成整条边共享的二维状态。该二维因子同时出现在两个顶点的 time-IBP 中，故按顶点独立的 tensor factorization 失效，但全图上的 tensor-product/Kronecker-sum 构造仍然成立。所有 regular IBP、迭代矩阵和 dlog 对角块因而可由 topology 直接写出；theta 导数只增加连接缩边 sector 的固定非对角块，无需先生成大规模 IBP 系统再反推出公式。
+本文是 \texttt{MadStree} 的公式手册。该程序包面向任意 massive/massless 混合 dS 树图，不生成一般 IBP 方程组，而由 topology 直接组装主积分、迭代约化和 block-triangular dlog 微分方程；具体使用指南在公开接口稳定后补入。本文从局部函数系统的张量积结构重新推导所需公式。文献 \cite{Chen:2023eic} 的纯 massive 公式可统一理解为若干一维无 theta 指数系统与二维 Hankel 系统的 Kronecker 和；每个顶点只带一个这样的指数参数 $k_{0,v}$，其生成元 $\ii p_{0,v}$ 是该一维因子与其余单位矩阵的张量积。含 theta 的 massless full propagator 不能等同于无 theta 的单指数因子：约化前，它在两个端点同样具有 $2\otimes2=4$ 个 Hankel 状态；利用 massless 的 $00/11$、$10/01$ 关系后，这四态被一个常数投影压成整条边共享的二维状态。该二维因子同时出现在两个顶点的 time-IBP 中，故按顶点独立的 tensor factorization 失效，但全图上的 tensor-product/Kronecker-sum 构造仍然成立。所有 regular IBP、迭代矩阵和 dlog 对角块因而可由 topology 直接写出；theta 导数只增加连接缩边 sector 的固定非对角块，无需先生成大规模 IBP 系统再反推出公式。本文凡从 \cite{Chen:2023eic} 原样引用的量都加上标或下标 ${\rm unreduced}$，含义在第~2 节给出：它是该文的原式，已按本文的 $+\nu$、正 prefactor convention 重写，但尚未代入上述 massless 额外约化关系。
 \end{abstract}
 
 \tableofcontents
@@ -88,24 +91,26 @@ arXiv 号是可点击链接，headless kernel 保留完整 URL。Python 文件�
  \qquad z=-k\tau,
  \label{eq:paper-h-definition}
 \end{equation}
-以及自然二进制 basis。MadStree 始终规定 $\nu=|\nu|$，只使用一个函数名 $h$，并定义
+以及自然二进制 basis。MadStree 把输入参数 $\nu$ 原样作为 Hankel 阶：$\nu$ 可以是实数、纯虚数 $\ii\mu$（principal series/重场）或复数，任何一层公式与程序都不对 $\nu$ 取绝对值或取实部。prefactor 的 convention 只由一个符号 $s_\nu$ 承载，包内只使用一个函数名 $h$，并定义
 \begin{equation}
  \boxed{h(\nu,0;z)=z^{s_\nu\nu}H_\nu(z)},
  \qquad s_\nu\in\{+1,-1\}.
  \label{eq:positive-order-h}
 \end{equation}
-缺省 \texttt{NuConvention -> "Positive"} 对应 $s_\nu=+1$；\texttt{"Negative"} 对应 $s_\nu=-1$，也就是论文 convention。两种定义并非只差常数；它们相差 $z^{2\nu}$。但是 Hankel 方程只含 $\nu^2$，代入后两套无量纲 EOM 分别为
+缺省 \texttt{NuConvention -> "Positive"} 对应 $s_\nu=+1$；\texttt{"Negative"} 对应 $s_\nu=-1$，也就是文献 \cite{Chen:2023eic} 与 \cite{Chen:2024jms} 印刷式所采用的 convention。Hankel 的阶在两种 convention 下都永远是输入的 $\nu$ 本身，切换只发生在 $z$ 上的幂。两种定义并非只差常数；它们相差 $z^{2\nu}$。但是 Hankel 方程只含 $\nu^2$，代入后两套无量纲 EOM 分别为
 \begin{equation}
  h''+\frac{1-2\nu}{z}h'+h=0\quad(s_\nu=+1),
  \qquad
  h''+\frac{1+2\nu}{z}h'+h=0\quad(s_\nu=-1).
 \end{equation}
-所以它们的全部公式严格只差 $\nu\to-\nu$。也可以把正 prefactor basis 与 2401 convention 中取负参数的同一个函数 $h(-\nu,0;z)=z^\nu H_{-\nu}(z)$ 比较；$H_{-\nu}$ 与 $H_\nu$ 只差运动学无关的 branch phase。下文引用 2401 的矩阵公式时仍把其中的参数写成 $\nu$；MadStree 的正 prefactor缺省实现统一执行
+所以两套代数公式严格只差 $s_\nu\nu\to-s_\nu\nu$（下文按惯常写法记作 $\nu\to-\nu$）。这一记号只是 $s_\nu$ 换号在代数上的后果，不是把 Hankel 阶换成共轭阶：被积函数里存储的始终是 $H_\nu$。也可以把正 prefactor basis 与文献 \cite{Chen:2023eic} convention 中取负参数的同一个函数 $h(-\nu,0;z)=z^\nu H_{-\nu}(z)$ 比较；$H_{-\nu}$ 与 $H_\nu$ 是两个独立解，只差运动学无关的 branch phase：常数关系 $H^{(1)}_{-\nu}=-e^{\ii\pi\nu}H^{(2)}_\nu$ 把这一阶的差别整体吸收进 normalization，对纯虚阶 $\nu=\ii\mu$ 它就是第 \ref{sec:package-adapter} 节式 \eqref{eq:paper-endpoint-to-common-hankel-order} 的 $e^{-\pi\mu}H^{(2)}_{-\ii\mu}=H^{(2)}_{\ii\mu}$。把该文印刷式中的同名参数记作 $\nu_{\rm ref}$，它与本文以及 MadStree 缺省正 prefactor 实现所用的 $\nu$ 之间只差
 \begin{equation}
- \boxed{\left.\nu\right|_{2401}\longrightarrow-\nu}.
+ \boxed{\nu_{\rm ref}=-\nu}.
  \label{eq:paper-to-positive-order}
 \end{equation}
-这不是只替换 Hankel 下标；EOM、Wronskian、$M_1$、contact 幂次、递推和 dlog 中的每个 $\nu$ 都必须同时替换。最后一节另给出到 package 的 $(-\tau)^A$、normalized-$J$ 和 sector normalization 适配。
+按式 \eqref{eq:paper-to-positive-order} 换到该文印刷式时，这不是只替换 Hankel 下标：EOM、Wronskian、$M_1$、contact 幂次、递推和 dlog 中的每个 $\nu$ 都必须同时替换成 $\nu_{\rm ref}$；这一替换只是把同一份被积函数改写成该文印刷 convention 的代数形式，不改变程序存储的 Hankel 阶。式 \eqref{eq:paper-to-positive-order} 因而也是本文唯一一次给出的 prefactor convention 换算：它已经代入下文每一个引用式，因此自本节以后全文一律按 $+\nu$、正 prefactor convention 书写，不再出现另一套 convention 下的公式，读者不需要再作任何替换。程序内部存储的基准公式就是这份 $s_\nu=+1$ 的 $+\nu$ 式：公式中凡出现阶的位置统一读取 \texttt{formulaNu}$\,:=s_\nu\,\nu$，缺省正 prefactor 下 \texttt{formulaNu}$=+\nu$，取 \texttt{"Negative"} 时 \texttt{formulaNu}$=-\nu=\nu_{\rm ref}$，与该文印刷式逐字一致。package context 中 \texttt{hankelOrder} 始终保存输入的 $\nu$ 本身，\texttt{formulaNu} 与 \texttt{hPrefactorPower} 则恒等于 $s_\nu\nu$。最后一节另给出到 package 的 $(-\tau)^A$、normalized-$J$ 和 sector normalization 适配。
+
+本文与文献 \cite{Chen:2023eic} 的核心区别是 massless 体内传播子。该文的通用迭代约化式 (3.37)、(3.47)、(3.54)--(3.55) 与 subsector 式 (3.64)--(3.68) 都是对 massive 被缩并边导出的：被缩并边在两个端点各带一个独立的二维 h 状态。该文虽在式 (3.13)--(3.14) 指出 massless $G^{\pm\pm}$ 也有 vanishing 与 pinched 两类关系，并在 3.6 节给出只连 massless 传播子的 0-fold 顶点（只有 $2^0=1$ 个主积分），却没有用这组额外约化关系把 massless full propagator 两个端点的四态压成整条边共享的二维态。因此本文凡从该文原样引用的量，一律加上标或下标 ${\rm unreduced}$，读作“\cite{Chen:2023eic} 的原式，已按式 \eqref{eq:paper-to-positive-order} 写在本文 $+\nu$ convention 中，但尚未代入本文的 massless 额外约化关系”。第 \ref{sec:massless-full-edge} 节的 $00/11$、$10/01$ 关系与式 \eqref{eq:SP-massless} 的 $4\to2$ 投影就是这组额外关系；unreduced 量再加上它们，才得到本文的最终公式。
 
 必须先区分两类对象：
 \begin{itemize}
@@ -121,31 +126,26 @@ arXiv 号是可点击链接，headless kernel 保留完整 URL。Python 文件�
 
 \subsection{无 theta 指数的一维系统}
 
-不是每个顶点只允许一个固定名字的 $k_0$. 对每个不带 theta 的指数 building block $b$，记录
+每个顶点 $v$ 只带一个无 theta 指数参数，即输入字段 \texttt{externalLegEnergy}，本文记为 $k_{0,v}$，其指数因子为
 \begin{equation}
- E_b(\tau_{v(b)})
- =\exp\!\left(\ii\chi_bq_b\tau_{v(b)}\right),
- \qquad \chi_b\in\{+1,-1\},
+ E_v(\tau_v)
+ =\exp\!\left(\ii\varsigma_vk_{0,v}\tau_v\right),
+ \qquad \varsigma_v=\pm1,
  \label{eq:phase-exponent-block}
 \end{equation}
-其中 $q_b$ 保留用户输入的名字和定义。顶点所附无 theta 指数参数、massless cross/external 分支都可以是这种 block；同一个顶点可以关联多个 $b$. 把 $E_b$ 视为一维空间 $\cE_b\simeq\mathbb C$ 上的向量，其 time generator 是
+$\varsigma_v$ 由 \texttt{vertexType} 唯一派生，见第~1 节与式 \eqref{eq:vertex-phase-sign}。$k_{0,v}$ 是单个用户符号，其取值等于附着在 $v$ 上的各条无 theta 外腿的动量模长之和；文献 \cite{Chen:2023eic} 式 (3.1) 中每个顶点同样只出现一个 $k_0$，就是这里的同一个求和量。本文此后一律使用求和后的 $k_{0,v}$，不再引入逐条外腿或逐 block 的指数参数，也不再对这些参数写求和式。把 $E_v$ 视为一维空间 $\cE_v\simeq\mathbb C$ 上的向量，其 time generator 与 signed energy 是
 \begin{equation}
- Q_b=[\ii\chi_bq_b],
- \qquad I_{\cE_b}=[1].
+ Q_v=[\ii\varsigma_vk_{0,v}],
+ \qquad I_{\cE_v}=[1],
+ \qquad p_{0,v}=\varsigma_vk_{0,v},
+ \qquad \Emb_v(Q_v)=\ii p_{0,v}I.
  \label{eq:exponential-1d}
 \end{equation}
-因此这些 blocks 不增加主积分维数，但必须分别编号，以便保留用户变量、求导 Jacobian 和边界坐标。对顶点 $v$，矩阵层只需使用 signed sum
-\begin{equation}
- p_{0,v}=\sum_{b:\,v(b)=v}\chi_bq_b,
- \qquad
- \sum_{b:\,v(b)=v}\Emb_b(Q_b)=\ii p_{0,v}I.
- \label{eq:vertex-signed-phase-energy}
-\end{equation}
-论文的 $e^{\ii k_{0,v}\tau_v}$ 是只有一个 block、$\chi_b=+1$、$p_{0,v}=k_{0,v}$ 的特例。每个 Hankel 导数项也都乘着所有一维 blocks 的单位矩阵，所以所有 regular time derivatives 仍是同一种 Kronecker-sum 项。
+因此一维指数不增加主积分维数，也不建立 slot：一个顶点只对应一个一维因子 $\cE_v$，$M_1$ 不含它，$M_0$ 只含标量 $\ii p_{0,v}I$。massless cross/external 分支同样没有 theta，它不另建一维因子，而是按式 \eqref{eq:component-energy} 把端点动量模长并入所在 component 的同一个纯指数能量。每个 Hankel 导数项也都乘着一维因子的单位矩阵，所以所有 regular time derivatives 仍是同一种 Kronecker-sum 项。
 
 \subsection{二维 h 系统}
 
-以下先沿用 2401 矩阵公式中的参数 $\nu$。令
+以下全部公式都已写在本文的 $+\nu$、正 prefactor convention 中。令
 \begin{equation}
  \bm h(\nu;z)=
  \begin{pmatrix}h(\nu,0;z)\\h(\nu,1;z)\end{pmatrix},
@@ -154,18 +154,18 @@ arXiv 号是可点击链接，headless kernel 保留完整 URL。Python 文件�
  \qquad
  \sigma_2=\begin{pmatrix}0&-\ii\\ \ii&0\end{pmatrix}.
 \end{equation}
-文献式 (3.2)--(3.4) 等价于
+文献 \cite{Chen:2023eic} 式 (3.2)--(3.4) 在本文 convention 中等价于
 \begin{equation}
  \partial_\tau\bm h
- =\left[-\ii k\sigma_2-\frac{2\nu+1}{\tau}P_1\right]\bm h.
+ =\left[-\ii k\sigma_2-\frac{1-2\nu}{\tau}P_1\right]\bm h.
  \label{eq:h-first-order-system}
 \end{equation}
-其中 $-\ii k\sigma_2$ 是与时间无关的 $2\times2$ 矩阵，$-(2\nu+1)P_1/\tau$ 与时间幂次的降低合并进入 $M_1$。
+其中 $-\ii k\sigma_2$ 是与时间无关的 $2\times2$ 矩阵，$-(1-2\nu)P_1/\tau$ 与时间幂次的降低合并进入 $M_1$。
 
 同一系统在无量纲变量 $z=-k\tau$ 中满足
 \begin{equation}
  \partial_z^2h(\nu,0;z)
- +\frac{2\nu+1}{z}\partial_zh(\nu,0;z)
+ +\frac{1-2\nu}{z}\partial_zh(\nu,0;z)
  +h(\nu,0;z)=0.
  \label{eq:h-dimensionless-eom}
 \end{equation}
@@ -174,21 +174,21 @@ arXiv 号是可点击链接，headless kernel 保留完整 URL。Python 文件�
  \partial_\tau=-k\partial_z
  \label{eq:tau-z-chain}
 \end{equation}
-恢复。这一分层是后文复用论文矩阵的关键。
+恢复。这一分层是后文复用文献 \cite{Chen:2023eic} 矩阵的关键。
 
 \subsection{正/负 prefactor convention 与 massless 指数核}
 
-Hankel 方程只依赖阶数平方，但这里固定 Hankel order 为 $\nu=|\nu|$，只切换 $z^{\pm\nu}$。prefactor 和公式参数必须按式 \eqref{eq:paper-to-positive-order} 一起变换。在 MadStree 的缺省正 prefactor convention 中，当 $\nu=1/2$ 时，
+Hankel 方程只依赖阶数平方，但这里 Hankel 阶始终原样取输入的 $\nu$，两种 convention 只切换 $z^{\pm\nu}$ 上的幂；式 \eqref{eq:paper-to-positive-order} 是两种 prefactor 之间唯一的换算，下文不再重复。在 MadStree 的缺省正 prefactor convention（$s_\nu=+1$，\texttt{formulaNu}$=+\nu$）中，当 $\nu=1/2$ 时，
 \begin{equation}
- h(1/2,0;z)\big|_{s_\nu=+1}=z^{1/2}H_{1/2}^{(1,2)}(z)
+ h(1/2,0;z)=z^{1/2}H_{1/2}^{(1,2)}(z)
  \propto e^{\pm\ii z},
  \qquad
- \left.(2\nu+1)\right|_{2401}\xrightarrow{\nu\to-\nu}1-2\nu=0.
+ \left.(1-2\nu)\right|_{\nu=1/2}=0.
  \label{eq:massless-h-eigenstate}
 \end{equation}
 于是
 \begin{equation}
- \partial_z^2h(1/2,0;z)+h(1/2,0;z)=0\quad(s_\nu=+1),
+ \partial_z^2h(1/2,0;z)+h(1/2,0;z)=0,
  \label{eq:massless-z-eom}
 \end{equation}
 且第一导数态是零阶态的分支本征态，
@@ -198,11 +198,11 @@ Hankel 方程只依赖阶数平方，但这里固定 Hankel order 为 $\nu=|\nu|
  h^{(2)}(1/2,1)=-\ii h^{(2)}(1/2,0).
  \label{eq:h-branch-eigenvalues}
 \end{equation}
-负 prefactor 选项给出 $z^{-1/2}H_{1/2}^{(1,2)}\propto z^{-1}e^{\pm\ii z}$，不再是纯指数；其公式由正 prefactor 结果作 $\nu\to-\nu$ 得到。纯虚阶情形应先选定平方根分支；这里的 $|\nu|$ 是 convention 标签，不表示在代数公式中调用复数 \texttt{Abs[nu]}。
+负 prefactor 选项给出 $z^{-1/2}H_{1/2}^{(1,2)}\propto z^{-1}e^{\pm\ii z}$，不再是纯指数；其公式由 $+\nu$ 基准公式把阶槽 \texttt{formulaNu} 从 $+\nu$ 换成 $-\nu$ 得到。这只是 $s_\nu$ 换号的代数后果：被积函数里存储的仍是 $H_\nu$，$H_{-\nu}$ 与 $H_\nu$ 之间只差常数 $-e^{\ii\pi\nu}$ 与支的互换。对纯虚阶 $\nu=\ii\mu$ 尤其不能说阶被换成了共轭阶：$H_{-\ii\mu}$ 与 $H_{\ii\mu}$ 是两个独立解，只差常数 $-e^{-\pi\mu}$ 与支的互换，即式 \eqref{eq:paper-endpoint-to-common-hankel-order} 的 $e^{-\pi\mu}H^{(2)}_{-\ii\mu}=H^{(2)}_{\ii\mu}$。复或纯虚阶时 $z^{\pm\nu}$ 应先选定对数分支；任何地方都不对 $\nu$ 调用 \texttt{Abs[nu]} 或取实部。
 
 \section{纯 massive 顶点公式本来就是 Kronecker 和}
 
-考虑论文的 $p$-fold 顶点积分
+考虑文献 \cite{Chen:2023eic} 的 $p$-fold 顶点积分
 \begin{equation}
  V_v(\nu_{0,v},\bm a)
  =\int\dd\tau_v\,
@@ -213,10 +213,10 @@ Hankel 方程只依赖阶数平方，但这里固定 Hankel order 为 $\nu=|\nu|
 它的局部空间是
 \begin{equation}
  \cV_v
- =\bigotimes_{b:\,v(b)=v}\cE_b
+ =\cE_v
  \otimes\bigotimes_{i=1}^{p}\cH_i,
  \qquad
- \dim\cE_b=1,
+ \dim\cE_v=1,
  \quad
  \dim\cH_i=2.
  \label{eq:vertex-tensor-space}
@@ -228,24 +228,24 @@ Hankel 方程只依赖阶数平方，但这里固定 Hankel order 为 $\nu=|\nu|
  =I_1\otimes\cdots\otimes A_\alpha\otimes\cdots\otimes I_N.
  \label{eq:embedding-definition}
 \end{equation}
-于是对被积函数做一次 time IBP，论文式 (3.37) 可直接写成
+于是对被积函数做一次 time IBP：$\partial_{\tau_v}$ 只作用在属于顶点 $v$ 的因子上——该顶点的一维指数 $E_v$ 与挂在它上的 $p$ 个 massive endpoint h block——其它顶点的因子不动、只带单位矩阵；文献 \cite{Chen:2023eic} 式 (3.37) 在本文 convention 中因而直接写成
 \begin{align}
  M_{1,v}(\nu_{0,v})
  &=\nu_{0,v}I_v
- -\sum_{i=1}^{p}(2\nu_i+1)\Emb_i(P_1),
+ -\sum_{i=1}^{p}(1-2\nu_i)\Emb_i(P_1),
  \label{eq:massive-M1-projector}\\
  M_{0,v}
  &=\ii p_{0,v}I_v
  +\sum_{i=1}^{p}\Emb_i(-\ii k_i\sigma_2).
  \label{eq:massive-M0-kronecker}
 \end{align}
-第一式使用 $P_1=(I-\sigma_3)/2$ 后，正好等于论文写法
+第一式使用 $P_1=(I-\sigma_3)/2$ 后，等于该文 $\Lambda_3$ 写法在本文 convention 中的形式
 \begin{equation}
  M_{1,v}
- =\sum_i\left(\nu_i+\frac12\right)\Lambda_3^{(i)}
- +\left(\nu_{0,v}-\frac p2-\sum_i\nu_i\right)I_v.
+ =\sum_i\left(\frac12-\nu_i\right)\Lambda_3^{(i)}
+ +\left(\nu_{0,v}-\frac p2+\sum_i\nu_i\right)I_v.
 \end{equation}
-因此 $p_0I$ 与 $k_i\Lambda_2^{(i)}$ 没有本质区别：前者是一维指数 generators 的和，后者来自二维 h 因子；二者都是局部 generator 乘所有 spectator identities。
+因此 $p_0I$ 与 $k_i\Lambda_2^{(i)}$ 没有本质区别：前者是该顶点一维指数因子的 generator，后者来自二维 h 因子；二者都是局部 generator 乘所有 spectator identities。
 
 令 $\bm f_v(a)$ 表示把 $\nu_{0,v}$ 平移整数 $a$ 后的 $2^p$ 维积分向量。忽略 theta remaining term 时，
 \begin{equation}
@@ -260,7 +260,7 @@ Hankel 方程只依赖阶数平方，但这里固定 Hankel order 为 $\nu=|\nu|
  \label{eq:Aminus-local}
 \end{equation}
 
-论文的常数矩阵
+文献 \cite{Chen:2023eic} 的常数矩阵
 \begin{equation}
  T=\frac1{\sqrt2}
  \begin{pmatrix}1&-\ii\\-\ii&1\end{pmatrix},
@@ -283,19 +283,20 @@ Hankel 方程只依赖阶数平方，但这里固定 Hankel order 为 $\nu=|\nu|
 
 \section{从逐顶点空间到全图空间}
 
-设固定 sector $s$ 的 active vertices 为 $V_s$。在尚未使用 massless 额外关系以前，每个传播子端点的 h 状态都是独立二维因子；每个无 theta 指数是一个一维因子。因此 regular 全图空间可写成
+设固定 sector $s$ 的 active vertices 为 $V_s$。在尚未使用 massless 额外关系以前，每个传播子端点的 h 状态都是独立二维因子；每个 active 顶点带一个一维指数因子。因此 regular 全图空间可写成
 \begin{equation}
  \cV_s^{\rm unreduced}
- =\bigotimes_{b\in E_0(s)}\cE_b
+ =\bigotimes_{v\in V_s}\cE_v
  \otimes
  \bigotimes_{\text{all active endpoints }i}\cH_i.
  \label{eq:global-unreduced-space}
 \end{equation}
-这里 $E_0(s)$ 是 active phase-exponent block 集。每个顶点的 $M_{0,v}$、$M_{1,v}$ 都由式 \eqref{eq:embedding-definition} 嵌入这个共同空间。对纯 massive 图，或对没有 theta 的 cross propagator，顶点 $v$ 的 regular operator 只作用于属于该顶点的因子，所以不同顶点的 vertex families 可以独立因子化。$G^{++}/G^{--}$ 的 theta 导数不属于 regular operator，而作为 lower-sector remaining term 另行加入。
+一维因子不建立 slot，只贡献标量 $p_{0,v}$. 每个顶点的 $M_{0,v}$、$M_{1,v}$ 都由式 \eqref{eq:embedding-definition} 嵌入这个共同空间。对 $\tau_v$ 做 time IBP 时，$\partial_{\tau_v}$ 只作用在属于该顶点的 building block 上：该顶点的一维指数因子、挂在它上的 massive endpoint h block，以及（对无 theta 的 cross propagator）它作为端点参与的纯指数分支；其它顶点的因子只带单位矩阵。因此对纯 massive 图，顶点 $v$ 的 regular operator 支撑在自己的局部因子上，不同顶点的 vertex families 可以独立因子化。$G^{++}/G^{--}$ 的 theta 导数不属于 regular operator，而作为 lower-sector remaining term 另行加入。
 
 这个全图写法比“先为每个顶点各写一次公式”更基本。后者成立，只是因为纯 massive 情形中不同顶点的 regular operator 支撑在互不相交的二维因子上。
 
 \section{massless full edge：四态到共享二态}
+\label{sec:massless-full-edge}
 
 \subsection{它不是一维指数因子}
 
@@ -303,12 +304,12 @@ Hankel 方程只依赖阶数平方，但这里固定 Hankel order 为 $\nu=|\nu|
 \begin{equation}
  \cH_{e,u}\otimes\cH_{e,v}\simeq\mathbb C^4.
 \end{equation}
-按论文自然顺序取
+按文献 \cite{Chen:2023eic} 的自然顺序取
 \begin{equation}
  \bm F_e^{(4)}
  =(F_{00},F_{01},F_{10},F_{11})^T.
 \end{equation}
-由式 \eqref{eq:h-branch-eigenvalues}，在论文无量纲 h-state convention 下，
+由式 \eqref{eq:h-branch-eigenvalues}，在文献 \cite{Chen:2023eic} 的无量纲 h-state convention 下，
 \begin{equation}
  F_{01}=-F_{10},
  \qquad
@@ -368,7 +369,7 @@ Hankel 方程只依赖阶数平方，但这里固定 Hankel order 为 $\nu=|\nu|
 
 \subsection{contact selector 也随投影直接得到}
 
-论文式 (3.65) 的四态 remaining-term pattern 与 overall scalar 暂时分开后，是
+文献 \cite{Chen:2023eic} 式 (3.65) 的四态 remaining-term pattern 与 overall scalar 暂时分开后，是
 \begin{equation}
  \bm r_e^{(4)}=(0,-1,+1,0)^T.
 \end{equation}
@@ -379,7 +380,7 @@ Hankel 方程只依赖阶数平方，但这里固定 Hankel order 为 $\nu=|\nu|
  |1\rangle_e=\begin{pmatrix}0\\1\end{pmatrix}.
  \label{eq:contact-vector-projection}
 \end{equation}
-所以 contact 不需要重新求解：在共享二态中，它就是固定列向量 $|1\rangle_e$。overall scalar $w_e^{(v)}$ 取决于二态 basis。令 $\sigma_e=+1,-1$ 分别表示 $G^{++},G^{--}$；在本节的论文 h-state basis 中，有序第一、第二端点分别是
+所以 contact 不需要重新求解：在共享二态中，它就是固定列向量 $|1\rangle_e$。overall scalar $w_e^{(v)}$ 取决于二态 basis。令 $\sigma_e=+1,-1$ 分别表示 $G^{++},G^{--}$；在本节文献 \cite{Chen:2023eic} 的 h-state basis 中，有序第一、第二端点分别是
 \begin{equation}
  w_{e,h}^{(u_e)}=+2\ii\sigma_e,
  \qquad
@@ -390,9 +391,8 @@ Hankel 方程只依赖阶数平方，但这里固定 Hankel order 为 $\nu=|\nu|
 
 \section{含 massless full edge 的全图 regular IBP}
 
-固定 contact-reachable sector $s$。记
+固定 contact-reachable sector $s$，其 active vertices 为 $V_s$。记
 \begin{itemize}
-  \item $E_0(s)$ 为所有 active 无 theta 一维指数 blocks；
   \item $H(s)$ 为所有仍活动的 massive endpoint h slots；
   \item $E_m(s)$ 为所有未缩并的 massless full edges；
 \end{itemize}
@@ -400,26 +400,25 @@ Hankel 方程只依赖阶数平方，但这里固定 Hankel order 为 $\nu=|\nu|
 \begin{equation}
  \boxed{
  \cV_s
- =\bigotimes_{b\in E_0(s)}\cE_b
+ =\bigotimes_{v\in V_s}\cE_v
  \otimes\bigotimes_{i\in H(s)}\cH_i
  \otimes\bigotimes_{e\in E_m(s)}\cM_e.
  }
  \label{eq:global-reduced-space}
 \end{equation}
-因为 $\dim\cE_b=1$，其维数为
+因为 $\dim\cE_v=1$，其维数为
 \begin{equation}
  \dim\cV_s=2^{|H(s)|+|E_m(s)|}.
 \end{equation}
 
-这给出可直接初始化的 building-block registry。每个 block 记录稳定编号、类型、root line/vertex、用户动量名、basis 与 SK/Hankel metadata；每个 root vertex $v$ 记录 incidence list
+这给出可直接初始化的 slot registry。每个 slot 记录稳定的编号、类型、root line/vertex 来源、用户动量名，以及 basis 与 SK/Hankel metadata；每个 root vertex $v$ 另存其 incidence list
 \begin{equation}
  \cB(v)=
- \{b\in E_0:v(b)=v\}
- \cup\{i\in H:v(i)=v\}
+ \{i\in H:v(i)=v\}
  \cup\{(e,\epsilon_{ve}):e\in E_m,\ v\in e\}.
  \label{eq:vertex-block-incidence}
 \end{equation}
-一维 blocks 可以在 $M_0$ 中聚合成 $p_{0,v}$，但不能从 registry 删除，因为用户仍按各自的传播子模长和顶点所附指数参数输入数值点与微分变量。massless full edge 的同一个编号 $e$ 同时出现在两个顶点的 list 中；这正是“共享而非复制”的数据表达。
+一维指数不进入这个 registry：它在 $M_0$ 中只以标量 $p_{0,v}$ 出现，而用户仍按自己的 $k_{0,v}$ 和各传播子模长 $q_e$ 输入数值点与微分变量，两套坐标由式 \eqref{eq:user-to-internal-coordinate-pullback} 的 pullback 联系。massless full edge 的同一个编号 $e$ 同时出现在两个顶点的 list 中；这正是“共享而非复制”的数据表达。
 
 为每条有序边 $e=(u_e,v_e)$ 定义 incidence
 \begin{equation}
@@ -430,15 +429,15 @@ Hankel 方程只依赖阶数平方，但这里固定 Hankel order 为 $\nu=|\nu|
  0,&v\notin e.
  \end{cases}
 \end{equation}
-在论文 h-state basis 中，Hankel branch 选择改变具体解，却不改变一阶系统的矩阵 $-\ii q_e\sigma_2$。因此这里不把 $G^{++}/G^{--}$ 的 branch 符号写进生成元；该符号在换到 package quotient basis 时显式出现。
+在文献 \cite{Chen:2023eic} 的 h-state basis 中，Hankel branch 选择改变具体解，却不改变一阶系统的矩阵 $-\ii q_e\sigma_2$。因此这里不把 $G^{++}/G^{--}$ 的 branch 符号写进生成元；该符号在换到 package quotient basis 时显式出现。
 
-registry 中每类原子对顶点 $v$ 的贡献可集中写成
+各类原子对顶点 $v$ 的贡献可集中写成
 \begin{align}
- \Delta M_{1;v}^{(E_b)}&=0,
- &\Delta M_{0;v}^{(E_b)}&=\ii\chi_bq_b I,
- &&b\in E_0(v),
+ \Delta M_{1;v}^{(E_v)}&=0,
+ &\Delta M_{0;v}^{(E_v)}&=\ii p_{0,v} I,
+ &&v\in V_s,
  \label{eq:phase-block-M10}\\
- \Delta M_{1;v}^{(h_i)}&=-(2\nu_i+1)P_1,
+ \Delta M_{1;v}^{(h_i)}&=-(1-2\nu_i)P_1,
  &\Delta M_{0;v}^{(h_i)}&=-\ii k_i\sigma_2,
  &&i\in H_v,
  \label{eq:massive-h-block-M10}\\
@@ -447,14 +446,14 @@ registry 中每类原子对顶点 $v$ 的贡献可集中写成
  &\Delta M_{0;v_e}^{(m_e)}&=+\ii q_e\sigma_2.
  \label{eq:massless-shared-block-M10}
 \end{align}
-式 \eqref{eq:massive-h-block-M10} 中的 $\nu_i$ 是 2401 的公式参数；本包缺省正 prefactor 统一代入 $\nu_i\to-\nu_i$. 全局 $M_1$ 还要加 component time power $\nu_{0,v}I$ 或 package 的 $A_vI$。式 \eqref{eq:massless-shared-block-M10} 的两个端点作用在同一个二维 slot 上，不能各自再乘出一个新 slot。
+式 \eqref{eq:massive-h-block-M10} 中的 $\nu_i$ 已是本文 $+\nu$ convention 的参数；程序内部存储的基准公式就是这一份 $s_\nu=+1$ 的 $+\nu$ 式，其中阶的位置读取 \texttt{formulaNu}$\,=s_\nu\nu_i$，缺省正 prefactor 下即 $+\nu_i$，所以代码里的 $(1-2\,\texttt{formulaNu})$ 与本文的 $(1-2\nu_i)$ 直接一致。与该文的印刷式逐字对照时，按式 \eqref{eq:paper-to-positive-order} 把阶换成 $\nu_{\rm ref}=-\nu_i$，本文的 $(1-2\nu_i)$ 与 $(2\nu_i-1)$ 即还原为该文印刷的 $(2\nu_{\rm ref}+1)$ 与 $(-2\nu_{\rm ref}-1)$。全局 $M_1$ 还要加 component time power $\nu_{0,v}I$ 或 package 的 $A_vI$。式 \eqref{eq:massless-shared-block-M10} 的两个端点作用在同一个二维 slot 上，不能各自再乘出一个新 slot。
 
 在全图空间 \eqref{eq:global-reduced-space} 上，每个顶点的 regular 矩阵直接为
 \begin{align}
  \boxed{
  M_{1;v,s}(\nu_{0,v})
  =\nu_{0,v}I_s
- -\sum_{i\in H_v(s)}(2\nu_i+1)\Emb_i(P_1),
+ -\sum_{i\in H_v(s)}(1-2\nu_i)\Emb_i(P_1),
  }
  \label{eq:global-M1}\\
  \boxed{
@@ -465,7 +464,7 @@ registry 中每类原子对顶点 $v$ 的贡献可集中写成
  }
  \label{eq:global-M0}
 \end{align}
-massless edge 不进入 $M_1$：缺省取 $\nu=1/2$ 和正 prefactor，把 2401 公式中的参数代为 $-\nu=-1/2$ 后，$2(-\nu)+1=0$。同一个 $\Emb_e(\sigma_2)$ 同时出现在边两端的 $M_{0;u_e,s}$ 和 $M_{0;v_e,s}$ 中，并带相反 incidence 符号。
+massless edge 不进入 $M_1$：缺省 $\nu=1/2$ 使式 \eqref{eq:massless-h-eigenstate} 的 $1-2\nu$ 直接为零。同一个 $\Emb_e(\sigma_2)$ 同时出现在边两端的 $M_{0;u_e,s}$ 和 $M_{0;v_e,s}$ 中，并带相反 incidence 符号。
 
 所有 $M_{0;v,s}$ 都由不同 slot 上的 $\sigma_2$，或同一 shared slot 上的同一个 $\sigma_2$ 构成，所以它们彼此对易，并可由单个全局常数变换
 \begin{equation}
@@ -474,7 +473,7 @@ massless edge 不进入 $M_1$：缺省取 $\nu=1/2$ 和正 prefactor，把 2401 
  \otimes\bigotimes_{e\in E_m(s)}T_e
  \label{eq:global-T}
 \end{equation}
-同时对角化；一维指数 slots 只贡献 $[1]$，未显式写出。
+同时对角化；一维指数因子只贡献 $[1]$，未显式写出。
 
 这一步不是说任意 Pauli 组合都能这样处理。对任一二维 slot $\alpha$，把各顶点在该 slot 上的局部部分写成
 \begin{equation}
@@ -488,7 +487,7 @@ massless edge 不进入 $M_1$：缺省取 $\nu=1/2$ 和正 prefactor，把 2401 
  \qquad(\text{all }v,w).
  \label{eq:local-common-diagonalization-condition}
 \end{equation}
-也就是说，同一 slot 上所有 Pauli 方向必须共线。当前论文 h-state 的每个 massive/shared slot 只出现 $\sigma_2$；package quotient 中 massive slots 只出现 $\sigma_2$，每个 massless shared slot 只出现 $\sigma_1$，故全局对角化器改为
+也就是说，同一 slot 上所有 Pauli 方向必须共线。当前文献 \cite{Chen:2023eic} 的 h-state 中，每个 massive/shared slot 只出现 $\sigma_2$；package quotient 中 massive slots 只出现 $\sigma_2$，每个 massless shared slot 只出现 $\sigma_1$，故全局对角化器改为
 \begin{equation}
  U_s^J
  =\bigotimes_{i\in H(s)}T_i
@@ -518,26 +517,26 @@ massless edge 不进入 $M_1$：缺省取 $\nu=1/2$ 和正 prefactor，把 2401 
 \end{equation}
 同一个 $r_e$ 同时进入 $u_e$ 和 $v_e$ 的 letter，并带相反符号。这是 shared-edge correlation 的完整 regular 内容。
 
-因此 massless quotient 不妨碍对单个顶点使用式 \eqref{eq:global-M1}--\eqref{eq:global-M0}：给定 $v$，只需从 $\cB(v)$ 逐 block 加项。它改变的是不同顶点矩阵之间的支撑关系：$M_{0;u_e,s}$ 与 $M_{0;v_e,s}$ 在同一个 $e$ slot 上分别含相反系数，而不是作用于两个互不相干的 slots。两套逐顶点递推会共享 state bit，却仍各自是闭式矩阵公式，不需要先联立大量 IBP 方程。
+因此 massless quotient 不妨碍对单个顶点使用式 \eqref{eq:global-M1}--\eqref{eq:global-M0}：给定 $v$，只需从 $\cB(v)$ 逐 block 加项。按顶点组装的含义在此说清楚：对 $\tau_v$ 做 time IBP 时，$\partial_{\tau_v}$ 只作用在属于该顶点的 building block 上——该顶点的一维指数因子、挂在它上的 massive endpoint h block，以及它以端点身份参与的 massless shared block（此时 incidence 给 $\epsilon_{ve}=\pm1$）；其余顶点的因子只带单位矩阵，所以式 \eqref{eq:global-M1}、\eqref{eq:global-M0} 正是该顶点局部原子的 Kronecker 和。它改变的不是这条逐顶点组装规则，而是不同顶点矩阵之间的支撑关系：$M_{0;u_e,s}$ 与 $M_{0;v_e,s}$ 在同一个 $e$ slot 上分别含相反系数，而不是作用于两个互不相干的 slots。两套逐顶点递推会共享 state bit，却仍各自是闭式矩阵公式，不需要先联立大量 IBP 方程。
 
 \subsection{正/负顶点、SK 符号与 Wick 坐标必须分开}
 
-对每个顶点选定其所附无 theta 指数
+式 \eqref{eq:phase-exponent-block} 的无 theta 指数在每个顶点只有一个，写作
 \begin{equation}
  \exp(\ii\varsigma_vk_{0,v}\tau_v),
  \qquad \varsigma_v=+1\ \text{或}\ -1,
  \label{eq:vertex-phase-sign}
 \end{equation}
-并把它作为式 \eqref{eq:phase-exponent-block} 的一个 block。$\varsigma_v$ 是顶点指数符号；它不是 massless propagator 的 $G^{++}/G^{--}$ 标签 $\sigma_e$，也不是有序端点 incidence $\epsilon_{ve}$. 其它无 theta 指数仍按各自 $\chi_bq_b$ 加进 $p_{0,v}$。
+其中 $\varsigma_v$ 由 \texttt{vertexType} 唯一派生：\texttt{"+"} 给 $\varsigma_v=-1$，\texttt{"-"} 给 $\varsigma_v=+1$. $\varsigma_v$ 是顶点指数符号；它不是 massless propagator 的 $G^{++}/G^{--}$ 标签 $\sigma_e$，也不是有序端点 incidence $\epsilon_{ve}$.
 
 正、负顶点对 regular 公式的影响只有
 \begin{equation}
- p_{0,v}=\varsigma_vk_{0,v}+\sum_{b\neq b_0(v)}\chi_bq_b,
+ p_{0,v}=\varsigma_vk_{0,v},
  \qquad
  M_{0;v,s}\supset\ii p_{0,v}I_s.
  \label{eq:signed-vertex-M0}
 \end{equation}
-$M_1$ 不含这些一维 blocks；massive h 的 $P_1,\sigma_2$ 原子也不因 Hankel branch 改变。$G^{++}/G^{--}$ 的差别则保存在 theta 分支、Wronskian/contact 权重，以及 package quotient 的 $D_{\sigma_e}$ 中，不能用 $\varsigma_v$ 替代。
+$M_1$ 不含一维指数；massive h 的 $P_1,\sigma_2$ 原子也不因 Hankel branch 改变。$G^{++}/G^{--}$ 的差别则保存在 theta 分支、Wronskian/contact 权重，以及 package quotient 的 $D_{\sigma_e}$ 中，不能用 $\varsigma_v$ 替代。
 
 现在令 $\tau_v=-t_v<0$. 沿两个顶点各自的阻尼射线统一定义
 \begin{equation}
@@ -554,18 +553,27 @@ $M_1$ 不含这些一维 blocks；massive h 的 $P_1,\sigma_2$ 原子也不因 H
 
 用户仍按初始化时自己的 $k_{0,v}$ 和全部传播子模长 $q_e$ 给点。connection 输出到用户坐标时只做可逆 pullback
 \begin{equation}
- \dd p_{0,v}=\varsigma_v\dd k_{0,v}+\sum_b\chi_b\dd q_b,
+ \dd p_{0,v}=\varsigma_v\dd k_{0,v},
  \qquad
  \dd K_v=\ii\varsigma_v\dd k_{0,v};
  \label{eq:user-to-internal-coordinate-pullback}
 \end{equation}
-不会把用户的 $q_e$ 擅自改名为 \texttt{pik} 或 \texttt{mik}. contact 把一组 root vertices 合成 $C$ 时，$p_{0,C}=\sum_{v\in C}p_{0,v}$，而阻尼变量满足 $K_C=\sum_{v\in C}K_v$。
+不会把用户的 $q_e$ 擅自改名为 \texttt{pik} 或 \texttt{mik}. contact 把一组 root vertices 合成 component $C$ 时，该 component 的纯指数能量与阻尼变量为
+\begin{equation}
+ p_{0,C}
+ =\sum_{v\in C}\varsigma_vk_{0,v}
+ +\!\!\sum_{\substack{e\ {\rm massless\ cross/external}\\ v\in e\cap C}}\!\!(-\varsigma_v)\,q_e,
+ \qquad
+ K_C=\sum_{v\in C}K_v.
+ \label{eq:component-energy}
+\end{equation}
+第二项来自没有 theta 的 massless cross/external 分支：这类分支不建立 slot，只把落在 $C$ 内的那些端点的动量模长按该端点的 SK contour sign $-\varsigma_v$ 并入同一个标量，求和只对 active lines 进行。单顶点 component 的式 \eqref{eq:component-energy} 退化为式 \eqref{eq:signed-vertex-M0} 的 $p_{0,v}$.
 
 \section{直接迭代约化：不先生成大规模 IBP}
 
-\subsection{2401 二进制顺序与递推的精确定义域}
+\subsection{\texorpdfstring{\cite{Chen:2023eic}}{arXiv:2401.00129} 的二进制顺序与递推的精确定义域}
 
-固定 sector $s$，令 $n_s^{\mathrm{slot}}$ 是该 sector 的二态因子数，$c_s$ 是 contact 后的 time components 数。沿用 2401 的二进制表示，把 state 写成
+固定 sector $s$，令 $n_s^{\mathrm{slot}}$ 是该 sector 的二态因子数，$c_s$ 是 contact 后的 time components 数。沿用文献 \cite{Chen:2023eic} 的二进制表示，把 state 写成
 \begin{equation}
  \bm a=(a_1,\ldots,a_{n_s^{\mathrm{slot}}}),
  \qquad a_i\in\{0,1\}.
@@ -619,7 +627,7 @@ $E=(e_1,\ldots,e_{N_E})$，已收缩的 canonical set 为 $L_s^{\rm ctr}$。定�
 
 \subsection{包含 contact remaining term 的两向递推}
 
-令 $\bm F_s(\bm n)$ 表示 sector $s$ 的有序 master vector，其中 $n_v$ 平移顶点 $v$ 的论文时间幂次 $\nu_{0,v}$。theta remaining term 写成 lower-sector vectors 的线性组合
+令 $\bm F_s(\bm n)$ 表示 sector $s$ 的有序 master vector，其中 $n_v$ 平移顶点 $v$ 自己的局部时间幂次 $\nu_{0,v}$，也就是 package 里 \texttt{timeShifts}（等价地，对角升幂算子 $A_v$ 的阶参数）的第 $v$ 个槽位。theta remaining term 写成 lower-sector vectors 的线性组合
 \begin{equation}
  \cR_{v,s}(\bm n)
  =\sum_{t\prec s}C_{st}^{(v)}(\bm n)\bm F_t(\bm n_t).
@@ -633,9 +641,9 @@ $E=(e_1,\ldots,e_{N_E})$，已收缩的 canonical set 为 $L_s^{\rm ctr}$。定�
  \bm F_{s/e}\!\left(\chi_e(\bm n)\right).
  \label{eq:R-edge-sum}
 \end{equation}
-$\chi_e$ 合并边两端所属的 time shifts，并包含 delta contact 使 child 基准幂少一次的固定平移。这个 parent-to-child 结构对 massive 与 massless edge 完全相同；区别只在局部矩阵 $C^{(v,e)}$。massive edge 使用 2401 式 (3.65) 的互补端点 bits 和符号；massless edge 先作 $4\to2$ quotient，再使用式 \eqref{eq:contact-injection} 的 shared-bit selector 与式 \eqref{eq:package-massless-contact-weight} 的 $-2,+2$。因此 massless 缩并不需要另一套递推公式。
+$\chi_e$ 合并边两端所属的 time shifts，并包含 delta contact 使 child 基准幂少一次的固定平移。这个 parent-to-child 结构对 massive 与 massless edge 完全相同；区别只在局部矩阵 $C^{(v,e)}$。massive edge 使用文献 \cite{Chen:2023eic} 式 (3.65) 的互补端点 bits 和符号；massless edge 先作 $4\to2$ quotient，再使用式 \eqref{eq:contact-injection} 的 shared-bit selector 与式 \eqref{eq:package-massless-contact-weight} 的 $-2,+2$。因此 massless 缩并不需要另一套递推公式。
 
-本包的 child base power 特意按 delta contact 固定：$\cR(\bm0)$ 落在 child shift $-1$，而 DE 所需的 $\cR(\bm e_v)$ 恰落在 child shift $0$。所以普通单边 massive/massless contact 的 $R^{(1)}$ 已经直接命中 child master；这里没有“dlog master 选好但迭代约不过去”的问题。
+本包的 child base power 特意按 delta contact 固定：$\cR(\bm0)$ 落在 child shift $-1$，而 DE 所需的 $\cR(\bm e_v)$ 恰落在 child shift $0$。下文把升幂步用到的余量记作 $R^{(1)}:=\cR_{v,s}(\bm e_v)$，把降幂步用到的 $\cR_{v,s}(\bm0)$ 记作 $R^{(0)}$；两者是同一条一步关系在不同下标处的两条余量，落点相差一个 child shift，不能互换。所以普通单边 massive/massless contact 的 $R^{(1)}$ 已经直接命中 child master；这里没有“dlog master 选好但迭代约不过去”的问题。
 
 顶点 $v$ 的完整一步 IBP 是
 \begin{equation}
@@ -644,6 +652,7 @@ $\chi_e$ 合并边两端所属的 time shifts，并包含 delta contact 使 chil
  +\cR_{v,s}(\bm n)=0.
  \label{eq:global-one-step-ibp}
 \end{equation}
+式 \eqref{eq:global-one-step-ibp} 是逐顶点写出的：每个顶点 $v$ 各有自己的一条一步关系，而这条关系正是由该顶点的 time IBP $\partial_{\tau_v}$ 给出的。$\partial_{\tau_v}$ 只作用在属于顶点 $v$ 的 building block 上——该顶点的一维指数因子、挂在它上的 massive endpoint h block，以及它以端点身份参与的 massless shared block——其它顶点的因子只带单位矩阵。因此 $\nu_{0,v}$、$M_{1;v,s}$、$M_{0;v,s}$、$\cR_{v,s}$ 与后面的 $A_{\pm,v,s}$ 都只读取顶点 $v$ 的局部原子，平移方向 $\bm e_v$ 在不同顶点之间互不混合：整个 family 的迭代约化是按顶点逐条进行的，\texttt{MSReduce} 也按 component 逐条套用各自的关系。
 
 因此降低一步直接为
 \begin{align}
@@ -669,7 +678,7 @@ $\chi_e$ 合并边两端所属的 time shifts，并包含 delta contact 使 chil
  M_{1;v,s}(\nu_{0,v}+n_v+1).
  \label{eq:global-Aplus}
 \end{align}
-这就是论文式 (3.37)、(3.47)、(3.50)、(3.66) 在 shared massless-edge space 上的直接推广。需要求逆的仍只有原 basis 中的对角 $M_1$ 和 $U_s$ basis 中的对角 $\widetilde M_0$。现在可直接得到 general-index 的完整奇异层。
+这就是文献 \cite{Chen:2023eic} 式 (3.37)、(3.47)、(3.50)、(3.66) 在 shared massless-edge space 上的直接推广。需要求逆的仍只有原 basis 中的对角 $M_1$ 和 $U_s$ basis 中的对角 $\widetilde M_0$。现在可直接得到 general-index 的完整奇异层。
 
 在解释奇异层以前，必须把公式中的 $h$ block 与完整物理 mode 区分。若 $d$ 是空间维数，并把曲率耦合等贡献收入 $m_{\rm eff}$，标量指标满足
 \begin{equation}
@@ -695,7 +704,7 @@ $h=z^{\pm\nu}H_\nu$ 只把式 \eqref{eq:physical-late-time-branches} 的 $\pm\nu
 \begin{equation}
  \lambda_{1;v,\bm a}(n_v)
  =\nu_{0,v}+n_v
- -\sum_{i\in H_v}(2\nu_i+1)a_i,
+ -\sum_{i\in H_v}(1-2\nu_i)a_i,
  \label{eq:M1-general-eigenvalue}
 \end{equation}
 它与 massless shared bits $\bm r$ 及全部运动学无关。降低 $n_v\to n_v-1$ 时只有
@@ -715,7 +724,7 @@ $h=z^{\pm\nu}H_\nu$ 只把式 \eqref{eq:physical-late-time-branches} 的 $\pm\nu
 \end{equation}
 这是运动学 energy-letter 奇异面。这里的 $k_i,q_e$ 都是动量模长，普通矢量动量守恒不迫使 $\kappa$ 为零；当相关动量退化为共线并按轴向分成相反两组 $L,R$ 时，动量守恒化为 $\sum_{\ell\in L}|\bm k_\ell|-\sum_{\ell\in R}|\bm k_\ell|=0$，正是对应 state 符号选择下的 $\kappa=0$。$M_1=0$ 在 raising 公式中只出现在分子，不产生 pole；$M_0=0$ 在 lowering 公式中也只出现在分子。若两者同时为零，则该 row 从两个方向都不能跨越，公式只剩 lower-sector constraint；这时需要另一条关系或另选 basis，但仍不能仅凭 rank loss 宣称一定新增 master。程序应返回方向、shift、state bits、零本征值与未除过的原始 IBP row，不使用固定最大步数掩盖这些层。
 
-0-fold 特例最清楚：$M_1=\nu_0+n$、$M_0=\ii p_0$。lowering 在 $\nu_0+n=0$ 失效，raising 在 $p_0=0$ 失效；这正是论文式 (3.59) 两个分母各自所属的方向，而不是同一个“统一奇异层”。
+0-fold 特例最清楚：$M_1=\nu_0+n$、$M_0=\ii p_0$。lowering 在 $\nu_0+n=0$ 失效，raising 在 $p_0=0$ 失效；这正是文献 \cite{Chen:2023eic} 式 (3.59) 两个分母各自所属的方向，而不是同一个“统一奇异层”。
 
 对单条 massless edge $e$ 缩并到 $t=s/e$，式 \eqref{eq:contact-vector-projection} 直接给出
 \begin{equation}
@@ -727,21 +736,51 @@ $h=z^{\pm\nu}H_\nu$ 只把式 \eqref{eq:physical-late-time-branches} 的 $\pm\nu
  }
  \label{eq:contact-injection}
 \end{equation}
-若一束 full lines $\mathcal B$ 共享同一个 theta argument，则它们不是独立 delta 的乘积。写
+若一束 full lines $\mathcal B$ 共享同一个 theta argument，则它们不是独立 delta 的乘积。所谓共享，是指 $|\mathcal B|\geq2$ 条 full lines 的两端分别落在同两个 current components 上，于是它们的 theta 宗量都是同一个 $\Delta=\tau_u-\tau_v$；程序正是按这一判据把 eligible full lines 分组为 bundle。写
 \begin{equation}
  \prod_{e\in\mathcal B}G_e
  =\theta(\Delta)\prod_{e\in\mathcal B}A_e
  +\theta(-\Delta)\prod_{e\in\mathcal B}B_e,
  \qquad
- \mathsf J_e=\frac{A_e+B_e}{2},\quad D_e=A_e-B_e,
+ \mathsf J_e=\frac{A_e+B_e}{2},\quad D_e=A_e-B_e.
+ \label{eq:common-theta-two-terms}
 \end{equation}
-一次求导只给一个 $\delta(\Delta)$，并有
+式 \eqref{eq:common-theta-two-terms} 只是把 theta 乘开，这一步还没有任何奇偶性：同一 bundle 内 $\theta(\Delta)$ 是同一个函数，且 $\theta(\Delta)^2=\theta(\Delta)$、$\theta(\Delta)\theta(-\Delta)=0$，所有混合项为零，因此 $|\mathcal B|=n$ 条线的乘积只剩两项，而不是 $2^n$ 项。$2^n$ 项只出现在 theta 宗量互不相同的线上，而那些线属于不同 bundle，contact event 按 bundle 分别做。
+
+奇偶性来自下一步：对共享 theta 求导。整束只有一个 $\theta$，所以一次求导只给一个 $\delta(\Delta)$，
 \begin{equation}
+ \partial_\Delta\!\left[\theta(\Delta)\prod_eA_e
+ +\theta(-\Delta)\prod_eB_e\right]
+ =\delta(\Delta)\left(\prod_eA_e-\prod_eB_e\right),
+ \label{eq:common-theta-delta}
+\end{equation}
+即 $\delta$ 的系数恰是 $A\leftrightarrow B$ 的反对称差，contact 信息全部集中在它里面；端点也只被这一个 $\delta$ 强制重合一次、component 只合并一次，与选中几条边无关。
+
+第三步把反对称差裂项再换基。裂项恒等式为
+\begin{equation}
+\begin{split}
+ \prod_{e=1}^{n}A_e-\prod_{e=1}^{n}B_e
+ &=\sum_{k=1}^{n}\left(A_1\cdots A_kB_{k+1}\cdots B_n
+ -A_1\cdots A_{k-1}B_k\cdots B_n\right)\\
+ &=\sum_{k=1}^{n}D_k\prod_{e<k}A_e\prod_{e>k}B_e,
+\end{split}
+ \label{eq:common-theta-telescope}
+\end{equation}
+每一项恰含一个 $D_k$. 再把 spectator 的 $A_e=\mathsf J_e+D_e/2$、$B_e=\mathsf J_e-D_e/2$ 代入并按 $D$ 的个数收集，即得
+\begin{equation}
+\begin{split}
  \prod_eA_e-\prod_eB_e
- =\sum_{\substack{\varnothing\neq S\subseteq\mathcal B\\|S|\ {m odd}}}
+ &=\sum_{S\subseteq\mathcal B}\left(1-(-1)^{|S|}\right)2^{-|S|}
+ \prod_{e\in S}D_e\prod_{e\notin S}\mathsf J_e\\
+ &=\sum_{\substack{\varnothing\neq S\subseteq\mathcal B\\|S|\ \text{odd}}}
  2^{1-|S|}\prod_{e\in S}D_e\prod_{e\notin S}\mathsf J_e.
+\end{split}
  \label{eq:common-theta-odd-subsets}
 \end{equation}
+奇偶性也可以只由对称性读出：式 \eqref{eq:common-theta-telescope} 的左端在 $A\leftrightarrow B$ 下变号，而 $D_e$ 在该交换下变号、$\mathsf J_e$ 不变号，故只有含奇数个 $D$ 的项能存活；$|S|=0$ 的系数 $1-1$ 使空集自动消失，偶数 $|S|$ 同理。系数 $2^{1-|S|}$ 中，$2^{-|S|}$ 来自每条选中边的 $D_e/2$，多出的因子 $2$ 来自奇数子集上的 $1-(-1)^{|S|}$.
+
+程序使用收集后的式 \eqref{eq:common-theta-odd-subsets}，而不是逐个 $k$ 的裂项 \eqref{eq:common-theta-telescope}：裂项的第 $k$ 项对应“只收缩第 $k$ 条线”，但把 spectator 展开后，同一个 $S$ 会从多个 $k$ 收到贡献，照裂项枚举会重复计数同一批 sector 跃迁。收集之后每个 event 只出现一次、系数是纯数；实现上就是对每个 bundle 取其非空奇数子集，把系数记为 $2^{1-|S|}$，再按 source sector、target sector 与所选线 id 去重。
+
 因此一个奇数子集 $S$ 就是一个 simultaneous contact event：所选边同时删除，端点只合并一次，contact selector 是各所选边局部 selector 的张量积再乘 $2^{1-|S|}$。若合并后的未选 massless full edge 两端 coincident，其 odd shared state 为零；未选 massive full edge 使用 $10\sim01$ 的 equal-time canonical quotient。程序先在 raw binary space 构造矩阵，再以 $P_sM^{\rm raw}S_s$ 投影到真实 sector masters，所以 coincident quotient 不要求一般大矩阵求逆。
 
 对 event-reachable component $C$，child 的基准幂可直接由最终 partition 写成
@@ -761,16 +800,24 @@ $h=z^{\pm\nu}H_\nu$ 只把式 \eqref{eq:physical-late-time-branches} 的 $\pm\nu
  \left[-\ii\log\kappa_{v,s;\bm a,\bm r}\right].
  \label{eq:global-omega0}
 \end{equation}
-论文的显式动量项只来自仍为二维 h 系统的 massive endpoint slots：
+文献 \cite{Chen:2023eic} 的显式动量项只来自仍为二维 h 系统的 massive endpoint slots：
 \begin{equation}
  (\Omega_{{\rm ex},s})_{\bm b\bm a}
  =\delta_{\bm b\bm a}
- \left[-\sum_{i\in H(s)}a_i(2\nu_i+1)\log k_i\right].
+ \left[-\sum_{i\in H(s)}a_i(1-2\nu_i)\log k_i\right].
  \label{eq:global-omega-ex}
 \end{equation}
-massless shared-edge slot 不贡献这一项，因为缺省代入后 $2(-\nu)+1=1-2\nu=0$。
+massless shared-edge slot 不贡献这一项，因为缺省正 prefactor（$s_\nu=+1$，\texttt{formulaNu}$=\nu=1/2$）使 $1-2\nu=0$；负 prefactor 下 $\nu=1/2$ 的无质量边不再是纯指数，这一点在式 \eqref{eq:massless-h-eigenstate} 之后已经单独说明。
 
-固定 sector 的 regular dlog potential 是论文式 (3.55) 的全图版本：
+若把无质量 shared edge 改用下一个简并半整数阶 $\nu=3/2$，结果仍落在同一个 family 内，不需要新增 slot、原子或 master。由球 Hankel 函数的显式表达式
+\begin{equation}
+ z^{3/2}H^{(1)}_{3/2}(z)=(1-\ii z)\,z^{1/2}H^{(1)}_{1/2}(z),\qquad
+ z^{3/2}H^{(2)}_{3/2}(z)=(1+\ii z)\,z^{1/2}H^{(2)}_{1/2}(z),
+ \label{eq:half-integer-family-nu32}
+\end{equation}
+$\nu=3/2$ 的 block 只比式 \eqref{eq:massless-h-eigenstate} 的 $\nu=1/2$ 纯指数 block 多一个 $z$ 的一次多项式。取 $z=-k\tau$ 后该多项式成为 $\tau$ 的一次多项式：常数项还原为原来的 $\nu=1/2$ block；$\tau$ 项只是将显式的 $(-\tau)^A$ 幂提高一格，由 package 记入对应顶点的 \texttt{timeShifts}，不引入新的函数类型；随之而来的动量常数（$\pm\ii k$）相对 $\tau$ 积分无关，直接进入 normalization $N_s$。因此 $\nu=3/2$ 的无质量边不成二维 h 系统，也不向只读取 massive endpoint h slots 的式 \eqref{eq:global-omega-ex} 贡献新项。一般半整数 $\nu=\ell+1/2$ 同理：$z^{\ell+1/2}H^{(1,2)}_{\ell+1/2}(z)$ 是一个 $\ell$ 次多项式乘 $e^{\pm\ii z}$，逐项归结为 $\nu=1/2$ block 与整数 $\tau$ 幂。
+
+固定 sector 的 regular dlog potential 是文献 \cite{Chen:2023eic} 式 (3.55) 的全图版本：
 \begin{equation}
  \boxed{
  \Omega_{ss}^{\rm reg}
@@ -783,21 +830,21 @@ massless shared-edge slot 不贡献这一项，因为缺省代入后 $2(-\nu)+1=
 \end{equation}
 它的 letters 就是全部式 \eqref{eq:global-energy-letter}，不需要先对 IBP 关系做线性求解。
 
-因此 dlog producer 与迭代 producer 使用的是同一份 registry，而不是另一套算法：一维 blocks 给 $p_{0,v}$，massive blocks 同时给 $M_1$、$M_0$ 和 $\Omega_{\rm ex}$，massless shared blocks给两个端点的同一 state bit、相反 incidence 和 contact selector。先按式 \eqref{eq:local-common-diagonalization-condition} 构造 $U_s$，再逐 state 写出 $\log\kappa$，最后乘 $M_1(A+1)$，就得到式 \eqref{eq:global-diagonal-omega}。这里从未对 $2^N\times2^N$ 的稠密 $M_0$ 做一般求逆；实际求逆只是对式 \eqref{eq:global-M0-diagonal} 的标量 letters 逐个取倒数。
+因此 dlog producer 与迭代 producer 使用的是同一份 registry，而不是另一套算法：一维指数给 $p_{0,v}$，massive blocks 同时给 $M_1$、$M_0$ 和 $\Omega_{\rm ex}$，massless shared blocks给两个端点的同一 state bit、相反 incidence 和 contact selector。先按式 \eqref{eq:local-common-diagonalization-condition} 构造 $U_s$，再逐 state 写出 $\log\kappa$，最后乘 $M_1(A+1)$，就得到式 \eqref{eq:global-diagonal-omega}。这里从未对 $2^N\times2^N$ 的稠密 $M_0$ 做一般求逆；实际求逆只是对式 \eqref{eq:global-M0-diagonal} 的标量 letters 逐个取倒数。
 
 若改用用户坐标或 Wick 坐标，不重新推导 DE，只对 differential one-form 作式 \eqref{eq:user-to-internal-coordinate-pullback} 的 pullback。若改用 package quotient 或物理导数 basis，则分别使用常数相似变换 \eqref{eq:global-package-similarity} 或含导数项的 gauge transformation \eqref{eq:physical-DE-gauge}；三者不能混成同一个无导数的 basis change。
 
-DE 非对角块必须使用升幂关系中的 remaining term，即论文的 $R^{(1)}$，不能拿 $R^{(0)}$ 的 lower 时间幂次先行约化后替代。本包采用 $(-\tau)^A$，其升幂行是
+DE 非对角块必须使用升幂关系中的 remaining term，即本文式 \eqref{eq:R-as-CF} 在 $\bm n=\bm e_v$ 处的 $\cR_{v,s}(\bm e_v)$（前文记作 $R^{(1)}$）；不能拿降幂步的 $\cR_{v,s}(\bm0)$（前文记作 $R^{(0)}$）先行约化后替代，两者的 child 落点相差一格平移，互不可交换。本包采用 $(-\tau)^A$，其升幂行是
 \begin{equation}
  M_{0;v,s}\bm F_s(\bm e_v)
  =M_{1;v,s}(\nu_{0,v}+1)\bm F_s(0)-\cR_{v,s}(\bm e_v).
  \label{eq:package-raising-contact-sign}
 \end{equation}
-因此参数微分中的 contact 项为 $+\ii M_0^{-1}\cR$；把论文的 $\tau^\nu$ 写法适配到这里时，不能漏掉这个整体符号。若
+因此参数微分中的 contact 项为 $+\ii M_0^{-1}\cR$；把文献 \cite{Chen:2023eic} 的 $\tau^\nu$ 写法适配到这里时，不能漏掉这个整体符号。若
 \begin{equation}
  \cR_{v,s}(\bm e_v)=\sum_{t\prec s}C_{st}^{(v,1)}\bm F_t(0),
 \end{equation}
-则论文式 (3.68) 直接推广为
+则文献 \cite{Chen:2023eic} 式 (3.68) 直接推广为
 \begin{equation}
  \boxed{
  \Omega_{st}^{\rm contact}
@@ -819,30 +866,31 @@ DE 非对角块必须使用升幂关系中的 remaining term，即论文的 $R^{
 \end{equation}
 pure-massive 的 $\varsigma_v$ 是初始化时固定的顶点指数符号；含 massless 的 event 还包含指数 quotient 相对 h/Wronskian contact 原子的相位。线型相关符号已经全部包含在 $C_{st}^{(v,1)}$：massive 端点使用补位 selector，massless quotient 使用式 \eqref{eq:package-massless-contact-weight} 的 $-2,+2$。单条 pure-massless full edge 的解析 chamber 积分对两个顶点能量求导后，式~\eqref{eq:contact-event-phase} 使完整 DE residual 逐分量精确为零；三条共同 theta 的 simultaneous event 取 $N_0=3$。contact 合并后的 pure-massive component 必须只有一个 $\varsigma$；若输入使同一 component 混合正负指数，公式入口 fail closed。
 
-\subsection{2401 式 (3.68) 的删位、补位与 massless quotient}
+\subsection{\texorpdfstring{\cite{Chen:2023eic}}{arXiv:2401.00129} 式 (3.68) 的删位、补位与 massless quotient}
 
-先写 2401 的 pure-massive 两顶点结果。设被缩并边在左、右顶点的端点位置分别为 $i,j$；parent states 为 $(\bm a,\bm b)$，child states 为 $(\widehat{\bm c},\widehat{\bm d})$。定义
+先写文献 \cite{Chen:2023eic} 式 (3.68) 的 pure-massive 两顶点结果，也就是尚未代入 massless 额外约化关系的 unreduced 形式。设被缩并边在左、右顶点的端点位置分别为 $i,j$；parent states 为 $(\bm a,\bm b)$，child states 为 $(\widehat{\bm c},\widehat{\bm d})$。定义
 \begin{equation}
- K_u^{2401}=T_{n_u}^{-1}\widetilde\Omega_{0;u}T_{n_u},
+ K_u^{\unred}=T_{n_u}^{-1}\widetilde\Omega_{0;u}T_{n_u},
  \qquad
- K_v^{2401}=T_{n_v}^{-1}\widetilde\Omega_{0;v}T_{n_v}.
+ K_v^{\unred}=T_{n_v}^{-1}\widetilde\Omega_{0;v}T_{n_v}.
  \label{eq:component-log-kernel}
 \end{equation}
-则论文式 (3.68) 的两个端点项逐分量为
+则该式的两个端点项逐分量为
 \begin{align}
- \left(\Omega_{s,s/e}^{2401}\right)_{(\bm a,\bm b),(\widehat{\bm c},\widehat{\bm d})}
-={}&-\ii
- (K_u^{2401})_{\bm a,\operatorname{Ins}_i(\widehat{\bm c},1-b_j)}
+ &\left(\Omega_{s,s/e}^{\unred}\right)_{(\bm a,\bm b),(\widehat{\bm c},\widehat{\bm d})}
+ \notag\\
+ &\quad=-\ii
+ (K_u^{\unred})_{\bm a,\operatorname{Ins}_i(\widehat{\bm c},1-b_j)}
  (-1)^{b_j}
  \delta_{\operatorname{Del}_j\bm b,\widehat{\bm d}}
  \notag\\
- &-\ii
- (K_v^{2401})_{\bm b,\operatorname{Ins}_j(\widehat{\bm d},1-a_i)}
+ &\qquad\quad-\ii
+ (K_v^{\unred})_{\bm b,\operatorname{Ins}_j(\widehat{\bm d},1-a_i)}
  (-1)^{a_i}
  \delta_{\operatorname{Del}_i\bm a,\widehat{\bm c}}.
- \label{eq:2401-binary-top-to-sub}
+ \label{eq:unreduced-binary-top-to-sub}
 \end{align}
-这就是“删去被缩并端点 bit，再在另一侧补入其互补 bit”的精确含义；所有未删 bits 都由 Kronecker delta 保持。本文的 $(-\tau)^A$ normalized-$J$ convention 把式 \eqref{eq:2401-binary-top-to-sub} 的整体 $-\ii$ 按式 \eqref{eq:package-raising-contact-sign} 改成式 \eqref{eq:global-offdiagonal-omega} 的 $+\ii\chi_v(E)$；2401 的 fixed positive pure-massive 顶点取 $\chi_v=\varsigma_v=+1$。不能只改二进制 selector 而漏掉这个 convention 变换。
+这就是“删去被缩并端点 bit，再在另一侧补入其互补 bit”的精确含义；所有未删 bits 都由 Kronecker delta 保持。本文的 $(-\tau)^A$ normalized-$J$ convention 把式 \eqref{eq:unreduced-binary-top-to-sub} 的整体 $-\ii$ 按式 \eqref{eq:package-raising-contact-sign} 改成式 \eqref{eq:global-offdiagonal-omega} 的 $+\ii\chi_v(E)$；文献 \cite{Chen:2023eic} 的 fixed positive pure-massive 顶点取 $\chi_v=\varsigma_v=+1$。不能只改二进制 selector 而漏掉这个 convention 变换。
 
 现在缩并一条 massless edge $e$。由于 shared slot 使逐顶点 factorization 失效，先在完整 parent sector 上定义全局 kernel
 \begin{equation}
@@ -942,7 +990,7 @@ pure-massive 的 $\varsigma_v$ 是初始化时固定的顶点指数符号；含 
  }
  \label{eq:physical-second-derivative}
 \end{equation}
-所以 $-k^2$ 不是另一套 EOM，而是无量纲常数 $-1$ 经过两次链式法则后的物理系数。内部继续使用 $h_0,h_1$ 二态，就能原样复用论文的 $2\times2$ 公式。
+所以 $-k^2$ 不是另一套 EOM，而是无量纲常数 $-1$ 经过两次链式法则后的物理系数。内部继续使用 $h_0,h_1$ 二态，就能原样复用文献 \cite{Chen:2023eic} 的 $2\times2$ 公式。
 
 若 backend 实数化采用
 \begin{equation}
@@ -954,7 +1002,7 @@ pure-massive 的 $\varsigma_v$ 是初始化时固定的顶点指数符号；含 
 \end{equation}
 若实变量的程序 token 恰好命名为 \texttt{ik}，输出中的 \texttt{ik\^2} 表示这个实变量的平方，不是虚数单位 $\ii$ 乘 $k^2$。
 
-现在区分论文 h-state 与物理端点导数。令
+现在区分文献 \cite{Chen:2023eic} 的 h-state 与物理端点导数。令
 \begin{equation}
  \mathcal F_{ab}
  =\partial_{\tau_u}^{a}\partial_{\tau_v}^{b}G_e
@@ -969,7 +1017,7 @@ pure-massive 的 $\varsigma_v$ 是初始化时固定的顶点指数符号；含 
 \end{equation}
 而完整 full propagator 的第二式还要加 theta 导数给出的 contact distribution，它正是式 \eqref{eq:contact-injection} 所属的 lower sector。
 
-若选择物理二态 $\bm g_{\rm phys}=(\mathcal F_{00},\mathcal F_{10})^T$，则与论文 h 二态的关系是
+若选择物理二态 $\bm g_{\rm phys}=(\mathcal F_{00},\mathcal F_{10})^T$，则与文献 \cite{Chen:2023eic} 的 h 二态的关系是
 \begin{equation}
  \bm g_{\rm phys}=N(k)\bm g_h,
  \qquad
@@ -991,7 +1039,7 @@ pure-massive 的 $\varsigma_v$ 是初始化时固定的顶点指数符号；含 
  \bm g_{\rm phys}.
  \label{eq:physical-four-to-two}
 \end{equation}
-因此若最终 DE 选择物理二态，而不是论文 h 二态，必须做
+因此若最终 DE 选择物理二态，而不是文献 \cite{Chen:2023eic} 的 h 二态，必须做
 \begin{equation}
  \boxed{
  \mathcal A_{\rm phys}
@@ -1009,7 +1057,7 @@ pure-massive 的 $\varsigma_v$ 是初始化时固定的顶点指数符号；含 
 
 \subsection{package 的 massless quotient basis}
 
-前文的 $F_{ab}$ 是论文 h-state。package 为了把每次端点导数的动量因子与离散态分开，使用另一组代数 quotient。对有序边 $e=(u_e,v_e)$，令 $\Delta=\tau_{u_e}-\tau_{v_e}$，并用 $\sigma_e=+1,-1$ 分别表示 $G^{++},G^{--}$，定义
+前文的 $F_{ab}$ 是文献 \cite{Chen:2023eic} 的 h-state。package 为了把每次端点导数的动量因子与离散态分开，使用另一组代数 quotient。对有序边 $e=(u_e,v_e)$，令 $\Delta=\tau_{u_e}-\tau_{v_e}$，并用 $\sigma_e=+1,-1$ 分别表示 $G^{++},G^{--}$，定义
 \begin{align}
  \mathsf m_{e,0}&=\theta(\Delta)e^{-\ii\sigma_eq_e\Delta}
        +\theta(-\Delta)e^{+\ii\sigma_eq_e\Delta},\\
@@ -1044,7 +1092,7 @@ package 的共享二态与四态 embedding 是
  D_{\sigma_e}=\operatorname{diag}(1,\ii\sigma_e).
  \label{eq:h-to-package-basis}
 \end{equation}
-因此论文 h-state 中两个端点的 $\mp\ii q_e\sigma_2$，在 package quotient 中正好成为
+因此该文 h-state 中两个端点的 $\mp\ii q_e\sigma_2$，在 package quotient 中正好成为
 \begin{align}
  Q^J_{u_e,e}
  &=D_{\sigma_e}(-\ii q_e\sigma_2)D_{\sigma_e}^{-1}
@@ -1080,7 +1128,7 @@ package 的共享二态与四态 embedding 是
 \end{equation}
 cycle line 把每次 $q_e$ 保存为 $b_e\to b_e-1$；fixed/non-loop line 没有 $b_e$ 槽，必须显式保留结构化模长 $q_e$。两次同端点 regular 导数因而是 $-q_e^2$，两端点各一次则是 $+q_e^2$。
 
-package quotient 的对角化矩阵可直接由论文矩阵得到：
+package quotient 的对角化矩阵可直接由该文矩阵得到：
 \begin{equation}
  T_e^J=T D_{\sigma_e}^{-1},
  \qquad
@@ -1136,7 +1184,7 @@ block-triangular dlog，不保留四态生产分支。
 
 \subsection{\texorpdfstring{$(-\tau)^A$ 与 normalized-$J$}{(-tau)A 与 normalized-J}}
 
-前文使用论文的 $\tau^{\nu_0}$ convention。package 中参与递推、DE 与数值输运的积分对象是 normalized object
+前文的递推与 DE 一直在本文的 $\tau^{\nu_0}$ convention 下写出。package 中参与递推、DE 与数值输运的积分对象是 normalized object
 \begin{equation}
  J_s=\cN_sI_s,
 \end{equation}
@@ -1168,7 +1216,7 @@ $J_s(\bm n;\bm a)=I_s(\bm n;\bm a)$。
  =-A_{v,s}(-\tau_v)^{A_{v,s}-1}.
  \label{eq:package-time-power-derivative}
 \end{equation}
-在同一个 h-state basis 中，package adapter 因而把论文的式 \eqref{eq:global-one-step-ibp} 精确写成
+在同一个 h-state basis 中，package adapter 因而把本文式 \eqref{eq:global-one-step-ibp} 精确写成
 \begin{equation}
  -M_{1;v,s}(A_v)\bm J_s(\bm a-\bm e_v)
  +M_{0;v,s}\bm J_s(\bm a)
@@ -1229,7 +1277,7 @@ MadStree 的 \texttt{MSHTohMatrix[nu,z,context]}、\texttt{MShToHMatrix[nu,z,con
 
 这里变换的是被积函数的同序状态向量，不是已经积分后的 \texttt{MSIntegral}。原因是式 \eqref{eq:package-H-to-h} 的 $z^p$ 与 $z^{p-1}$ 会同时改变 component base time power；首版没有建立独立的 H-family sector metadata，因此积分对象重载明确 fail closed，不能把这一步伪装成只翻转 state bit。
 
-dSIBP 的 public time-only 表示为 \texttt{J[sectorKey,timeShifts,stateBits]}，与 MadStree 的 \texttt{MSIntegral[sectorKey,timeShifts,stateBits]} 逐槽对应；\texttt{stateBits} 是全 sector registry 中的 $n_i$ 类离散态，不要求按顶点分组。该对应只转换积分身份，不替换 normalization：两边 context 必须对每个 sector 使用同一 $\cN_s$，且求导时都包含式~\eqref{eq:normalization-adapter} 的 $\partial\log\cN_s$。MadStree 的缺省 massless 输入是 $\nu=1/2$ 和正 prefactor，组装 2401 公式时统一代入 $\nu\to-\nu=-1/2$。这一解析等价不替代 line metadata、theta 或 contact normalization。
+dSIBP 的 public time-only 表示为 \texttt{J[sectorKey,timeShifts,stateBits]}，与 MadStree 的 \texttt{MSIntegral[sectorKey,timeShifts,stateBits]} 逐槽对应；\texttt{stateBits} 是全 sector registry 中的 $n_i$ 类离散态，不要求按顶点分组。该对应只转换积分身份，不替换 normalization：两边 context 必须对每个 sector 使用同一 $\cN_s$，且求导时都包含式~\eqref{eq:normalization-adapter} 的 $\partial\log\cN_s$。MadStree 的缺省 massless 输入是 $\nu=1/2$ 和正 prefactor，此时 \texttt{formulaNu}$\,=s_\nu\nu=+1/2$，代码与本文公式在同一份 $+\nu$ 基准式上逐槽一致；取 \texttt{NuConvention -> "Negative"} 时 \texttt{formulaNu}$=-1/2=\nu_{\rm ref}$，只用于与该文印刷式逐字对照。这一约定不替代 line metadata、theta 或 contact normalization。
 
 \subsection{单顶点函数族、局部逆与完整约化接口}
 
@@ -1242,9 +1290,8 @@ ctx = MSInitVertexFamily[<|
 |>, NuConvention -> "Positive"];
 \end{verbatim}
 其中 \texttt{First[ki]} 与 \texttt{First[nui]} 分别是纯顶点指数能量和 $(-\tau)$
-基准幂；其余位置一一给出 h block 的动量、$\nu=|\nu|$ 和 Hankel branch。显式数据模型使用
-\texttt{externalLegEnergy/}\allowbreak\texttt{timePower/}\allowbreak\texttt{hBlocks/}\allowbreak\texttt{exponentialBlocks}。每个纯指数 block 是一维因子，只平移
-effective external-leg energy；每个 h block 是二维 massive endpoint slot。该 context 可直接调用
+基准幂；其余位置一一给出 h block 的动量、原样作为 Hankel 阶的 $\nu$ 和 Hankel branch。显式数据模型使用
+\texttt{externalLegEnergy/}\allowbreak\texttt{timePower/}\allowbreak\texttt{hBlocks/}\allowbreak\texttt{exponentialBlocks}。\texttt{exponentialBlocks} 只是输入层的便利写法：初始化时按其字面 \texttt{exponentType} 符号并入 effective external-leg energy，此后只留下式 \eqref{eq:phase-exponent-block} 的那一个参数，不建立独立 slot；每个 h block 是二维 massive endpoint slot。该 context 可直接调用
 \texttt{MSFormulaMatrices}、\texttt{MSMasterIntegrals}、\texttt{MSDLogDE}、
 \texttt{MSBoundaryData}，并通过 \texttt{MSEvaluatePath} 完成单阶段数值计算。
 \texttt{NuConvention} 只在初始化时选择，
@@ -1270,7 +1317,7 @@ block 在 effective external-leg energy 中的字面正负号。单顶点 family
 所以其初始化 schema 与树图的 \texttt{vertices/lines} 有意不同；context 建立后，两者共用同一
 master、递推、DE、边界、数值选项和返回结构。
 
-实现中没有一般 $2^p\times2^p$ 符号逆。对 massive endpoint，$M_0$ 的局部非平凡方向是 $\sigma_2$，直接使用论文常数矩阵 $T$ 及其显式逆；对 massless shared edge，局部方向是 $\sigma_1$，使用自逆 Hadamard 矩阵
+实现中没有一般 $2^p\times2^p$ 符号逆。对 massive endpoint，$M_0$ 的局部非平凡方向是 $\sigma_2$，直接使用文献 \cite{Chen:2023eic} 的常数矩阵 $T$ 及其显式逆；对 massless shared edge，局部方向是 $\sigma_1$，使用自逆 Hadamard 矩阵
 \begin{equation}
  H_2=\frac1{\sqrt2}
  \begin{pmatrix}1&1\\1&-1\end{pmatrix},
@@ -1330,9 +1377,9 @@ shift。含通用符号解析正规化参数的 $\alpha$ 保持符号化，不�
  \qquad K_v>0.
  \label{eq:wick-damping-energy}
 \end{equation}
-所以 $K_v\to\infty$ 把积分局域到 $\tau_v\to0^-$. 这与文献 \cite{Chen:2024jms} 第 3 节的单顶点 family 边界相同；论文使用的是 $\varsigma_v=+1$、$k_{0,v}\to-\ii\infty$ chart。
+所以 $K_v\to\infty$ 把积分局域到 $\tau_v\to0^-$. 这与文献 \cite{Chen:2024jms} 第 3 节的单顶点 family 边界相同；该文使用的是 $\varsigma_v=+1$、$k_{0,v}\to-\ii\infty$ chart。
 
-若原被积函数在某个顶点没有纯顶点指数，可以加入一个辅助 block $\exp(\ii\varsigma_vk_{0,v}^{\rm aux}\tau_v)$. 它只把
+若原被积函数在某个顶点没有纯顶点指数，可以加入一个辅助能量 $\exp(\ii\varsigma_vk_{0,v}^{\rm aux}\tau_v)$. 它只把
 \begin{equation}
  p_{0,v}\longmapsto p_{0,v}+\varsigma_vk_{0,v}^{\rm aux},
  \qquad
@@ -1340,7 +1387,7 @@ shift。含通用符号解析正规化参数的 $\alpha$ 保持符号化，不�
  +\ii\varsigma_vk_{0,v}^{\rm aux}I_s .
  \label{eq:auxiliary-energy-M0-shift}
 \end{equation}
-因此在 generic kinematics 下，它不增加 slot 数和主积分数，也不改变 $M_1$。不过 $K_v^{\rm aux}=0$ 是这个 augmented family 的特殊化；是否仍为普通点必须由全 sector letters 决定，不能由“一维 slot 不增加主积分”推出。
+因此在 generic kinematics 下，它不增加 slot 数和主积分数，也不改变 $M_1$。不过 $K_v^{\rm aux}=0$ 是这个 augmented family 的特殊化；是否仍为普通点必须由全 sector letters 决定，不能由“一维指数不增加主积分”推出。
 
 \subsection{严格 time 总序、嵌套 blow-up 与 theta 固化}
 
@@ -1366,7 +1413,7 @@ shift。含通用符号解析正规化参数的 $\alpha$ 保持符号化，不�
  \qquad x_1,\ldots,x_V\longrightarrow0.
  \label{eq:nested-energy-inverse}
 \end{equation}
-两顶点时，若 $K_1\gg K_2$，这就是文献第 4.1 节的 $x=K_2/K_1$、$y=1/K_2$。在原逆变量中，$t_1,t_2,t_1+t_2$ 三个 divisor 同时通过二维原点，属于退化交点；式 \eqref{eq:nested-blowup-coordinates} 把它解析为 normal-crossing chart。
+两顶点时，若 $K_1\gg K_2$，这就是文献 \cite{Chen:2024jms} 第 4.1 节的 $x=K_2/K_1$、$y=1/K_2$。在原逆变量中，$t_1,t_2,t_1+t_2$ 三个 divisor 同时通过二维原点，属于退化交点；式 \eqref{eq:nested-blowup-coordinates} 把它解析为 normal-crossing chart。
 
 指数局域尺度满足
 \begin{equation}
@@ -1476,7 +1523,7 @@ shift。含通用符号解析正规化参数的 $\alpha$ 保持符号化，不�
 
 上述定理也给出了自动化范围。完全不含任何 $K_v$ 的奇点已经显式列在 DE letters 中，不是这个边界 producer 的待解决障碍。普通折线可用 \texttt{"Avoid"} 拒绝穿越；\texttt{"Automatic"} 把用户显式给出的有限奇点交给后端局部幂对数基，分类有限极限、pole 与 log 发散，并用同一局部基覆盖收敛域内双侧用户点。更一般的 blow-up、奇点处非共线转向及额外 gauge transformation 引入的新分母仍不自动继承上述证明。
 
-每个 sector 的边界条件必须把该 sector 自己当作 top sector：使用 contact 后的 component base power、normalization 和式 \eqref{eq:component-energy-rank}。先计算 bottom sectors，再沿 sector DAG 向上。固定 theta 后的 homogeneous leading term 因子化成 component vertex-family 边界系数的乘积；但 parent 还可收到 lower-sector solution 的 leading contribution。文献第 4.2 节五维例子中，remaining integral 对原 sector 的第二、第三分量已有非零 leading coefficient，正说明只写 homogeneous product 会漏项。通用 producer 应解 block-triangular Frobenius leading system，或等价地保留 theta/delta 的端点展开，递归得到完整同序边界向量。
+每个 sector 的边界条件必须把该 sector 自己当作 top sector：使用 contact 后的 component base power、normalization 和式 \eqref{eq:component-energy-rank}。先计算 bottom sectors，再沿 sector DAG 向上。固定 theta 后的 homogeneous leading term 因子化成 component vertex-family 边界系数的乘积；但 parent 还可收到 lower-sector solution 的 leading contribution。文献 \cite{Chen:2024jms} 第 4.2 节五维例子中，remaining integral 对原 sector 的第二、第三分量已有非零 leading coefficient，正说明只写 homogeneous product 会漏项。通用 producer 应解 block-triangular Frobenius leading system，或等价地保留 theta/delta 的端点展开，递归得到完整同序边界向量。
 
 \subsection{辅助外腿能量取零的受控输运}
 
@@ -1497,7 +1544,7 @@ shift。含通用符号解析正规化参数的 $\alpha$ 保持符号化，不�
  \kappa_{\{u,v\}}=p_{0,u}+p_{0,v}.
  \label{eq:contracted-zero-letter}
 \end{equation}
-因此当这两个 $p_0$ 只由待移除的辅助 blocks 组成时，完整 top/subsector 系统在辅助能量同时为零处是奇异的。更一般地，任一 reachable component 若在目标点既没有提供非零 signed energy 的 active slot，又没有非零总指数能量，就必有零 letter。
+因此当这两个 $p_0$ 只由待移除的辅助能量组成时，完整 top/subsector 系统在辅助能量同时为零处是奇异的。更一般地，任一 reachable component 若在目标点既没有提供非零 signed energy 的 active slot，又没有非零总指数能量，就必有零 letter。
 
 对 $M_1=0$ 的 general 结论已经由式 \eqref{eq:M1-general-eigenvalue}--\eqref{eq:M0-raising-resonance} 给出：一般 mixed state 必须另查端点渐近；纯 massless 的例外已在式 \eqref{eq:M1-lowering-resonance} 后说明，此时 $M_1=0$ 正对应未正规化的 $\Gamma(\alpha_v)$ 发散，必须先引入解析 regulator。边界与递推 producer 应消费正规化后的 generic 参数系统，而不把未正规化的零本征值误报为新的主积分或物理递推失效。
 
@@ -1505,14 +1552,14 @@ shift。含通用符号解析正规化参数的 $\alpha$ 保持符号化，不�
 
 因此推荐流程是：先按式 \eqref{eq:preferred-rank-from-point} 选择首选 chart，从式 \eqref{eq:nested-blowup-coordinates} 的边界得到同序向量，在 chart 内取一个小而有限的普通点，再由用户按所需同伦类给出到 preferred 普通点和最终目标点的多变量折线。\texttt{"Avoid"} 报告穿过 letter hypersurface 的问题点对；\texttt{"Automatic"} 对显式奇点用户点使用局部基分类并输出，且在同一直线分支上从出射普通匹配点继续；\texttt{"SingularityJump"} 显式选择穿越分支并要求确认多值性。辅助顶点能量可逐个取零；若零点是有限奇点，则返回有限值或 \texttt{Infinity}。若奇点位于复仿射段转向处，则输入没有唯一指定延拓分支，程序仍 fail closed。
 
-\subsection{当前 2411 无穷远边界与 FlintNDE 输运}
+\subsection{\texorpdfstring{\cite{Chen:2024jms}}{arXiv:2411.03088} 无穷远边界与 FlintNDE 输运}
 
-生产入口不在有限 Euclidean 普通点直接计算定义积分。\texttt{MSBoundaryData} 以文献 \cite{Chen:2024jms} 的 $K_v\to\infty$ 数据为唯一边界来源。若某个顶点没有物理外腿，程序在同一解析 dlog 系统中内部引入私有辅助外腿能量 $k_{0,v}^{\rm aux}$，先从对应 $K_v^{\rm aux}\to\infty$ 的阻尼极限构造边界数据，再由 FlintNDE 沿该辅助坐标输运到物理目标 $k_{0,v}^{\rm aux}=0$；用户无需在 \texttt{pointSequence} 或 \texttt{ParameterRules} 中输入该私有坐标。包括单顶点 massive-external family 在内，所有已闭合 tree/time-only context 都统一消费 sector DAG、component、slot registry、normalization、state order 与 strict rank，并走“边界领头项 + FlintNDE Frobenius 递推”路线。式 (3.44)--(3.46) 的单顶点显式多变量级数只作为测试 oracle，不进入生产分派。
+生产入口不在有限 Euclidean 普通点直接计算定义积分。\texttt{MSBoundaryData} 以文献 \cite{Chen:2024jms} 的 $K_v\to\infty$ 数据为唯一边界来源。若某个顶点没有物理外腿，程序在同一解析 dlog 系统中内部引入私有辅助外腿能量 $k_{0,v}^{\rm aux}$，先从对应 $K_v^{\rm aux}\to\infty$ 的阻尼极限构造边界数据，再由 FlintNDE 沿该辅助坐标输运到物理目标 $k_{0,v}^{\rm aux}=0$；用户无需在 \texttt{pointSequence} 或 \texttt{ParameterRules} 中输入该私有坐标。包括单顶点 massive-external family 在内，所有已闭合 tree/time-only context 都统一消费 sector DAG、component、slot registry、normalization、state order 与 strict rank，并走“边界领头项 + FlintNDE Frobenius 递推”路线。文献 \cite{Chen:2024jms} 式 (3.44)--(3.46) 的单顶点显式多变量级数只作为测试 oracle，不进入生产分派。
 
-具体地，对 sector $s$ 的 component $C$ 定义
+具体地，对 sector $s$ 的 component $C$ 定义（本小节全部 $\nu$ 都是式~\eqref{eq:paper-to-positive-order} 之后的本文参数）
 \begin{align}
  \alpha_{sC}(\bm a)&=A_{sC}+1-
- \sum_{r\in H(s,C)}a_r(2\nu_r^{\rm formula}+1),
+ \sum_{r\in H(s,C)}a_r(1-2\nu_r),
  \notag\\
  \ell_{sC}&=V-\min_{v\in C}\operatorname{rank}(v)+1,
  \qquad
@@ -1530,9 +1577,9 @@ shift。含通用符号解析正规化参数的 $\alpha$ 保持符号化，不�
  \right].
  \label{eq:generic-sector-boundary-weight}
 \end{align}
-$\cN_s$ 是 sector normalization，$\Xi_{s,\bm a}$ 收集 shared-massless chamber sign，$E_{sC,\bm a}$ 是该 component 全部 Hankel endpoint coefficients 的乘积。每条被收缩的 massive Full line $e$ 给 $\cN_s$ 贡献
+$\cN_s$ 是 sector normalization，$\Xi_{s,\bm a}$ 收集 shared-massless chamber sign，$E_{sC,\bm a}$ 是该 component 全部 Hankel endpoint coefficients 的乘积。每条被收缩的 massive Full line $e$ 给 $\cN_s$ 贡献文献 \cite{Chen:2024jms} 式 (2.17) 的 pinch 因子
 \begin{equation}
- -\frac{4\ii}{\pi}\eta_e k_e^{-2\nu_e^{\rm formula}-1},
+ -\frac{4\ii}{\pi}\eta_e k_e^{2\nu_e-1},
  \qquad
  \eta_e=\begin{cases}+1,&++\\-1,&--\end{cases},
  \label{eq:massive-full-pinch-normalization}
@@ -1546,37 +1593,37 @@ $\cN_s$ 是 sector normalization，$\Xi_{s,\bm a}$ 收集 shared-massless chambe
 \end{equation}
 于是 $W_{s,\bm a}v_{s,\bm a}$ 自动包含 child solution 注入 parent 的 leading 分量。重根或整数差共振不另造图专用参数；完整 exact residue 与这些 $\{\lambda,0,v\}$ 交给 FlintNDE 的 power-log 递推。有限定义积分只作为独立验证 oracle，不进入生产输入。
 
-对两顶点等时间幂 $\nu_0$ 的负 prefactor convention，2411 式 (4.2) 在论文自身的 endpoint basis 中定义
+文献 \cite{Chen:2024jms} 式 (4.2) 给出两顶点等时间幂 $\nu_0$ 的 remaining term。下面把它按式~\eqref{eq:paper-to-positive-order} 写在本文 $+\nu$ convention 中；上标 ${\rm paper}$ 只表示仍使用该文的 endpoint basis（两端取共轭 Hankel 阶），不表示另一套 prefactor convention：
 \begin{equation}
- I_R^{\rm paper}=-\frac{4\ii}{\pi}e^{\pi\operatorname{Im}\nu_1}k_s^{-2\nu_1-1}
- \int_{-\infty}^{0}\dd\tau\,(-\tau)^{2\nu_0-2\nu_1}
+ I_R^{\rm paper}=-\frac{4\ii}{\pi}e^{-\pi\operatorname{Im}\nu_1}k_s^{2\nu_1-1}
+ \int_{-\infty}^{0}\dd\tau\,(-\tau)^{2\nu_1-2\nu_0}
  e^{\ii(k_{12}+k_{34})\tau}.
  \label{eq:paper-two-vertex-child-normalization}
 \end{equation}
-这个式子不能不经换基直接抄成 MadStree 的 sector normalization。对物理阶 $\nu_1=\ii\mu$，论文的共轭阶端点与 MadStree 两端共同阶之间满足
+这个式子不能不经换基直接抄成 MadStree 的 sector normalization。对重场物理阶（Hankel 阶为 $\pm\ii\mu$，$\mu$ 实），该文印刷式的共轭阶端点与 MadStree 两端共同阶之间满足
 \begin{equation}
  e^{-\pi\mu}H^{(2)}_{-\ii\mu}(z)=H^{(2)}_{\ii\mu}(z).
  \label{eq:paper-endpoint-to-common-hankel-order}
 \end{equation}
 因此式 \eqref{eq:paper-two-vertex-child-normalization} 的显式 Boltzmann 因子已经进入 endpoint basis 变换；该例是 $G_{++}$，所以式 \eqref{eq:massive-full-pinch-normalization} 取 $\eta_e=+1$，在 MadStree 的共同 Hankel 阶 basis 中 child normalization 是
 \begin{equation}
- \cN_R^{\rm MS}=-\frac{4\ii}{\pi}k_s^{-2\nu_1-1},
+ \cN_R^{\rm MS}=-\frac{4\ii}{\pi}k_s^{2\nu_1-1},
  \label{eq:madstree-common-order-child-normalization}
 \end{equation}
-不能再乘 $e^{\pi\operatorname{Im}\nu_1}$。同一第五分支的 leading vector，以及在两种 basis 中对应的物理系数分别为
+不能再乘 $e^{-\pi\operatorname{Im}\nu_1}$。同一第五分支的 leading vector，以及在两种 endpoint basis 中对应的物理系数分别为
 \begin{align}
- v_5&=\left(0,\frac{1}{2\nu_1-\nu_0},\frac{1}{\nu_0+1},0,1\right)^T,
+ v_5&=\left(0,\frac{1}{\nu_0-2\nu_1},\frac{1}{1-\nu_0},0,1\right)^T,
  \notag\\
- C_5^{\rm paper}&=-\frac{4\ii}{\pi}e^{\pi\operatorname{Im}\nu_1}
- k_s^{-2\nu_1-1}e^{-\ii\pi(2\nu_0-2\nu_1+1)/2}
- \Gamma(2\nu_0-2\nu_1+1),
+ C_5^{\rm paper}&=-\frac{4\ii}{\pi}e^{-\pi\operatorname{Im}\nu_1}
+ k_s^{2\nu_1-1}e^{-\ii\pi(2\nu_1-2\nu_0+1)/2}
+ \Gamma(2\nu_1-2\nu_0+1),
  \notag\\
  C_5^{\rm MS}&=-\frac{4\ii}{\pi}
- k_s^{-2\nu_1-1}e^{-\ii\pi(2\nu_0-2\nu_1+1)/2}
- \Gamma(2\nu_0-2\nu_1+1).
+ k_s^{2\nu_1-1}e^{-\ii\pi(2\nu_1-2\nu_0+1)/2}
+ \Gamma(2\nu_1-2\nu_0+1).
  \label{eq:paper-two-vertex-contact-boundary}
 \end{align}
-这里使用 $\int_{-\infty}^{0}\dd\tau\,(-\tau)^p e^{\ii K\tau}=(-\ii)^{p+1}\Gamma(p+1)K^{-p-1}$ 的 $i\epsilon$ 分支。论文印刷式 (4.11) 的相位 $e^{\ii\pi(\nu_1-\nu_0)}$ 相对式 (4.2) 的这个直接积分多一个 $\ii$；MadStree 按公开定义 $J_s=\cN_s I_s$ 采用直接积分，并在和论文比较前显式化到同一 endpoint basis。正 prefactor context 只把这些公式中的论文参数统一换成 \texttt{formulaNu}$=-|\nu|$。上述五维结果现在只是式 \eqref{eq:generic-sector-boundary-component}--\eqref{eq:generic-sector-indicial-vector} 的一个检查例，不是生产分派；一般不等 time powers 直接读取各 component 自身的 $A_{sC}$。实正物理动量的 massive pinch normalization 固定为式 \eqref{eq:madstree-common-order-child-normalization}，不能把形式符号 $(-k_s)^{-2\nu_1-1}$ 交给 Mathematica 主支。
+这里使用 $\int_{-\infty}^{0}\dd\tau\,(-\tau)^p e^{\ii K\tau}=(-\ii)^{p+1}\Gamma(p+1)K^{-p-1}$ 的 $i\epsilon$ 分支。文献 \cite{Chen:2024jms} 印刷式 (4.11) 的相位写在本文 convention 中是 $e^{\ii\pi(\nu_0-\nu_1)}$，它相对式 \eqref{eq:paper-two-vertex-child-normalization} 的这个直接积分多一个 $\ii$；MadStree 按公开定义 $J_s=\cN_s I_s$ 采用直接积分，并在与该文比较前显式化到同一 endpoint basis。程序存储的基准公式就是本文这份 $+\nu$ 式（阶槽读取 \texttt{formulaNu}$\,=s_\nu\nu$，缺省 $+\nu$）；与 \cite{Chen:2024jms} 印刷式逐字对照时把阶换成该文的 $\nu_{\rm ref}=-\nu$ 即可，本文以上各式都不需要再作替换。上述五维结果现在只是式 \eqref{eq:generic-sector-boundary-component}--\eqref{eq:generic-sector-indicial-vector} 的一个检查例，不是生产分派；一般不等 time powers 直接读取各 component 自身的 $A_{sC}$。实正物理动量的 massive pinch normalization 固定为式 \eqref{eq:madstree-common-order-child-normalization}，不能把形式符号 $(-k_s)^{2\nu_1-1}$ 交给 Mathematica 主支。
 
 \texttt{MSEvaluatePath} 在 MadStree 侧按输入顺序把用户点划分为最大连续复仿射单变量段
 $x(s)=x_0+s v$，每段只拉回一次单变量矩阵 DE，并把全部 exact 复参数点、边界和选项放入
@@ -1706,7 +1753,7 @@ FlintNDE 在启动前分类局部奇点并执行 capability preflight；MadStree
 
 原被积函数的 $e^{-K_vt_v}$ 阻尼在 $K_v\to\infty$ 的原坐标表述中看起来具有指数渐近；这不等于正规化主积分的 dlog 系统在 blow-up 坐标 $x_j=0$ 必有本性奇点。抽出式 \eqref{eq:generic-sector-boundary-weight} 的已知物理权重并作 nested blow-up 后，当前接受的 exact 系统必须是普通匹配问题或 Fuchsian regular-singular 问题。若实际拉回系统仍有不可约二阶以上 pole、需要 Stokes/ramification 或不属于当前 exact field，capability preflight 会返回实际分类并停止；package 不把它自动解释成已解决的边界条件。
 
-当前已经端到端检查单顶点三 massive 的 2411 边界、两顶点 pure-massless 的解析 chamber 边界、三顶点 massive/massless 的通用 15 维边界与输运，以及两顶点 $G^{++}$ 五维系统。pure-massless 定义积分同时检查 contact 原子权重的两张 DE residual 和完整目标向量；massive 五维系统的 connection、奇点拉回、五个 leading vectors、五个系数和目标向量均与独立论文路线一致。结构检查还覆盖共同-theta simultaneous events、massless/massive coincident quotient，以及 triangle time-only 圈图的通用 boundary/residue。FlintNDE 适配器另检查普通/正则奇点保存点和超能力 pole 的 fail-closed。代表性运行证据不等于对所有 topology 与参数区域逐点认证；通用性来自同一 metadata 数据流与结构不同拓扑的共同回归，而不是列举专用生产分支。
+当前已经端到端检查单顶点三 massive 的文献 \cite{Chen:2024jms} 边界、两顶点 pure-massless 的解析 chamber 边界、三顶点 massive/massless 的通用 15 维边界与输运，以及两顶点 $G^{++}$ 五维系统。pure-massless 定义积分同时检查 contact 原子权重的两张 DE residual 和完整目标向量；massive 五维系统的 connection、奇点拉回、五个 leading vectors、五个系数和目标向量均与基于文献 \cite{Chen:2023eic} 印刷公式的独立推导路线一致。结构检查还覆盖共同-theta simultaneous events、massless/massive coincident quotient，以及 triangle time-only 圈图的通用 boundary/residue。FlintNDE 适配器另检查普通/正则奇点保存点和超能力 pole 的 fail-closed。代表性运行证据不等于对所有 topology 与参数区域逐点认证；通用性来自同一 metadata 数据流与结构不同拓扑的共同回归，而不是列举专用生产分支。
 
 \section{典型使用例子}
 
@@ -1773,8 +1820,8 @@ $a_1=a_2=a_3=1+\epsilon$，用户只指定 \texttt{MaximumEpPower->0}。程序�
 
 不运行 sampled IBP 或 reduction 时，公式 producer 只需执行以下步骤：
 \begin{enumerate}[label=\arabic*.]
-  \item 从 topology 建立全图 building-block registry：每个无 theta 指数一个有独立编号的一维 slot，每个 massive endpoint 一个二维 h slot，每条未缩并 massless full edge 一个共享二维 slot；同时保存每个 vertex 的 block incidence list。
-  \item 对 massless full edge 固定式 \eqref{eq:SP-massless} 的 $S_e,P_e$ 和端点 incidence；cross/external exponent 不建立共享 slot。
+  \item 从 topology 建立全图 building-block registry：每个 massive endpoint 一个二维 h slot，每条未缩并 massless full edge 一个共享二维 slot；同时保存每个 vertex 的 slot incidence list。无 theta 指数不入 registry，只按式 \eqref{eq:component-energy} 给出每个 component 的标量 $p_0$。
+  \item 对 massless full edge 固定式 \eqref{eq:SP-massless} 的 $S_e,P_e$ 和端点 incidence；cross/external exponent 不建立任何 slot。
   \item 按式 \eqref{eq:global-M1}--\eqref{eq:global-M0} 逐顶点组装 Kronecker 和；一维指数项与所有二维项使用同一个 embedding API，并严格区分 $\varsigma_v$、$\sigma_e$ 与 $\epsilon_{ve}$。
   \item 先验证式 \eqref{eq:local-common-diagonalization-condition}，再用一个全局 $U_s$ 列举式 \eqref{eq:global-energy-letter} 的对角元；只反演 $M_1$ 和 $\widetilde M_0$ 的标量对角元。
   \item 按式 \eqref{eq:common-theta-odd-subsets} 对 current-component bundles 做 event BFS；对 coincident spectators 构造 $S_s,P_s$ quotient，并用式 \eqref{eq:simultaneous-contact-base-power} 固定 child powers。
@@ -1797,9 +1844,9 @@ $a_1=a_2=a_3=1+\epsilon$，用户只指定 \texttt{MaximumEpPower->0}。程序�
 
 \section{最终判断}
 
-纯 massive 公式从一开始就是 building-block registry 上的 Kronecker 和：每个无 theta 指数给 $\Delta M_1=0$、$\Delta M_0=\ii\chi_bq_bI$，每个二维 h endpoint 给 $\Delta M_1=-(2\nu_i+1)P_1$、$\Delta M_0=-\ii k_i\sigma_2$，所有项都乘其它 slots 的单位矩阵。MadStree 缺省正 prefactor convention 统一代入 $\nu_i\to-\nu_i$，所以第一项改为 $-(1-2\nu_i)P_1$。正、负顶点只改变纯顶点指数的 $\chi_b=\varsigma_v$；沿 $k_{0,v}=-\ii\varsigma_vK_v$、$K_v>0$，两者都成为 $e^{-K_vt_v}$，不会改变二维 h 原子。
+纯 massive 公式从一开始就是 building-block registry 上的 Kronecker 和：每个顶点的无 theta 指数给 $\Delta M_1=0$、$\Delta M_0=\ii p_{0,v}I$，每个二维 h endpoint 给 $\Delta M_1=-(1-2\nu_i)P_1$、$\Delta M_0=-\ii k_i\sigma_2$，所有项都乘其它 slots 的单位矩阵；这里的 $\nu_i$ 一律是式~\eqref{eq:paper-to-positive-order} 之后的本文参数，MadStree 缺省正 prefactor convention 不需要再作替换。正、负顶点只改变纯顶点指数的符号 $\varsigma_v$；沿 $k_{0,v}=-\ii\varsigma_vK_v$、$K_v>0$，两者都成为 $e^{-K_vt_v}$，不会改变二维 h 原子。
 
-加入含 theta 的 massless full edge 后，应先保留与 massive 相同的两个端点二态，再用 $S_e,P_e$ 把四态约为一个共享二态。两个顶点不再拥有彼此独立的该边因子，而是在同一个 slot 上以相反符号作用；因此逐顶点 tensor factorization 失效，但全图 Kronecker 和、共同对角化、迭代矩阵和 dlog DE 都仍可直接写出。theta 导数只增加由 $|1\rangle_e$ 生成的 lower-sector block。论文 h-state 的 $F_{11}=+F_{00}$ 与 package quotient 的 $F_{11}^J=-F_{00}^J$ 由常数 $D_{\sigma_e}$ 严格连接，不能混写。
+加入含 theta 的 massless full edge 后，应先保留与 massive 相同的两个端点二态，再用 $S_e,P_e$ 把四态约为一个共享二态。两个顶点不再拥有彼此独立的该边因子，而是在同一个 slot 上以相反符号作用；因此逐顶点 tensor factorization 失效，但全图 Kronecker 和、共同对角化、迭代矩阵和 dlog DE 都仍可直接写出。theta 导数只增加由 $|1\rangle_e$ 生成的 lower-sector block。文献 \cite{Chen:2023eic} 的 h-state 中 $F_{11}=+F_{00}$，与 package quotient 的 $F_{11}^J=-F_{00}^J$ 由常数 $D_{\sigma_e}$ 严格连接，不能混写。
 
 单顶点递推不受共享槽阻碍：从该顶点的关联表逐块相加即可得到 $M_{1;v,s},M_{0;v,s}$。不同顶点只是在同一无质量槽上共享状态位并取相反的端点符号。当前每个二维槽中只出现一个固定泡利方向，故同槽算子两两对易；局部 $2\times2$ 对角化器的 Kronecker 积可把大矩阵求逆化成逐能量字母取倒数。未来若同一槽出现不共线的泡利方向，则必须停用这条快速路径。lowering 只在 $M_1$ 本征值为零时失效，raising 只在 $M_0$ 的能量字母为零时失效；未被该方向求逆的矩阵即使为零，也不产生该方向的 pole。
 
@@ -1807,7 +1854,7 @@ dlog DE 由同一 registry 直接产生：sector diagonal block 使用共同对�
 
 边界同样使用初始化后的 $K_v=\ii\varsigma_vk_{0,v}$，而不把用户变量永久改名为 \texttt{pik0}/\texttt{mik0}。preferred 普通点按 $\operatorname{Re}K_v$ 降序选择首选 strict chart；这等价于 $|\tau_v|$ 升序，因为大阻尼能量只支持更小的典型 $|\tau_v|$。该选择用于缩短首段 continuation、减少可能需要绕开的 letters，不替代普通点和 normal-crossing 证书。
 
-massless building block 应始终写成无量纲 h 方程 $h_{zz}+h=0$。物理式 $\partial_\tau^2h=-k^2h$ 完全等价，只是 $\partial_\tau=-k\partial_z$ 的两次链式法则；它不要求引入另一套不兼容的局部 EOM。这样既保留论文公式的 $2\times2$ 结构，也能在最终物理 basis 中正确恢复 $k^2$ 和 contact。
+massless building block 应始终写成无量纲 h 方程 $h_{zz}+h=0$。物理式 $\partial_\tau^2h=-k^2h$ 完全等价，只是 $\partial_\tau=-k\partial_z$ 的两次链式法则；它不要求引入另一套不兼容的局部 EOM。这样既保留文献 \cite{Chen:2023eic} 公式的 $2\times2$ 结构，也能在最终物理 basis 中正确恢复 $k^2$ 和 contact。
 
 \bibliographystyle{unsrtnat}
 \bibliography{references}
