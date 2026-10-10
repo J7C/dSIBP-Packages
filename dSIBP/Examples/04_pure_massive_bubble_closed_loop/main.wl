@@ -43,7 +43,7 @@ parameterProbeRules = {
 (*详细物理输入*)
 
 (* 两个顶点均在 - branch；这与 reference 的 Vpm=0 convention 对齐。 *)
-(* 两条 massive h 内线依次取 q 与 q-k；effectiveLoopExternalMomenta 只含实际进入线动量的独立向量 k。 *)
+(* 两条 massive h 圈传播子依次取 q 与 q-k；effectiveLoopExternalMomenta 只含实际进入 loop 动量的独立向量 k。 *)
 (* ss11=Sqrt[k.k]=ks 与 P0 是 ds 的独立变量；P_pkg=P0，reference P1=P2=-P0。 *)
 (* J 只保存整数指标；a0=2 nu、b0=-2 nu 留在 metadata，并在 shrink/tree 投影时进入完整物理幂次。 *)
 caseInput = <|

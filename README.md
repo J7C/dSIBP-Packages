@@ -5,7 +5,7 @@ spacetime: **MadStree**, **dSIBP** and **FlintNDE**.
 
 | Package | Language | Role |
 | --- | --- | --- |
-| [dSIBP](dSIBP/) | Wolfram Language | Topology-driven generation of dS IBP relations, parameter-derivative seeds, sector metadata and backend-neutral reduction input for graphs with any number of loops, any topology and mixed massive/massless lines. |
+| [dSIBP](dSIBP/) | Wolfram Language | Topology-driven generation of dS IBP relations, parameter-derivative seeds, sector metadata and backend-neutral reduction input for graphs with any number of loops, any topology and mixed massive/massless propagators. |
 | [MadStree](MadStree/) | Wolfram Language | Assembly of the dS tree and time-only formula: master integrals, recurrence metadata, the analytic `dlog`-form differential equation, and high-precision evaluation of the resulting boundary-value problem. |
 | [FlintNDE](FlintNDE/) | Python, with a Wolfram Language front end | Arbitrary-precision numerical transport of first-order matrix differential equations `Y'(x) = A(x) Y(x)`, plus reconstruction of half-analytic Laurent/power series in a regulator. |
 

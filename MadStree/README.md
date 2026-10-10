@@ -136,7 +136,7 @@ written into the package source tree.
 
 | Example | Covers |
 | --- | --- |
-| `01_massless_full_edge.wl` | A single theta-carrying massless full edge: initialization to masters, recurrence and the `dlog` DE, then single-point and multipoint numerical evaluation. |
+| `01_massless_full_edge.wl` | A single theta-carrying massless full propagator: initialization to masters, recurrence and the `dlog` DE, then single-point and multipoint numerical evaluation. |
 | `02_single_vertex_family.wl` | A single-vertex function family in both compact and explicit form, analytic saving, masters, reduction, and one table-driven numerical run. |
 | `03_time_only_cycle_chart.wl` | Time-only cycle initialization, the common-theta contact sector, the `dlog` DE and all strict time-rank blow-up chart certificates. |
 | `04_three_vertex_tree.wl` | The minimal massless three-vertex, two-propagator tree (`+++` contour) through to a shared-anchor batch multipoint evaluation with CSV/JSON export. |

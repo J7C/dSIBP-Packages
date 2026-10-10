@@ -90,7 +90,7 @@ contextInfo = DSInfo[context, "Full"];
 notation = DSParameterNotation[context];
 publicAPI = DSPublicAPI[];
 
-(* cycle/fixed full line 都保留双端点三槽；fixed line 以短字符串 "F" 标记无 b 指标。 *)
+(* cycle/fixed full 传播子都保留两个顶点的三槽；fixed 传播子以短字符串 "F" 标记无 b 指标。 *)
 integral = J[
    {0, 0, 0},
    {{0, 0, 0}, {0, 0, 0}, {"F", 0, 1}},

@@ -15,8 +15,8 @@ Get[FileNameJoin[{exampleDir, "family_conventions.wl"}]];
 (* ::Chapter:: *)
 (*详细物理输入*)
 
-(* 两个 ISP 分别以两条 massless line 的动量与 massive line 动量作标量积；
-   在 k321 <-> l3-k321-kL 下它们严格互换，因此可与 line 交换共同 canonicalize。 *)
+(* 两个 ISP 分别以两条 massless 传播子的动量与 massive 传播子动量作标量积；
+   在 k321 <-> l3-k321-kL 下它们严格互换，因此可与传播子交换共同 canonicalize。 *)
 case = <|
    "name" -> "singleMassiveSunriseExample",
    "vertices" -> {

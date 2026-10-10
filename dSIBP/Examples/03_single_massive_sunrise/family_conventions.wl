@@ -1,6 +1,6 @@
 (* ::Package:: *)
 (* Single-massive sunrise 的离散对称性与 odd/odd parity convention。顶点交换
-   反转每条 full line 的端点指标；两条 massless 平行线交换时，同时交换对应 line
+   反转每条 full 传播子的顶点指标；两条 massless 平行传播子交换时，同时交换对应传播子
    pack 与成对 ISP 指标。本例只构造 general seeds 和 general 参数微分算符。 *)
 
 
@@ -55,7 +55,7 @@ sunriseEndpointState[pack_List, slot_Integer] := If[
    ];
 
 
-(* 顶点键先无序化两条同类 massless line 的端点态，所以不受 line 交换影响。 *)
+(* 顶点键先无序化两条同类 massless 传播子的顶点态，所以不受传播子交换影响。 *)
 sunriseVertexSwapNeededQ[
    J[{a1_, a2_}, {massivePack_, masslessPack2_, masslessPack3_}, _]
    ] := sunriseNumericLexGreaterQ[
@@ -67,7 +67,7 @@ sunriseVertexSwapNeededQ[
 sunriseVertexSwapNeededQ[_] := False;
 
 
-(* line 键无序化一条线的两个端点态，所以不受顶点交换影响；ISP 指标随对应线一起比较。 *)
+(* 传播子键无序化一条传播子的两个顶点态，所以不受顶点交换影响；ISP 指标随对应传播子一起比较。 *)
 sunriseMasslessLineSwapNeededQ[
    J[_, {_, masslessPack2_, masslessPack3_}, {isp2_, isp3_}]
    ] := sunriseNumericLexGreaterQ[

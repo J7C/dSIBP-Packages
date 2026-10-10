@@ -4,7 +4,7 @@ dSIBP is a topology-driven Wolfram Language generator of integration-by-parts (I
 for correlators in de Sitter spacetime.
 
 You describe a graph — any number of loops, any topology, with massive and massless internal
-lines mixed — and dSIBP produces the complete relation system for it: time and loop IBP
+propagators mixed — and dSIBP produces the complete relation system for it: time and loop IBP
 equations, parameter-derivative seeds, sector metadata, and a backend-neutral `linearData`
 representation that can be serialized for Kira or any other linear reducer. dSIBP generates and
 exports those relations; it never runs a reduction itself.

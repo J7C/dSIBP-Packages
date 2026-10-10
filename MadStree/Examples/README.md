@@ -12,7 +12,7 @@ chapter cells are ordered so that a section only reads what the sections above i
 
 | Example | Covers |
 | --- | --- |
-| `01_massless_full_edge.wl` | A single theta-carrying massless full edge: topology initialization, masters, recurrence and the `dlog` DE, then the single-point and multipoint numerical workflow on one table. |
+| `01_massless_full_edge.wl` | A single theta-carrying massless full propagator: topology initialization, masters, recurrence and the `dlog` DE, then the single-point and multipoint numerical workflow on one table. |
 | `02_single_vertex_family.wl` | A single-vertex function family defined both compactly and explicitly. The two initialization schemas build the same context; `ParameterRules` is given once, and the single-point and multipoint runs differ only in the number of value rows. |
 | `03_time_only_cycle_chart.wl` | Time-only cycle initialization, the common-theta contact sector, the `dlog` DE, and the strict time-rank blow-up chart certificates. |
 | `04_three_vertex_tree.wl` | The minimal massless three-vertex, two-propagator tree (`+++` contour vertices) through to a batch multipoint evaluation sharing one finite anchor, exported to CSV and JSON. |

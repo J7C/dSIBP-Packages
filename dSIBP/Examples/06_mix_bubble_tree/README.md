@@ -2,21 +2,21 @@
 
 Run with `wolframscript -file main.wl`.
 
-The case fixes three internal lines: between `v1` and `v2` one massive `h` cycle line and one
-massless exponential cycle line, and between `v2` and `v3` one massless exponential bridge
-line.
+The case fixes three internal propagators: between `v1` and `v2` one massive `h` cycle propagator and one
+massless exponential cycle propagator, and between `v2` and `v3` one massless exponential bridge
+propagator.
 
 Each of the two cycle propagators is taken fully even, that is the evenness constraint is
-applied to its own complete `{b, n1, n2}` index set. The third line is a fixed tree/bridge
-line: it does not belong to a loop integration, carries no continuous `b` index, and receives
+applied to its own complete `{b, n1, n2}` index set. The third propagator is a fixed tree/bridge
+propagator: it does not belong to a loop integration, carries no continuous `b` index, and receives
 no parity constraint.
 
 `loopExternalMomenta = {k1 + k2}` declares the loop-external direction and
 `independentExternalMomenta = {k1, k2}` declares the two loop-free momenta. The script then
 walks through the default `ss11/sE1/sE2`, custom `loopScale/legScale1/legScale2`, per-vertex
-independent phases, and the cycle/fixed line-pack and post-contact sector data.
+independent phases, and the cycle/fixed propagator pack and post-contact sector data.
 
-No second massive line is added, so that the demonstration of momentum roles, massless
+No second massive propagator is added, so that the demonstration of momentum roles, massless
 convention and bridge/cycle contraction is not mixed into an unnecessary massive
 function-system combination.
 
