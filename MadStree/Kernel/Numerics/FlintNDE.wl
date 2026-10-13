@@ -367,7 +367,12 @@ msExecuteFlintNDEAdapter[inputData_Association, pythonExecutable_, runtimeDirect
     Return[Join[imported, <|"cacheHit" -> False, "cacheDirectory" -> cacheDirectory|>]]
   ];
   If[process["ExitCode"] =!= 0 || Lookup[imported, "status", None] =!= "success",
-    Message[MSEvaluatePath::backendRunFailed, pythonExecutable, Lookup[imported, "error", logTail]];
+    (* 同时打印后端序列化的 traceback：只看外层 "error" 字段会掩蔽
+       链式真因（如 exact_gaussian 包装的 int<->str 位数上限）。 *)
+    Message[MSEvaluatePath::backendRunFailed, pythonExecutable,
+      Lookup[imported, "error", logTail] <>
+        If[StringQ[Lookup[imported, "traceback", ""]],
+          "\n" <> Lookup[imported, "traceback", ""], ""]];
     Return[msFailure["FlintNDEProcessFailed", <|"process" -> process, "backend" -> imported, "stderr" -> logTail|>]]
   ];
   Quiet[DeleteFile /@ Select[{inputFile, logFile}, FileExistsQ]];

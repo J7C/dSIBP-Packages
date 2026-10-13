@@ -29,7 +29,11 @@ def _real_rational(value: Any, field_name: str) -> fmpq:
     try:
         rational = Fraction(text)
     except (ValueError, ZeroDivisionError) as error:
-        raise ValueError(f"expected an exact rational scalar, got {value}") from error
+        # 把底层原因并入消息本身（如 Python 3.11+ 对 int<->str 转换的
+        # 4300 位十进制上限），真因不再只埋在 __cause__ 里。
+        raise ValueError(
+            f"expected an exact rational scalar, got {value}: {error}"
+        ) from error
     return fmpq(rational.numerator, rational.denominator)
 
 
