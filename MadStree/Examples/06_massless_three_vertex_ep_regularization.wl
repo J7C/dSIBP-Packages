@@ -2,8 +2,10 @@
 
 (***
 文件：06_massless_three_vertex_ep_regularization.wl
-用途：演示真实无质量三顶点树图的共同时间幂解析正规化 a1=a2=a3=1+ep；
-      用户只指定需要返回到 ep^0，程序在数值 NDE 前从符号边界与 dlog DE 认证最低幂，
+用途：演示真实无质量三顶点树图的时间幂解析正规化 a1=-1+ep、a2=a3=1+ep；
+      顶点 1 的幂取 -1+ep，使 eps=0 处时间积分真正发散，Laurent 展开含单一
+      1/ep 极点：请求返回到 ep^0 时，极点系数 c_{-1} 与有限部 c_0 一并返回。
+      程序在数值 NDE 前从符号边界与 dlog DE 认证最低幂 n_min=-1，
       再选择 exact ep 点并重构 Laurent 系数。用户也可提供冗余生产候选池、独立验证点
       和首轮内部最高幂；程序只按每轮所需点数消费候选前缀并复用既有结果。本例缺省
       选择开角域 {-Pi/3,Pi/3}，模长仍由目标精度自动决定。
@@ -49,7 +51,7 @@ epInitialInternalMaximumPower = 2;
 
 
 (* ::Chapter:: *)
-(*无质量三顶点 family 与共同 ep 正规化*)
+(*无质量三顶点 family 与单顶点降幂 ep 正规化*)
 
 treeSpec = <|
   "vertices" -> {
@@ -70,7 +72,7 @@ formulaArtifacts = MSWriteFormulaArtifacts[context];
 pointSequence = {{k1, k2, k3}, {9 I, 3 I, 5 I}};
 parameterRules = {
   q12 -> 1, q23 -> 2,
-  a1 -> 1 + ep, a2 -> 1 + ep, a3 -> 1 + ep
+  a1 -> -1 + ep, a2 -> 1 + ep, a3 -> 1 + ep
 };
 
 
@@ -119,8 +121,8 @@ checks = <|
   "twoMasslessPropagators" -> Length[treeSpec["lines"]] === 2 &&
     AllTrue[treeSpec["lines"], #["type"] === "massless" &] &&
     AllTrue[context["lines"], #["type"] === "masslessFull" &],
-  "sharedEpRegularization" ->
-    ({a1, a2, a3} /. parameterRules) === ConstantArray[1 + ep, 3],
+  "oneVertexLoweredEpRegularization" ->
+    ({a1, a2, a3} /. parameterRules) === {-1 + ep, 1 + ep, 1 + ep},
   "analyticFormulaWritten" -> Lookup[formulaArtifacts, "status", None] === "generated" &&
     FileExistsQ[formulaArtifacts["files", "dlogDE"]] &&
     epSeries["formulaArtifacts", "outputDirectory"] === formulaArtifacts["outputDirectory"] &&
@@ -139,15 +141,17 @@ checks = <|
     epSeries["laurentSupportCertificate", "status"] === "certified" &&
     epSeries["laurentSupportCertificate", "method"] ===
       "symbolicBoundaryAndRegularDLogValuation",
-  "automaticLeadingPowerZero" -> epSeries["leadingPower"] === 0 &&
-    epSeries["laurentSupportCertificate", "leadingPower"] === 0,
-  "regularDEAndAnalyticBoundary" ->
+  "certifiedSinglePoleLeadingPower" -> epSeries["leadingPower"] === -1 &&
+    epSeries["laurentSupportCertificate", "leadingPower"] === -1,
+  "poleCoefficientReturned" -> KeyExistsQ[epSeries["coefficients"], -1] &&
+    ! AllTrue[Lookup[epSeries["coefficients"], -1], TrueQ[# === 0] &],
+  "regularDEAndMeromorphicBoundary" ->
     TrueQ[epSeries["laurentSupportCertificate",
       "differentialEquationRegularAtEpZeroQ"]] &&
     TrueQ[epSeries["laurentSupportCertificate",
       "boundaryFiniteLaurentAtEpZeroQ"]] &&
-    TrueQ[epSeries["laurentSupportCertificate",
-      "boundaryDefinitionAnalyticAtEpZeroQ"]],
+    epSeries["laurentSupportCertificate", "boundaryDefinitionAnalyticAtEpZeroQ"] ===
+      False,
   "automaticProductionGrid" -> Length[epSeries["productionEpValues"]] >=
     epSeries["maximumPower"] - epSeries["leadingPower"] + 1,
   "openComplexAngleRange" -> If[
@@ -192,14 +196,23 @@ Print["independent validation ep values: ", epSeries["validationEpValues"]];
 Print["parallel requested/effective: ",
   epSeries["parallelTaskCountRequested"], "/", epSeries["parallelTaskCountEffective"]];
 Print["adaptive reconstruction wall seconds: ", epSeriesWallSeconds];
-Print["pole coefficients: ", InputForm[epSeries["poleCoefficients"]]];
-Print["finite part: ", InputForm[epSeries["finitePart"]]];
+(* 展示前把绝对值低于 10^-20 的分量归零：本次重构相对残差约 10^-25、物理分量量级
+   10^-5 以上，低于 10^-20 的分量是数值噪声（数学上为零），不是物理信号；返回记录
+   epSeries 本身保持未截断的高精度原值。 *)
+displayChopThreshold = 10^-20;
+poleVector = Lookup[epSeries["poleCoefficients"], -1];
+Print["pole coefficients: ",
+  InputForm[Chop[N[poleVector], displayChopThreshold]]];
+Print["finite part: ",
+  InputForm[Chop[N[epSeries["finitePart"]], displayChopThreshold]]];
 Print["maximum validation relative residual: ",
   epSeries["maximumValidationRelativeResidual"]];
+Print["returned coefficient precision: ",
+  Min[Precision /@ Flatten[Values[epSeries["coefficients"]]]]];
 Print["checks: ", Count[Values[checks], True], "/", Length[checks]];
 
 If[! And @@ Values[checks],
   Print["failed checks: ", Keys@Select[checks, Not@TrueQ[#] &]];
   Exit[1]
 ];
-Print["Example PASSED: adaptive shared-ep Laurent reconstruction completed."];
+Print["Example PASSED: single-pole ep Laurent reconstruction completed."];

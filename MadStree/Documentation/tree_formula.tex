@@ -1732,11 +1732,11 @@ $n_{\min}\geq0$ 才同时记录解析性。沿当前有限路径，$\epsilon$-�
 Frobenius 递推算子在 $\epsilon=0$ 的降秩只作为共振诊断保存；它本身不能越过已经合并的
 物理边界而被解释成 $1/\epsilon$ pole。
 
-Example 06 的无质量三顶点采用
-$a_1=a_2=a_3=1+\epsilon$。其物理边界权重包含
-$\Gamma(2+\epsilon)^3$、$\Gamma(2+\epsilon)\Gamma(4+2\epsilon)$ 和
-$\Gamma(6+3\epsilon)$，都在 $\epsilon=0$ 正则；实际九维 DE 也无负 $\epsilon$ 阶，故程序在
-任何 NDE 求解前认证 $n_{\min}=0$。这意味着该例没有 pole；程序不会为了演示而虚构
+Example 06 的无质量三顶点采用 $a_1=-1+\epsilon$、$a_2=a_3=1+\epsilon$，
+$\epsilon=0$ 处时间积分真正发散。顶点 1 的单位 $u_1=a_1+1$ 等于 $\epsilon$，在部分因子化
+边界权重中作为独立因子出现，每个这样的分支都带一个 $\Gamma(\epsilon)$ 单极点；实际九维 DE
+仍无负 $\epsilon$ 阶，故程序在任何 NDE 求解前由合并物理边界认证
+$n_{\min}=-1$。极点来自边界数据本身，而不是任何单个共振；程序既不虚构也不掩盖
 $1/\epsilon$ 项。
 
 认证支撑后，内部方阵插值缺省至少拟合到用户最高阶以上两阶。独立验证点从不进入拟合矩阵；
@@ -1833,10 +1833,11 @@ FlintNDE 局部幂对数入口区分可去、pole 与 log 发散，不按变量�
 \subsection{三顶点正规化：自动 Laurent 支撑与增量拟合}
 
 \texttt{Examples/06\_massless\_three\_vertex\_ep\_regularization.wl} 取
-$a_1=a_2=a_3=1+\epsilon$，用户只指定 \texttt{MaximumEpPower->0}。程序先由符号边界和 DE
+$a_1=-1+\epsilon$、$a_2=a_3=1+\epsilon$，用户只指定 \texttt{MaximumEpPower->0}。程序先由符号边界和 DE
 认证最低幂，再自动选择生产/独立验证点；验证精度不足时只增加内部拟合阶数和新增点，并复用
-已计算值。坐标表只含不依赖 $\epsilon$ 的 $k_i$ 值，$a_i\to1+\epsilon$ 只写在
-\texttt{ParameterRules}；该例的认证最低幂是 0，故返回有限项而不虚构 pole。
+已计算值。坐标表只含不依赖 $\epsilon$ 的 $k_i$ 值，$a_i\to c_i+\epsilon$ 只写在
+\texttt{ParameterRules}；该例的认证最低幂是 $-1$，返回值同时含 $\epsilon^{-1}$ 极点系数与
+$\epsilon^0$ 有限项。
 
 \subsection{无物理外腿：私有辅助能量输运到零}
 

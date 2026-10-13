@@ -1809,11 +1809,13 @@ $\epsilon=0$ is retained as a resonance diagnostic only; it is not by itself int
 $1/\epsilon$ pole across the already combined physical boundary.
 
 Example 06 uses the massless three-vertex family with
-$a_1=a_2=a_3=1+\epsilon$.  Its physical boundary weights include
-$\Gamma(2+\epsilon)^3$, $\Gamma(2+\epsilon)\Gamma(4+2\epsilon)$, and
-$\Gamma(6+3\epsilon)$, all regular at $\epsilon=0$.  The actual nine-dimensional DE also has
-no negative $\epsilon$ power.  The program therefore certifies $n_{\min}=0$ before any NDE
-solve: this example has no pole, and no artificial $1/\epsilon$ term is introduced.
+$a_1=-1+\epsilon$ and $a_2=a_3=1+\epsilon$, whose $\epsilon=0$ time integrals genuinely
+diverge.  The vertex-1 unit $u_1=a_1+1$ equals $\epsilon$ and is isolated as a standalone
+factor in part of the factorized boundary weights, and every such branch carries a single
+$\Gamma(\epsilon)$ simple pole.  The actual nine-dimensional DE still has
+no negative $\epsilon$ power.  The program therefore certifies $n_{\min}=-1$ before any NDE
+solve, from the combined physical boundary: the pole comes from the boundary data itself and
+not from any individual resonance.
 
 After support certification, the square interpolation initially includes at least two powers
 above the user maximum.  Independent validation points never enter the fit.  If their relative
@@ -1918,13 +1920,13 @@ log divergent without dispatching on a variable name or graph type.
 \subsection{Three-vertex regulator: automatic Laurent support and incremental fitting}
 
 \texttt{Examples/06\_massless\_three\_vertex\_ep\_regularization.wl} sets
-$a_1=a_2=a_3=1+\epsilon$, while the user requests only \texttt{MaximumEpPower->0}. The package first
+$a_1=-1+\epsilon$ and $a_2=a_3=1+\epsilon$, while the user requests only \texttt{MaximumEpPower->0}. The package first
 certifies the lowest power from the symbolic boundary and DE and then selects production and
 independent validation points. If validation misses the target, only the internal fit order and new
 points are added, while previous values are reused. Its coordinate table contains only
-$\epsilon$-independent $k_i$ values, while $a_i\to1+\epsilon$ occurs only in
-\texttt{ParameterRules}. This example certifies lowest power zero and therefore returns the finite
-part without inventing a pole.
+$\epsilon$-independent $k_i$ values, while $a_i\to c_i+\epsilon$ occurs only in
+\texttt{ParameterRules}. This example certifies lowest power $-1$ and therefore returns the
+$\epsilon^{-1}$ pole coefficient together with the finite part.
 
 \subsection{No physical external leg: private auxiliary energy to zero}
 
