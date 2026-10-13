@@ -5,6 +5,8 @@
 用途：构造 contact-reachable sector、统一主积分顺序，并认证每个时间分量的小 t 分支与安全指标范围。
 核心逻辑：sector DAG 和 slot registry 建成后，逐分量枚举全部 Hankel Frobenius 分支；零 shift
 主积分若已命中 Gamma 极点则拒绝初始化，正整数分支只记录后续递推可使用的最低 shift。
+整数性判定走 Together/Expand 的结构化规范形（msGammaCanonicalForm），商空间验证对显式 0/1
+整数矩阵直接比较，全程不调用 Simplify/FullSimplify。
 ***)
 
 (***
@@ -211,7 +213,8 @@ msSectorCanonicalStateData[sector_Association] := Module[
     "stateEmbedding" -> embedding,
     "stateProjection" -> projection,
     "coincidentLineIds" -> Lookup[constraints, "id", {}],
-    "quotientCertifiedQ" -> TrueQ[Simplify[projection.embedding] === IdentityMatrix[Length[canonicalStates]]]
+    (* S、P 由 ConstantArray[0,...] 加单位置 1 构造，元素恒为显式整数，Dot 结果可直接 SameQ 比较。 *)
+    "quotientCertifiedQ" -> projection.embedding === IdentityMatrix[Length[canonicalStates]]
   |>
 ];
 
@@ -359,32 +362,38 @@ msSectorIdentityCertificate[sectors_List, masters_List, rootLines_List] := Modul
 (* ::Section:: *)
 (*时间 IBP 的小 t 分支与安全指标范围*)
 
-(* 这里只接受可以精确证明的整数结论；含 generic regulator 的符号表达式保持未判定。 *)
-msProvablyIntegerQ[value_] := Module[{simplified = Simplify[value]},
-  IntegerQ[simplified] || TrueQ[Quiet@FullSimplify[Element[simplified, Integers]]]
-];
+(* gamma 宗量规范形：本包中该宗量恒为 整数常数 + 各 ν 的一次整数系数组合，
+   Together 收分式并约公因子、Expand 分配并项，两步都是结构重写而非证明搜索。
+   并项后仍残留符号的式子就是不可证整数，结论与原 Simplify/FullSimplify 路径在此表达式类上一致。 *)
+msGammaCanonicalForm[value_] := Expand[Together[value]];
 
 
-msProvablyNonPositiveIntegerQ[value_] := Module[{simplified = Simplify[value]},
-  msProvablyIntegerQ[simplified] && TrueQ[Quiet@FullSimplify[simplified <= 0]]
+(* 只接受可以精确证明的整数结论；含 generic regulator 的符号表达式保持未判定。 *)
+msProvablyIntegerQ[value_] := IntegerQ[msGammaCanonicalForm[value]];
+
+
+msProvablyNonPositiveIntegerQ[value_] := With[
+  {canonical = msGammaCanonicalForm[value]},
+  IntegerQ[canonical] && TrueQ[canonical <= 0]
 ];
 
 
 (* 这是 h=z^(+/-nu) H_nu 的已知小 t 两支领头幂次表，不在初始化中重解 Frobenius 方程。
-   state 1 是 h'=partial_z h；零次幂分支的导数从下一项开始，因此领头幂次为 1。 *)
+   state 1 是 h'=partial_z h；零次幂分支的导数从下一项开始，因此领头幂次为 1。
+   表项是核内算术可直接求值的一次式，原样返回不再包化简；两个 PossibleZeroQ 形状检查保留。 *)
 msSmallTLeadingPowerTable[slot_Association, state_Integer] := Module[
   {nu = slot["hankelOrder"], prefactorPower = slot["hPrefactorPower"]},
   Which[
     TrueQ[PossibleZeroQ[prefactorPower - nu]],
       Switch[state,
-        0, Simplify /@ {0, 2 nu},
-        1, Simplify /@ {1, 2 nu - 1},
+        0, {0, 2 nu},
+        1, {1, 2 nu - 1},
         _, msFailure["UnsupportedHState", <|"slot" -> slot, "state" -> state|>]
       ],
     TrueQ[PossibleZeroQ[prefactorPower + nu]],
       Switch[state,
-        0, Simplify /@ {-2 nu, 0},
-        1, Simplify /@ {-2 nu - 1, 1},
+        0, {-2 nu, 0},
+        1, {-2 nu - 1, 1},
         _, msFailure["UnsupportedHState", <|"slot" -> slot, "state" -> state|>]
       ],
     True,
@@ -402,7 +411,8 @@ msTimeIBPComponentCertificate[
   stateBits_List
 ] := Module[
   {component, hSlots, powerTables, branchSelections, records, integerRecords,
-   positiveIntegerRecords, nonPositiveIntegerRecords, minimumSafeShift},
+   positiveIntegerRecords, nonPositiveIntegerRecords, minimumSafeShift,
+   slotKeysValue, slotStatesValue, basePower, slotRange, needsCanonicalForm},
   component = sector["vertexComponents"][[componentPosition]];
   hSlots = Select[
     MapIndexed[Append[#1, "slotPosition" -> First[#2]] &, sector["slots"]],
@@ -419,32 +429,48 @@ msTimeIBPComponentCertificate[
     {{}},
     Tuples[ConstantArray[{1, 2}, Length[hSlots]]]
   ];
+  (* 逐支不变量只在分量级算一次：槽键、槽态、底幂。各 ν 全为原子（符号或数）时，
+     幂次之和与任意底幂（含 a1+a2 这类 Plus 复合式）都会被外层 Plus 自动吸收并项，
+     结果本身就是规范形，无需任何化简；含复合 ν（如 1+ep regulator）时才走
+     Together+Expand 的 msGammaCanonicalForm。逐支取幂用 Extract 按位置列表配对取元素。 *)
+  slotKeysValue = Lookup[hSlots, "key", {}];
+  slotStatesValue = If[hSlots === {}, {}, stateBits[[Lookup[hSlots, "slotPosition"]]]];
+  basePower = sector["baseTimePowers"][[componentPosition]];
+  slotRange = Range[Length[hSlots]];
+  needsCanonicalForm = ! AllTrue[Lookup[hSlots, "hankelOrder"], AtomQ];
   records = MapIndexed[
     Function[{selection, index},
       With[
-        {powers = MapThread[Part, {powerTables, selection}]},
-        <|
-          "branchOrdinal" -> First[index],
-          "branchSelection" -> selection,
-          "slotKeys" -> Lookup[hSlots, "key", {}],
-          "slotStates" -> If[hSlots === {}, {}, stateBits[[Lookup[hSlots, "slotPosition"]]]],
-          "branchPowers" -> powers,
-          "gammaArgumentAtMaster" -> Simplify[
-            sector["baseTimePowers"][[componentPosition]] + 1 + Total[powers]
-          ]
-        |>
+        {powers = Extract[powerTables, Transpose[{slotRange, selection}]]},
+        With[
+          {gamma = If[
+             needsCanonicalForm,
+             msGammaCanonicalForm[basePower + 1 + Total[powers]],
+             basePower + 1 + Total[powers]
+           ]},
+          <|
+            "branchOrdinal" -> First[index],
+            "branchSelection" -> selection,
+            "slotKeys" -> slotKeysValue,
+            "slotStates" -> slotStatesValue,
+            "branchPowers" -> powers,
+            "gammaArgumentAtMaster" -> gamma
+          |>
+        ]
       ]
     ],
     branchSelections
   ];
-  integerRecords = Select[records, msProvablyIntegerQ[#1["gammaArgumentAtMaster"]] &];
+  (* 存入记录的 gamma 已是（或恒等于）msGammaCanonicalForm 的规范形，
+     整数支分类直接判定即可，不再重复过判定器。 *)
+  integerRecords = Select[records, IntegerQ[#1["gammaArgumentAtMaster"]] &];
   positiveIntegerRecords = Select[
     integerRecords,
     TrueQ[#1["gammaArgumentAtMaster"] > 0] &
   ];
   nonPositiveIntegerRecords = Select[
     integerRecords,
-    msProvablyNonPositiveIntegerQ[#1["gammaArgumentAtMaster"]] &
+    TrueQ[#1["gammaArgumentAtMaster"] <= 0] &
   ];
   minimumSafeShift = If[
     positiveIntegerRecords === {},
@@ -531,7 +557,7 @@ msTimeIBPShiftIssues[
       Map[
         Function[branchRecord,
           With[
-            {shiftedArgument = Simplify[
+            {shiftedArgument = msGammaCanonicalForm[
                branchRecord["gammaArgumentAtMaster"] + requestedShift
              ]},
             If[

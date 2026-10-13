@@ -301,6 +301,77 @@ msBoundaryHankelBranch[
 ];
 
 
+(* A full line whose two endpoints already merged into one component carries no time ordering:
+   the two Hankel arrangements are the two sides of the same equal-time fibre, so a boundary
+   coefficient that keeps only one of them is not constant along the fibre. *)
+msBoundaryCoincidentFullLineQ[sector_Association, line_Association] :=
+  line["type"] === "massiveFull" &&
+    SameQ @@ (sector["rootToComponent"] /@ line["endpoints"]);
+
+
+(* Fibre-symmetric endpoint coefficient of one coincident full line, m = (alpha + beta)/2.
+   Swapping the two bits gives the same pair of products, so the slot order is irrelevant.
+   Averaging rescales coefficients only; it never moves the Frobenius power. *)
+msBoundaryCoincidentEndpointCoefficient[
+  convention_String,
+  {firstBit_Integer, secondBit_Integer},
+  nu_
+] := FullSimplify[
+  (msVertexEndpointCoefficient[convention, 1, firstBit, nu]
+     msVertexEndpointCoefficient[convention, 2, secondBit, nu] +
+   msVertexEndpointCoefficient[convention, 2, firstBit, nu]
+     msVertexEndpointCoefficient[convention, 1, secondBit, nu])/2
+];
+
+
+(* Endpoint factor of one component, built line by line. A strictly ordered line keeps the
+   branches fixed by the component rank, while every coincident full line contributes exactly
+   one averaged factor; with several spectator lines the result is therefore the product of
+   their m factors, which is what the odd-subset theta bundle algebra requires. *)
+msBoundaryComponentEndpointFactor[
+  context_?MSContextQ,
+  sector_Association,
+  rank_Association,
+  hSlots_List,
+  stateBits_List,
+  targetRules_List
+] := Module[{convention},
+  convention = context["convention", "nuConvention"];
+  Times @@ Map[
+    Function[lineSlots,
+      Module[{line, bits, momentum, physicalNu, formulaNu, powerFactor, branchFactor},
+        line = msLineById[context, First[lineSlots]["lineId"]];
+        momentum = line["momentum"] /. targetRules;
+        physicalNu = line["nu"] /. targetRules;
+        formulaNu = line["formulaNu"] /. targetRules;
+        bits = stateBits[[#["slotPosition"]]] & /@ lineSlots;
+        powerFactor = Times @@ Map[
+          Function[bit, (-I momentum)^(-bit (1 - 2 formulaNu))],
+          bits
+        ];
+        branchFactor = If[
+          msBoundaryCoincidentFullLineQ[sector, line],
+          msBoundaryCoincidentEndpointCoefficient[convention, bits, physicalNu],
+          Times @@ Map[
+            Function[slot,
+              msVertexEndpointCoefficient[
+                convention,
+                msBoundaryHankelBranch[slot, sector, rank, context],
+                stateBits[[slot["slotPosition"]]],
+                physicalNu
+              ]
+            ],
+            lineSlots
+          ]
+        ];
+        powerFactor branchFactor
+      ]
+    ],
+    GatherBy[hSlots, #["lineId"] &]
+  ]
+];
+
+
 (* A quotient massless slot is a fixed exponent inside a strict chamber; bit=1 only leaves the direction sign. *)
 msBoundaryMasslessSharedFactor[
   slot_Association,
@@ -448,8 +519,7 @@ msGenericSectorLeadingRecord[
 ] := Module[
   {rank, parameter, vertexCount, componentRecords, hSlots, timePower, alpha,
    componentRank, weight, energyExpression, energyConstant, endpointFactor, slotBit,
-     line, momentum, physicalNu, formulaNu, branch, sharedFactor, coefficient, exponent,
-     componentFailure},
+     sharedFactor, coefficient, exponent, componentFailure},
   rank = curveData["rank"];
   parameter = curveData["parameter"];
   vertexCount = Length[context["vertices"]];
@@ -490,20 +560,8 @@ msGenericSectorLeadingRecord[
           "VanishingComponentBoundaryEnergy",
           <|"sectorKey" -> sector["sectorKey"], "componentPosition" -> componentPosition|>
         ],
-        endpointFactor = Times @@ Map[
-          Function[slot,
-            slotBit = stateBits[[slot["slotPosition"]]];
-            line = msLineById[context, slot["lineId"]];
-            momentum = line["momentum"] /. targetRules;
-            physicalNu = line["nu"] /. targetRules;
-            formulaNu = line["formulaNu"] /. targetRules;
-            branch = msBoundaryHankelBranch[slot, sector, rank, context];
-            (-I momentum)^(-slotBit (1 - 2 formulaNu))
-              msVertexEndpointCoefficient[
-                context["convention", "nuConvention"], branch, slotBit, physicalNu
-              ]
-          ],
-          hSlots
+        endpointFactor = msBoundaryComponentEndpointFactor[
+          context, sector, rank, hSlots, stateBits, targetRules
         ];
         <|
           "componentPosition" -> componentPosition,
