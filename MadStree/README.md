@@ -16,7 +16,7 @@ NuConvention: "Positive"
 
 只使用函数名 `h`，且 `h(nu,0;z)=z^(sNu nu) H_nu(z)`：输入的 `nu` 原样作为 Hankel order，不取绝对值。基准公式写在 `sNu=+1` 的 `+nu` 形式上，公式中凡出现阶的位置统一读取 `formulaNu := sNu nu`。`NuConvention -> "Negative"` 选择 2401.00129 的负 prefactor convention，此时 `formulaNu=-nu`；两套公式的差别只是 `formulaNu` 换号，Hankel order 始终不变。
 
-`NuConvention` 只在 `MSInitTree` 初始化时选择。context 建立后，公式矩阵、递推、dlog 与全 sector H/h 换基都固定读取该值，不提供逐调用修改 convention 的入口。
+`NuConvention` 只在 `MSInitTree` 初始化时选择。context 建立后，公式矩阵、递推与 dlog 都固定读取该值，不提供逐调用修改 convention 的入口。
 
 ## 奇点用户点输出
 
@@ -80,7 +80,7 @@ $J_s(\mathbf n;\mathbf a)$；同一组三项也唯一标识裸积分 $I_s(\mathb
 `J_s=normalization I_s`；单个 shifted integral 可用
 `MSIntegralDefinition[MSIntegral[sectorKey,timeShifts,stateBits],context]` 查询。
 massive Full 传播子收缩时，该 normalization 含唯一的 contour 因子：省略共同动量幂后，
-`++` child 为 `-4 I/Pi`，`--` child 为 `+4 I/Pi`；该符号不重复进入 dlog contact block。
+`++` subsector 为 `-4 I/Pi`，`--` subsector 为 `+4 I/Pi`；该符号不重复进入 dlog contact block。
 二态因子要么是 massive 传播子在其中一个顶点上的二维态，要么是整条 massless Full 传播子
 共享的 quotient 二态；其逐位顺序由 `MSSlotRegistry` 给出。`++/--` 的 h 组合只在手册统一定义，
 不在每条输出中展开。`MSSectors[context]` 返回 contact-reachable sectors 的确定顺序（键、
@@ -233,7 +233,7 @@ vertexValue = MSEvaluatePath[
 给 `id/momentum/nu/hankelBranch`，每个额外指数 block 给 `id/momentum/exponentType`。这套初始化
 schema 与树图的 `vertices/lines` 不同，因为它定义的是单个顶点上的函数积而不是 incidence graph；
 初始化完成后，主积分、递推、DE、边界及上述 `MSEvaluatePath` 数值接口完全相同。纯指数 block
-是 `1x1`，不增加状态位；每个 h block 是 `2x2`。初始化时选定的 `NuConvention` 此后固定，不能在递推、DE、数值计算或 H/h 变换时另行覆盖。
+是 `1x1`，不增加状态位；每个 h block 是 `2x2`。初始化时选定的 `NuConvention` 此后固定，不能在递推、DE 或数值计算时另行覆盖。
 
 ## 直接约化
 
@@ -261,15 +261,13 @@ reduction = MSReduce[
 跨过安全下界时才拒绝，并列出原始顶点、sector、分支、Gamma 参数和所请求 shift。加入通用
 符号解析正规化参数后，程序保留该参数并继续符号计算。
 
-若 top-to-sub 的 `R^(1)` 落在 child 非零 shift，`MSDLogDE` 会逐列调用同一公式递推，生成 shifted child 到全局同序 masters 的 reduction matrix，再右复合 contact block。每个 contact block 保存 `shiftReductionRecords`、residual、remaining shifts 和 singular layers；任何一列未闭合时 dlog 状态为 `contactShiftReductionFailed`，不会输出伪闭合 connection。
+若 top-to-sub 的 `R^(1)` 落在 subsector 非零 shift，`MSDLogDE` 会逐列调用同一公式递推，生成 shifted subsector 到全局同序 masters 的 reduction matrix，再右复合 contact block。每个 contact block 保存 `shiftReductionRecords`、residual、remaining shifts 和 singular layers；任何一列未闭合时 dlog 状态为 `contactShiftReductionFailed`，不会输出伪闭合 connection。
 
 公式层不构造一般大矩阵逆。massive 顶点态的固定 `sigma2` 使用论文的 `2x2` 变换及其
 显式逆，massless Full 传播子共享 quotient slot 的固定 `sigma1` 使用自逆 Hadamard；全 sector 只作这些
 局部矩阵的 Kronecker 积。`M1` 在 state-bit basis 逐对角元取倒数，`M0` 在对应局部张量基逐
 energy letter 取倒数。若未来同一个 slot 出现多个不能由同一局部变换对角化的组分，这条快速
 路径必须 fail closed。
-
-H/Hankel state 与 h state 的公开变换为 `MSHTohMatrix`、`MShToHMatrix` 和 `MSConvertBasis`。局部与全 sector 状态向量都读取 context 中固定的 `NuConvention`；已经积分后的 `MSIntegral` 会同时牵涉基准时间幂，当前不能唯一恢复时明确拒绝。
 
 FlintNDE 数值后端作为与独立包同步的副本放在版本目录内，缺省位置只在一个相对路径变量中定义：
 
@@ -347,9 +345,9 @@ MSExportEvaluationData[
   `MSEvaluatePath` 调用计算中间顶点外腿能量 `k2=0` 的四点列；两组不混合规划或结果。
 - [06_massless_three_vertex_ep_regularization.wl](Examples/06_massless_three_vertex_ep_regularization.wl)：
   三顶点 massless 树的时间幂正规化 `a1=-1+ep`、`a2=a3=1+ep`，`ep=0` 处时间积分真正发散；
-  数值 NDE 前先做三项符号自检：`MSReduce` 一次作用于两个相对主积分幂偏移 `-1` 的积分之和并核对
+  数值 NDE 前先做两项符号自检：`MSReduce` 一次作用于两个相对主积分幂偏移 `-1` 的积分之和并核对
   status/residual/remaining/singularLayers；以 `a1=-1+ep, a2=a3=1+ep` 代入 `timePower` 重新初始化
-  context 后重复同一约化（系数显式带 `ep`）；以及 `MSConvertBasis` 的 H/h 局部换基往返。
+  context 后重复同一约化（系数显式带 `ep`）。
   之后由符号边界与 DE 认证最低幂为 `-1`，再选择生产/验证点并一并提取 `ep^-1` 极点系数与有限项。
 - [07_zero_external_leg_energy.wl](Examples/07_zero_external_leg_energy.wl)：无物理外腿的顶点省略
   `externalLegEnergy` 或显式输入 0；私有辅助能量保留在解析 dlog 中并自动输运到物理零点。
@@ -378,7 +376,6 @@ Example 06 自适应检查为 `17/17`，使用 4 个生产点、2 个独立验�
 ## 当前边界
 
 - 已支持共同-theta odd-subset simultaneous contact、coincident massless/massive quotient、event-reachable sector BFS 与纯 time-only 圈图；这不等于支持 loop-momentum integration。
-- H/h 局部二态与全 sector 状态向量可逆；已经积分后的 `MSIntegral` 换基涉及 family 基准时间幂变化，当前不伪装成普通状态变换。
 - 生产边界不按图名或 master 数分派。单顶点 massiveExternal 也走同一通用路线（2411.03088 Sec.3.3 显式级数仅保留为测试对照基准）；已闭合的 tree/time-only context 统一由 sector DAG、component/slot metadata、normalization 和 strict time rank 生成 nested curve、完整 dlog pullback residue 与 ancestor-sector leading system。公式/dlog/chart 未闭合、late-time 指数不衰减或拉回系统不是 exact regular singular 时结构化 fail closed；有限点定义积分只用于独立验证。
 - FlintNDE 输运要求拉回 connection 属于 exact `Q(i)(s)` 或 `Q(i)(t)`。本轮 fresh 开发检查
   覆盖单顶点、pure massless、massive Full 和 mixed 三顶点，并统一使用当前 generic boundary producer。

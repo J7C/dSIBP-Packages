@@ -76,11 +76,11 @@ msFailureDefaultText[tag_String] := Switch[tag,
       "The requested recurrence or master basis is not valid for this context. Check the listed shifts and use each current master exactly once",
       "请求的递推或主积分基底不适用于当前上下文。请检查列出的指标移动，并确保当前每个主积分恰好出现一次"
     },
-  "UnsupportedBasisConversion" | "UnsupportedBasisDirection" | "UnsupportedDSIBPJ" |
+  "UnsupportedDSIBPJ" |
   "UnknownNuConvention",
     {
-      "The requested convention or basis conversion is not supported for these objects. Choose one of the documented conventions and conversion directions",
-      "当前对象不支持所请求的约定或基底转换。请选择手册中列出的约定和转换方向"
+      "The requested convention is not supported for these objects. Choose one of the documented conventions",
+      "当前对象不支持所请求的约定。请选择手册中列出的约定"
     },
   "CertifiedDLogRequired" | "InvalidDLogData" | "FormulaMatrixGenerationFailed" |
   "FormulaArtifactWriteFailed" | "EmptyDifferentialEquationSupport",
@@ -188,16 +188,6 @@ msFailureDefaultText[tag_String] := Switch[tag,
     {
       "The stateBits of this MSIntegral do not occur in the state order of the requested sector. Use a state-bit vector listed in that sector's stateOrder and build the integral again",
       "该 MSIntegral 的 stateBits 不在所请求区段的 stateOrder 中。请使用该区段 stateOrder 列出的状态位向量重新构造积分"
-    },
-  "ComponentTimeCount",
-    {
-      "MSConvertBasis received a componentTimes list whose length differs from the number of vertex components of the requested sector. Pass exactly one component time per vertex component of that sector and try again",
-      "MSConvertBasis 收到的 componentTimes 长度与所请求区段的顶点分量个数不一致。请为该区段的每个顶点分量各传入一个分量时间后重试"
-    },
-  "StateVectorDimension",
-    {
-      "MSConvertBasis received a state vector whose length differs from the master count of the requested sector. Pass a vector with exactly one entry per master of that sector and try again",
-      "MSConvertBasis 收到的状态向量长度与所请求区段的主积分个数不一致。请传入长度恰等于该区段主积分个数的向量后重试"
     },
   "DSIBPExpressionConversionFailed",
     {

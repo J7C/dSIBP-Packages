@@ -14,7 +14,7 @@ NuConvention: "Positive"
 
 Only the function name `h` is used, with `h(nu,0;z)=z^(sNu nu) H_nu(z)`: the input `nu` is the Hankel order verbatim, never an absolute value. The baseline formulas are written in the `+nu` (sNu=+1) shape, and every position where the order appears reads `formulaNu := sNu nu`. `NuConvention -> "Negative"` selects the negative-prefactor convention of 2401.00129, where `formulaNu=-nu`; the two formula sets differ only by the sign of `formulaNu`, while the Hankel order itself never changes.
 
-`NuConvention` is chosen only at `MSInitTree` initialization. Once a context is built, the formula matrices, recurrence, dlog and all-sector H/h basis changes read this value fixed; there is no per-call convention override.
+`NuConvention` is chosen only at `MSInitTree` initialization. Once a context is built, the formula matrices, recurrence and dlog read this value fixed; there is no per-call convention override.
 
 ## User points at finite singularities
 
@@ -80,7 +80,7 @@ $I_s(\mathbf n;\mathbf a)$. `MSMasterIntegrals` directly reports the exact `norm
 and $J_s=\text{normalization}\,I_s$ for every master. Use
 `MSIntegralDefinition[MSIntegral[sectorKey,timeShifts,stateBits],context]` for one shifted integral.
 For a contracted massive Full propagator, this normalization contains its one contour factor: after
-suppressing the common momentum power, a `++` child is `-4 I/Pi` and a `--` child is `+4 I/Pi`.
+suppressing the common momentum power, a `++` subsector is `-4 I/Pi` and a `--` subsector is `+4 I/Pi`.
 This sign is not multiplied again into the dlog contact block.
 A two-state factor is either the two-dimensional state of one vertex of a massive propagator, or the quotient state shared by a whole massless Full propagator; `MSSlotRegistry` gives their bit order. The $++/--$ h combinations are defined once in the manual and are not expanded in every record. `MSSectors[context]` returns the deterministic order of contact-reachable sectors with their keys, contracted propagators and master counts, consistent with `context["sectorOrder"]`; `MSContextQ[obj]` tests whether an object is a valid MadStree context and is the shared input gate of every public entry.
 
@@ -237,7 +237,7 @@ Here `First[ki]` is the theta-free external-leg exponent parameter and `First[nu
 `id/momentum/exponentType`. This initialization schema differs from tree `vertices/lines`
 because it defines a function product at one vertex rather than an incidence graph. Once initialized,
 both context kinds use the same masters, recurrence, DE, boundary, and `MSEvaluatePath` interface.
-A pure exponential block is `1x1` and adds no state bits; every h block is `2x2`. The `NuConvention` chosen at initialization stays fixed and cannot be overridden in recurrence, DE, numerics or H/h transforms.
+A pure exponential block is `1x1` and adds no state bits; every h block is `2x2`. The `NuConvention` chosen at initialization stays fixed and cannot be overridden in recurrence, DE or numerics.
 
 ## Direct reduction
 
@@ -261,11 +261,9 @@ but a reduction is rejected only when it crosses the safe lower bound; the failu
 original vertices, sector, branch, Gamma argument and requested shift. Adding a symbolic analytic
 regulator leaves that parameter symbolic and permits the family to proceed.
 
-If the top-to-sub `R^(1)` lands on a child with a nonzero shift, `MSDLogDE` calls the same formula recurrence column by column, builds the reduction matrix from the shifted child to the global ordered masters, and right-composes it with the contact block. Each contact block keeps `shiftReductionRecords`, the residual, remaining shifts and singular layers; if any column does not close, the dlog status is `contactShiftReductionFailed` and no falsely closed connection is emitted.
+If the top-to-sub `R^(1)` lands on a subsector with a nonzero shift, `MSDLogDE` calls the same formula recurrence column by column, builds the reduction matrix from the shifted subsector to the global ordered masters, and right-composes it with the contact block. Each contact block keeps `shiftReductionRecords`, the residual, remaining shifts and singular layers; if any column does not close, the dlog status is `contactShiftReductionFailed` and no falsely closed connection is emitted.
 
 The formula layer never constructs a generic large matrix inverse. The fixed `sigma2` of the two-dimensional state at one vertex of a massive propagator uses the paper's `2x2` transform and its explicit inverse, while the fixed `sigma1` of the quotient slot shared by a whole massless Full propagator uses the self-inverse Hadamard; an all-sector matrix is only the Kronecker product of these local matrices. `M1` takes reciprocals of diagonal entries in the state-bit basis and `M0` takes reciprocals letter by letter in the corresponding local tensor basis. If a future slot contains multiple components that cannot be diagonalized by the same local transform, this fast path must fail closed.
-
-The public H/Hankel-state to h-state transforms are `MSHTohMatrix`, `MShToHMatrix` and `MSConvertBasis`. Local and all-sector state vectors read the fixed `NuConvention` of the context; an already integrated `MSIntegral` also involves base time powers and is rejected explicitly when it cannot be recovered uniquely.
 
 The FlintNDE numerical backend ships as a synchronized copy inside this version directory; its default location is defined in a single relative-path variable:
 
@@ -329,7 +327,7 @@ The full formulas, the massless `4 -> 2` quotient, contact shifts and the top-to
   of its sector. The same context first evaluates and
   exports the original nonzero point sequence, then uses a second independent `MSEvaluatePath` call
   for four points with middle external-leg energy `k2=0`; planning and results are not mixed.
-- [06_massless_three_vertex_ep_regularization.wl](Examples/06_massless_three_vertex_ep_regularization.wl): a massless three-vertex chain with `a1=-1+ep, a2=a3=1+ep`, whose `ep=0` time integrals genuinely diverge. Before the numerical stage it runs three symbolic self-checks: `MSReduce` acts once on the sum of two integrals whose powers lie one unit below the master powers (with status/residual/remaining/singularLayers verified); the same reduction is repeated on a context re-initialized with the regulated powers substituted into `timePower`, so the coefficients carry explicit `ep`; and `MSConvertBasis` performs an H/h local basis round trip. The symbolic boundary and DE then certify the leading power `-1` before numerical NDE work, after which the program selects production/validation points and extracts the `ep^-1` pole coefficient together with the finite part.
+- [06_massless_three_vertex_ep_regularization.wl](Examples/06_massless_three_vertex_ep_regularization.wl): a massless three-vertex chain with `a1=-1+ep, a2=a3=1+ep`, whose `ep=0` time integrals genuinely diverge. Before the numerical stage it runs two symbolic self-checks: `MSReduce` acts once on the sum of two integrals whose powers lie one unit below the master powers (with status/residual/remaining/singularLayers verified); the same reduction is repeated on a context re-initialized with the regulated powers substituted into `timePower`, so the coefficients carry explicit `ep`. The symbolic boundary and DE then certify the leading power `-1` before numerical NDE work, after which the program selects production/validation points and extracts the `ep^-1` pole coefficient together with the finite part.
 - [07_zero_external_leg_energy.wl](Examples/07_zero_external_leg_energy.wl): a vertex without a physical external leg may omit `externalLegEnergy` or set it to zero; a private auxiliary energy remains in the analytic dlog and is transported automatically to the physical zero.
 
 After deleting the existing `results/` and `results_temp/` trees, all seven examples passed fresh runs with `Example PASSED` and exit code `0`. Example 06 passed `17/17` checks with four production points and two independent validation points; the default request of 12 workers was automatically capped at the six actual ep tasks.
@@ -363,7 +361,6 @@ listed here, together with the source of the reference data in each case.
 ## Current boundaries
 
 - Common-theta odd-subset simultaneous contacts, coincident massless/massive quotients, event-reachable sector BFS and pure time-only cycles are supported; this does not mean loop-momentum integration is supported.
-- The local two-state and all-sector H/h state vectors are invertible; a basis change of an already integrated `MSIntegral` changes the family base time powers and is currently not disguised as an ordinary state transform.
 - Production boundaries never dispatch on graph names or master counts. The single-vertex massiveExternal case follows the same general route (the explicit 2411.03088 Sec.3.3 series is kept only as a test reference baseline); closed tree/time-only contexts build the nested curve, complete dlog pullback residue and ancestor-sector leading system from the sector DAG, component/slot metadata, normalization and strict time rank. When the formula/dlog/chart is not closed, the late-time exponents do not decay, or the pullback system is not an exact regular singularity, the package fails closed and never falls back to finite-point defining integrals.
 - FlintNDE transport requires the pulled-back connection to be in exact `Q(i)(s)` or `Q(i)(t)`.
   This fresh development run covers single-vertex, pure-massless, massive-Full, and mixed

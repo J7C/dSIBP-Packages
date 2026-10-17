@@ -24,13 +24,10 @@ MSMasterIntegrals::usage = "MSMasterIntegrals[context] returns master-integral r
 MSFormulaMatrices::usage = "MSFormulaMatrices[context,sector] returns M1, M0, U and the energy letters.";
 MSFormulaData::usage = "MSFormulaData[context] aggregates all-sector masters, recurrence metadata and the full analytic dlog DE. TimePowerRules may specialize recurrence metadata, but never substitutes the analytic dlog DE.";
 MSWriteFormulaArtifacts::usage = "MSWriteFormulaArtifacts[context] writes all-sector masters, recurrence metadata, the analytic dlog DE and a manifest under results/madstree_formula/run-UUID by default, and returns every actual output path.";
-MSContactMaps::usage = "MSContactMaps[context,sector] returns the exact parent-to-subsector contact matrices.";
+MSContactMaps::usage = "MSContactMaps[context,sector] returns the exact supersector-to-subsector contact matrices.";
 MSRecurrenceStep::usage = "MSRecurrenceStep[integral,component,context] reduces one nonzero time shift toward zero.";
 MSReduce::usage = "MSReduce[expr,context,MasterBasis->basis] iteratively reduces a finite linear combination, List, or nested Table of valid MSIntegral objects. Scalar input returns one ordered coefficient vector; list input preserves its shape and reports per-element coefficients, residuals, remaining shifts, singular layers, and failure positions.";
 MSDLogDE::usage = "MSDLogDE[context] returns the ordered master integrals and the block-triangular dlog connection.";
-MSHTohMatrix::usage = "MSHTohMatrix[nu,z,context] returns the local 2x2 transformation from H-states to h-states according to the initialized context.";
-MShToHMatrix::usage = "MShToHMatrix[nu,z,context] returns the local inverse transformation from h-states to H-states according to the initialized context.";
-MSConvertBasis::usage = "MSConvertBasis converts between ordered H/h state vectors locally or for a specified sector; sector conversion always reads the NuConvention of the initialized context, and integral objects continue to fail closed.";
 MSToDSIBPJ::usage = "MSToDSIBPJ[integral,context] losslessly converts a MadStree time-only integral to a lazy dSIBP J[sectorKey,timeShifts,stateBits]; further differentiation requires a dSIBP context matching the same sector/state-slot schema.";
 MSFromDSIBPJ::usage = "MSFromDSIBPJ[j,context] converts a lazy or active dSIBP time-only J back to an MSIntegral in the same context.";
 MSFromDSIBPExpression::usage = "MSFromDSIBPExpression[expr,context] converts a linear dSIBP J expression term by term into a MadStree MSIntegral expression without performing reduction.";
@@ -77,7 +74,6 @@ MSFormulaMatrices::nosector = "找不到区段 `1`；请使用 MSSectors[context
 MSContactMaps::nosector = "找不到区段 `1`；请使用 MSSectors[context] 返回的 sectorKey。 Sector `1` not found; use a sectorKey returned by MSSectors[context].";
 MSRecurrenceStep::badint = "Integral does not match the context: `1`.";
 MSReduce::cycle = "Iterative reduction detected a repeated state: `1`.";
-MSConvertBasis::unsupported = "不支持的基变换 `1`；MSConvertBasis 只接受 \"H\"->\"h\" 或 \"h\"->\"H\"。 Unsupported basis transformation `1`; MSConvertBasis only accepts \"H\"->\"h\" or \"h\"->\"H\".";
 MSEvaluatePath::backendLaunchFailed = "FlintNDE backend could not be launched under Python command `1`. Captured backend output tail: `2`.";
 MSEvaluatePath::pythonFlintMissing = "Python command `1` started but cannot import python-flint. Captured backend output tail: `2`.";
 MSEvaluatePath::backendOutputMissing = "FlintNDE backend exited without creating its output file under Python command `1`. Captured backend output tail: `2`.";
@@ -97,7 +93,7 @@ $MadStreeKernelDirectory = DirectoryName[$InputFileName];
 $MadStreeModuleContracts = {
   "Core/FailureMessages.wl" -> "MadStree`Private`msFailure",
   "Core/Paths.wl" -> "MadStree`Private`msRuntimeDirectory",
-  "Core/Conventions.wl" -> "MadStree`Private`msHTohMatrix",
+  "Core/Conventions.wl" -> "MadStree`Private`msSigma1",
   "Core/Topology.wl" -> "MadStree`Private`msInputSchemaIssues",
   "Core/Sectors.wl" -> "MadStree`MSInitTree",
   "Core/VertexFamily.wl" -> "MadStree`MSInitVertexFamily",
@@ -116,7 +112,7 @@ $MadStreeModuleContracts = {
 $MadStreeDefinitionPresentQ[symbolName_String] := TrueQ@ToExpression[
   symbolName,
   InputForm,
-  Function[symbol, Length[DownValues[symbol]] > 0, HoldAll]
+  Function[symbol, Length[DownValues[symbol]] > 0 || Length[OwnValues[symbol]] > 0, HoldAll]
 ];
 $MadStreeModuleLoadFailure = Catch[
   Scan[

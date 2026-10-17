@@ -160,7 +160,7 @@ msNormalizeLine[
     Switch[
       type,
       (* MadStree 两个端点使用共同 Hankel 阶，因此不重复加入 paper endpoint basis 的
-         Boltzmann 因子；但 ++/-- 收缩定义的物理 child master 相差 fullContourSign。
+         Boltzmann 因子；但 ++/-- 收缩定义的物理 subsector master 相差 fullContourSign。
          pinch 幂次取 +nu 基准形状 k^(2 formulaNu-1)（等价于论文的 k^(-2 nu_ref-1)）。 *)
       "massiveFull", -(4 I/Pi) fullContourSign momentum^(2 formulaNu - 1),
       "masslessFull", 1,

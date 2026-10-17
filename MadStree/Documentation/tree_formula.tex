@@ -646,9 +646,9 @@ $E=(e_1,\ldots,e_{N_E})$，已收缩的 canonical set 为 $L_s^{\rm ctr}$。定�
  \bm{\text I}_{s/e}\!\left(\chi_e(\bm n)\right).
  \label{eq:R-edge-sum}
 \end{equation}
-$\chi_e$ 合并传播子两端所属的 time shifts，并包含 delta contact 使 child 基准幂少一次的固定平移。这个 parent-to-child 结构对 massive 与 massless propagator 完全相同；区别只在局部矩阵 $C^{(v,e)}$。massive propagator 使用文献 \cite{Chen:2023eic} 式 (3.65) 的互补顶点 bits 和符号；massless propagator 先作 $4\to2$ quotient，再使用式 \eqref{eq:contact-injection} 的 shared-bit selector 与式 \eqref{eq:package-massless-contact-weight} 的 $-2,+2$。因此 massless 缩并不需要另一套递推公式。
+$\chi_e$ 合并传播子两端所属的 time shifts，并包含 delta contact 使 subsector 基准幂少一次的固定平移。这个 supersector-to-subsector 结构对 massive 与 massless propagator 完全相同；区别只在局部矩阵 $C^{(v,e)}$。massive propagator 使用文献 \cite{Chen:2023eic} 式 (3.65) 的互补顶点 bits 和符号；massless propagator 先作 $4\to2$ quotient，再使用式 \eqref{eq:contact-injection} 的 shared-bit selector 与式 \eqref{eq:package-massless-contact-weight} 的 $-2,+2$。因此 massless 缩并不需要另一套递推公式。
 
-本包的 child base power 特意按 delta contact 固定：$\cR(\bm0)$ 落在 child shift $-1$，而 DE 所需的 $\cR(\bm e_v)$ 恰落在 child shift $0$。下文把升幂步用到的余量记作 $R^{(1)}:=\cR_{v,s}(\bm e_v)$，把降幂步用到的 $\cR_{v,s}(\bm0)$ 记作 $R^{(0)}$；两者是同一条一步关系在不同下标处的两条余量，落点相差一个 child shift，不能互换。所以普通单条传播子 massive/massless contact 的 $R^{(1)}$ 已经直接命中 child master；这里没有“dlog master 选好但迭代约不过去”的问题。
+本包的 subsector base power 特意按 delta contact 固定：$\cR(\bm0)$ 落在 subsector shift $-1$，而 DE 所需的 $\cR(\bm e_v)$ 恰落在 subsector shift $0$。下文把升幂步用到的余量记作 $R^{(1)}:=\cR_{v,s}(\bm e_v)$，把降幂步用到的 $\cR_{v,s}(\bm0)$ 记作 $R^{(0)}$；两者是同一条一步关系在不同下标处的两条余量，落点相差一个 subsector shift，不能互换。所以普通单条传播子 massive/massless contact 的 $R^{(1)}$ 已经直接命中 subsector master；这里没有“dlog master 选好但迭代约不过去”的问题。
 
 顶点 $v$ 的完整一步 IBP 是
 \begin{equation}
@@ -788,7 +788,7 @@ $h=z^{\pm\nu}H_\nu$ 只把式 \eqref{eq:physical-late-time-branches} 的 $\pm\nu
 
 因此一个奇数子集 $S$ 就是一个 simultaneous contact event：所选传播子同时删除，顶点只合并一次，contact selector 是各所选传播子局部 selector 的张量积再乘 $2^{1-|S|}$。若合并后的未选 massless full propagator 两端 coincident，其 odd shared state 为零；未选 massive full propagator 使用 $10\sim01$ 的 equal-time canonical quotient。程序先在 raw binary space 构造矩阵，再以 $P_sM^{\rm raw}S_s$ 投影到真实 sector masters，所以 coincident quotient 不要求一般大矩阵求逆。
 
-对 event-reachable component $C$，child 的基准幂可直接由最终 partition 写成
+对 event-reachable component $C$，subsector 的基准幂可直接由最终 partition 写成
 \begin{equation}
  A_{C,s}=\sum_{v\in C}A_v
  +\sum_{e\in E_s(C)}r_e+|C|-1,
@@ -840,7 +840,7 @@ $\nu=3/2$ 的 block 只比式 \eqref{eq:massless-h-eigenstate} 的 $\nu=1/2$ 纯
 
 若改用用户坐标或 Wick 坐标，不重新推导 DE，只对 differential one-form 作式 \eqref{eq:user-to-internal-coordinate-pullback} 的 pullback。若改用 package quotient 或物理导数 basis，则分别使用常数相似变换 \eqref{eq:global-package-similarity} 或含导数项的 gauge transformation \eqref{eq:physical-DE-gauge}；三者不能混成同一个无导数的 basis change。
 
-DE 非对角块必须使用升幂关系中的 remaining term，即本文式 \eqref{eq:R-as-CF} 在 $\bm n=\bm e_v$ 处的 $\cR_{v,s}(\bm e_v)$（前文记作 $R^{(1)}$）；不能拿降幂步的 $\cR_{v,s}(\bm0)$（前文记作 $R^{(0)}$）先行约化后替代，两者的 child 落点相差一格平移，互不可交换。本包采用 $(-\tau)^A$，其升幂行是
+DE 非对角块必须使用升幂关系中的 remaining term，即本文式 \eqref{eq:R-as-CF} 在 $\bm n=\bm e_v$ 处的 $\cR_{v,s}(\bm e_v)$（前文记作 $R^{(1)}$）；不能拿降幂步的 $\cR_{v,s}(\bm0)$（前文记作 $R^{(0)}$）先行约化后替代，两者的 subsector 落点相差一格平移，互不可交换。本包采用 $(-\tau)^A$，其升幂行是
 \begin{equation}
  M_{0;v,s}\bm{\text I}_s(\bm e_v)
  =M_{1;v,s}(\nu_{0,v}+1)\bm{\text I}_s(0)-\cR_{v,s}(\bm e_v).
@@ -874,7 +874,7 @@ pure-massive 的 $\varsigma_v$ 是初始化时固定的顶点指数符号；含 
 
 \subsection{\texorpdfstring{\cite{Chen:2023eic}}{arXiv:2401.00129} 式 (3.68) 的删位、补位与 massless quotient}
 
-先写文献 \cite{Chen:2023eic} 式 (3.68) 的 pure-massive 两顶点结果，也就是尚未代入 massless 额外约化关系的 unreduced 形式。设被缩并的传播子在左、右顶点的顶点位置分别为 $i,j$；parent states 为 $(\bm a,\bm b)$，child states 为 $(\widehat{\bm c},\widehat{\bm d})$。定义
+先写文献 \cite{Chen:2023eic} 式 (3.68) 的 pure-massive 两顶点结果，也就是尚未代入 massless 额外约化关系的 unreduced 形式。设被缩并的传播子在左、右顶点的顶点位置分别为 $i,j$；supersector states 为 $(\bm a,\bm b)$，subsector states 为 $(\widehat{\bm c},\widehat{\bm d})$。定义
 \begin{equation}
  K_u^{\unred}=T_{n_u}^{-1}\widetilde\Omega_{0;u}T_{n_u},
  \qquad
@@ -898,12 +898,12 @@ pure-massive 的 $\varsigma_v$ 是初始化时固定的顶点指数符号；含 
 \end{align}
 这就是“删去被缩并顶点 bit，再在另一侧补入其互补 bit”的精确含义；所有未删 bits 都由 Kronecker delta 保持。本文的 $(-\tau)^A$ normalized-$J$ convention 把式 \eqref{eq:unreduced-binary-top-to-sub} 的整体 $-\ii$ 按式 \eqref{eq:package-raising-contact-sign} 改成式 \eqref{eq:global-offdiagonal-omega} 的 $+\ii\chi_v(E)$；文献 \cite{Chen:2023eic} 的 fixed positive pure-massive 顶点取 $\chi_v=\varsigma_v=+1$。不能只改二进制 selector 而漏掉这个 convention 变换。
 
-现在缩并一条 massless propagator $e$。由于 shared slot 使逐顶点 factorization 失效，先在完整 parent sector 上定义全局 kernel
+现在缩并一条 massless propagator $e$。由于 shared slot 使逐顶点 factorization 失效，先在完整 supersector 上定义全局 kernel
 \begin{equation}
  \mathcal K_{v,s}=U_s^{-1}\widetilde\Omega_{0;v,s}U_s.
  \label{eq:global-component-log-kernel}
 \end{equation}
-在 quotient 后的 parent 全局二进制字串中，该传播子只有一个 shared bit，记其位置为 $p_e$；child 字串记为 $\widehat{\bm c}$。package basis 的 contact 矩阵分量是
+在 quotient 后的 supersector 全局二进制字串中，该传播子只有一个 shared bit，记其位置为 $p_e$；subsector 字串记为 $\widehat{\bm c}$。package basis 的 contact 矩阵分量是
 \begin{equation}
  \left(C_{s,s/e}^{(v,e)}\right)_{\bm d,\widehat{\bm c}}
  =\eta_{s,e}\,w_e^{(v)}
@@ -942,12 +942,12 @@ pure-massive 的 $\varsigma_v$ 是初始化时固定的顶点指数符号；含 
 
 若另一条 massless propagator $f\neq e$ 没有被缩并，它的 shared bit 是 spectator，并在式 \eqref{eq:massless-contact-binary-component} 中自动给出
 \begin{equation}
- \delta_{r_f^{\rm parent},r_f^{\rm child}}.
+ \delta_{r_f^{\rm sup},r_f^{\rm sub}}.
  \label{eq:massless-spectator-delta}
 \end{equation}
 它不产生两个顶点 bits 的额外求和；它只继续以相反 incidence 符号进入两个顶点的 energy letters 和 $\mathcal K_{v,s}$。mixed massive/massless 情形只需把 massive vertex bits 与其它 shared bits 按式 \eqref{eq:binary-state-order} 合成同一个全局字串，删除 $p_e$ 后其余 bits 全部由式 \eqref{eq:massless-contact-binary-component} 的第二个 delta 保持。
 
-若 generalized 或 multi-propagator contact 使 $R^{(1)}$ 落到 child 的非零 shift $\bm q$，程序现在逐个 child state 调用同一公式递推，构造
+若 generalized 或 multi-propagator contact 使 $R^{(1)}$ 落到 subsector 的非零 shift $\bm q$，程序现在逐个 subsector state 调用同一公式递推，构造
 \begin{equation}
  \bm{\text I}_t(\bm q)=\mathcal Q_t(\bm q\to0)\,\bm{\text I}_{\rm all}(0),
  \qquad
@@ -955,7 +955,7 @@ pure-massive 的 $\varsigma_v$ 是初始化时固定的顶点指数符号；含 
  =-\mathcal K_{v,s}C_{st}^{(v,1)}\mathcal Q_t(\bm q_v\to0).
  \label{eq:shifted-contact-right-composition}
 \end{equation}
-这里 $\bm{\text I}_{\rm all}(0)$ 按 context 的全局主积分顺序排列，因此 $\mathcal Q_t$ 允许继续落到 $t$ 的更低 contact sectors，而非只保留直接 child。程序逐列保存 residual、未消去的 shifted integrals 与方向敏感奇异层。只有全部列闭合，才把式 \eqref{eq:shifted-contact-right-composition} 写入 connection；否则返回
+这里 $\bm{\text I}_{\rm all}(0)$ 按 context 的全局主积分顺序排列，因此 $\mathcal Q_t$ 允许继续落到 $t$ 的更低 contact sectors，而非只保留直接 subsector。程序逐列保存 residual、未消去的 shifted integrals 与方向敏感奇异层。只有全部列闭合，才把式 \eqref{eq:shifted-contact-right-composition} 写入 connection；否则返回
 \begin{center}
  \texttt{contactShiftReductionFailed}.
 \end{center}
@@ -978,7 +978,7 @@ pure-massive 的 $\varsigma_v$ 是初始化时固定的顶点指数符号；含 
  \end{pmatrix}.
  \label{eq:block-triangular-de}
 \end{equation}
-矩阵写成 upper 还是 lower triangular 只取决于 sector 排序；物理内容是 contact 只从 parent 指向严格 lower sector。
+矩阵写成 upper 还是 lower triangular 只取决于 sector 排序；物理内容是 contact 只从 supersector 指向严格 lower sector。
 
 \section{无量纲 h 方程、物理二次动量项与实数化}
 \label{sec:physical-k2}
@@ -1256,35 +1256,6 @@ normalized basis 中还必须使用
 \end{equation}
 所以 sector 对角块增加 $\dd\log\cN_s\text{I}_s$，非对角 contact 块乘 $\cN_s/\cN_t$。只有当该比值已由 basis normalization 变成运动学无关常数时，式 \eqref{eq:global-offdiagonal-omega} 才直接是 constant-residue dlog；否则需要额外 basis/gauge 变换，不能只凭字面上的 $\log\kappa$ 宣称完成。
 
-\subsection{H/h 状态向量的正反变换}
-\label{sec:Hh-transform}
-
-令 $p=s_\nu\nu$。同一个函数 $h$ 与裸 Hankel 状态的局部关系为
-\begin{equation}
- \begin{pmatrix}h(\nu,0;z)\\h(\nu,1;z)\end{pmatrix}
- =T_{H\to h}(p,z)
- \begin{pmatrix}H_\nu(z)\\\partial_zH_\nu(z)\end{pmatrix},
- \qquad
- T_{H\to h}(p,z)=
- \begin{pmatrix}
-  z^p&0\\p z^{p-1}&z^p
- \end{pmatrix}.
- \label{eq:package-H-to-h}
-\end{equation}
-其逆矩阵是
-\begin{equation}
- T_{h\to H}(p,z)=
- \begin{pmatrix}
-  z^{-p}&0\\-p z^{-p-1}&z^{-p}
- \end{pmatrix},
- \qquad
- T_{h\to H}T_{H\to h}=\Id_2.
- \label{eq:package-h-to-H}
-\end{equation}
-MadStree 的 \texttt{MSHTohMatrix[nu,z,context]}、\texttt{MShToHMatrix[nu,z,context]} 直接实现这两个矩阵。\texttt{MSConvertBasis} 还可按固定 sector 的 slot registry 把它们作 Kronecker 积：每个 massive vertex 使用自己的 $z=-k\tau_{\rm component}$，massless shared quotient 不是裸 Hankel vertex pair，故在这一换基中乘单位矩阵。\texttt{NuConvention} 只在 \texttt{MSInitTree} 时选择；context 建立后，局部矩阵与全 sector 换基都固定读取该值，不接受逐调用覆盖。正/负 prefactor context 均已分别检查正反变换为单位矩阵。
-
-这里变换的是被积函数的同序状态向量，不是已经积分后的 \texttt{MSIntegral}。原因是式 \eqref{eq:package-H-to-h} 的 $z^p$ 与 $z^{p-1}$ 会同时改变 component base time power；首版没有建立独立的 H-family sector metadata，因此积分对象重载明确 fail closed，不能把这一步伪装成只翻转 state bit。
-
 dSIBP 的 public time-only 表示为 \texttt{J[sectorKey,timeShifts,stateBits]}，与 MadStree 的 \texttt{MSIntegral[sectorKey,timeShifts,stateBits]} 逐槽对应；\texttt{stateBits} 是全 sector registry 中的 $n_i$ 类离散态，不要求按顶点分组。该对应只转换积分身份，不替换 normalization：两边 context 必须对每个 sector 使用同一 $\cN_s$，且求导时都包含式~\eqref{eq:normalization-adapter} 的 $\partial\log\cN_s$。MadStree 的缺省 massless 输入是 $\nu=1/2$ 和正 prefactor，此时 \texttt{formulaNu}$\,=s_\nu\nu=+1/2$，代码与本文公式在同一份 $+\nu$ 基准式上逐槽一致；取 \texttt{NuConvention -> "Negative"} 时 \texttt{formulaNu}$=-1/2=\nu_{\rm ref}$，只用于与该文印刷式逐字对照。这一约定不替代传播子 metadata、theta 或 contact normalization。
 
 \subsection{单顶点函数族、局部逆与完整约化接口}
@@ -1373,7 +1344,7 @@ memoizedIntegralCount, singularLayers
  n\geq 1-m,
 \end{equation}
 因为下一步会命中非正整数。\texttt{MSRecurrenceStep}、\texttt{MSReduce} 和 dlog 的 shifted
-child 约化在实际跨越这个下界时才拒绝，并返回原始顶点、sector、局部分支、$\alpha$ 与请求
+subsector 约化在实际跨越这个下界时才拒绝，并返回原始顶点、sector、局部分支、$\alpha$ 与请求
 shift。含通用符号解析正规化参数的 $\alpha$ 保持符号化，不被误判为整数。
 
 \section{任意 time-only 图的大纯指数能量边界与 blow-up}
@@ -1491,7 +1462,7 @@ shift。含通用符号解析正规化参数的 $\alpha$ 保持符号化，不�
 \end{equation}
 其中方括号在 $x=0$ 等于 $1$. 因而每个 contact-reachable sector 的全部 energy letters 都是 coordinate monomial 乘边界非零 unit；这就是严格 rank blow-up 对任意 time graph 线性 letters 的直接解析。
 
-这个结论事实上比 component letter 更一般。固定 sector 的对角块只含式 \eqref{eq:global-omega0} 的 $\log\kappa$. Top-to-sub 公式 \eqref{eq:global-offdiagonal-omega} 只是把 parent 的同一 $\widetilde\Omega_{0;v,s}$ 乘上与运动学无关的 contact map $C_{st}^{(v,1)}$，所以不产生新的 log argument。若 $R^{(1)}$ 没有直接落在 child master 而需要继续递推，新增分母也只来自 child 的 $M_0^{-1}$，仍是 child component 的同型 energy letters。沿严格下降的 contact DAG 归纳，完整 block-triangular DE 中任一含 $K$ 的分母都具有
+这个结论事实上比 component letter 更一般。固定 sector 的对角块只含式 \eqref{eq:global-omega0} 的 $\log\kappa$. Top-to-sub 公式 \eqref{eq:global-offdiagonal-omega} 只是把 supersector 的同一 $\widetilde\Omega_{0;v,s}$ 乘上与运动学无关的 contact map $C_{st}^{(v,1)}$，所以不产生新的 log argument。若 $R^{(1)}$ 没有直接落在 subsector master 而需要继续递推，新增分母也只来自 subsector 的 $M_0^{-1}$，仍是 subsector component 的同型 energy letters。沿严格下降的 contact DAG 归纳，完整 block-triangular DE 中任一含 $K$ 的分母都具有
 \begin{equation}
  D_{\alpha,s}(K,q)
  =Q_{\alpha,s}(q)
@@ -1533,7 +1504,7 @@ shift。含通用符号解析正规化参数的 $\alpha$ 保持符号化，不�
 
 上述定理也给出了自动化范围。完全不含任何 $K_v$ 的奇点已经显式列在 DE letters 中，不是这个边界 producer 的待解决障碍。普通折线可用 \texttt{"Avoid"} 拒绝穿越；\texttt{"Automatic"} 把用户显式给出的有限奇点交给后端局部幂对数基，分类有限极限、pole 与 log 发散，并用同一局部基覆盖收敛域内双侧用户点。更一般的 blow-up、奇点处非共线转向及额外 gauge transformation 引入的新分母仍不自动继承上述证明。
 
-每个 sector 的边界条件必须把该 sector 自己当作 top sector：使用 contact 后的 component base power、normalization 和式 \eqref{eq:component-energy-rank}。先计算 bottom sectors，再沿 sector DAG 向上。固定 theta 后的 homogeneous leading term 因子化成 component vertex-family 边界系数的乘积；但 parent 还可收到 lower-sector solution 的 leading contribution。文献 \cite{Chen:2024jms} 第 4.2 节五维例子中，remaining integral 对原 sector 的第二、第三分量已有非零 leading coefficient，正说明只写 homogeneous product 会漏项。通用 producer 应解 block-triangular Frobenius leading system，或等价地保留 theta/delta 的顶点展开，递归得到完整同序边界向量。
+每个 sector 的边界条件必须把该 sector 自己当作 top sector：使用 contact 后的 component base power、normalization 和式 \eqref{eq:component-energy-rank}。先计算 bottom sectors，再沿 sector DAG 向上。固定 theta 后的 homogeneous leading term 因子化成 component vertex-family 边界系数的乘积；但 supersector 还可收到 lower-sector solution 的 leading contribution。文献 \cite{Chen:2024jms} 第 4.2 节五维例子中，remaining integral 对原 sector 的第二、第三分量已有非零 leading coefficient，正说明只写 homogeneous product 会漏项。通用 producer 应解 block-triangular Frobenius leading system，或等价地保留 theta/delta 的顶点展开，递归得到完整同序边界向量。
 
 \subsection{辅助外腿能量取零的受控输运}
 
@@ -1595,14 +1566,14 @@ $\cN_s$ 是 sector normalization，$\Xi_{s,\bm a}$ 收集 shared-massless chambe
  \eta_e=\begin{cases}+1,&++\\-1,&--\end{cases},
  \label{eq:massive-full-pinch-normalization}
 \end{equation}
-其中 $\eta_e$ 只定义物理 child master 的 normalization；它不再乘入 normalized-master dlog contact block 或 recurrence event。massive contact 的其余常系数已完整包含在各 component 的定义积分系数中，不能再按收缩深度额外乘相位。所有量都从当前 sector metadata 取得，不能从 root sector 猜 child 的幂次或二态因子。
+其中 $\eta_e$ 只定义物理 subsector master 的 normalization；它不再乘入 normalized-master dlog contact block 或 recurrence event。massive contact 的其余常系数已完整包含在各 component 的定义积分系数中，不能再按收缩深度额外乘相位。所有量都从当前 sector metadata 取得，不能从 root sector 猜 subsector 的幂次或二态因子。
 
 把完整 dlog potential 沿 $K_{\sigma(j)}=B^{V-j+1}t^{-(V-j+1)}$ 拉回并记 residue 为 $R_0$。对每个 $(s,\bm a)$，程序固定该 sector 内对应 root master 的分量为 $1$，非 ancestor sectors 为 $0$，解
 \begin{equation}
  (\lambda_{s,\bm a}I-R_0)v_{s,\bm a}=0.
  \label{eq:generic-sector-indicial-vector}
 \end{equation}
-于是 $W_{s,\bm a}v_{s,\bm a}$ 自动包含 child solution 注入 parent 的 leading 分量。重根或整数差共振不另造图专用参数；完整 exact residue 与这些 $\{\lambda,0,v\}$ 交给 FlintNDE 的 power-log 递推。有限定义积分只作为独立验证 oracle，不进入生产输入。
+于是 $W_{s,\bm a}v_{s,\bm a}$ 自动包含 subsector solution 注入 supersector 的 leading 分量。重根或整数差共振不另造图专用参数；完整 exact residue 与这些 $\{\lambda,0,v\}$ 交给 FlintNDE 的 power-log 递推。有限定义积分只作为独立验证 oracle，不进入生产输入。
 
 上面对每个 component 只写入一个 $\tau$ 幂，这不是遗漏，而是 $h$ 的两幂结构与两个 state 的对应关系。把 \texttt{msVertexEndpointCoefficient} 在 Hankel 支 $\mathrm b\in\{1,2\}$、state bit $a\in\{0,1\}$ 上的条目记作 $\mathsf c^{(\mathrm b)}_a$，并以 $s_\nu=\pm1$ 表示 prefactor convention（$\texttt{formulaNu}=s_\nu\nu$），则小 $z$ 的两个 Frobenius 塔为
 \begin{equation}
@@ -1643,7 +1614,7 @@ $\cN_s$ 是 sector normalization，$\Xi_{s,\bm a}$ 收集 shared-massless chambe
  e^{-\pi\mu}H^{(2)}_{-\ii\mu}(z)=H^{(2)}_{\ii\mu}(z).
  \label{eq:paper-endpoint-to-common-hankel-order}
 \end{equation}
-因此式 \eqref{eq:paper-two-vertex-child-normalization} 的显式 Boltzmann 因子已经进入 vertex basis 变换；该例是 $G_{++}$，所以式 \eqref{eq:massive-full-pinch-normalization} 取 $\eta_e=+1$，在 MadStree 的共同 Hankel 阶 basis 中 child normalization 是
+因此式 \eqref{eq:paper-two-vertex-child-normalization} 的显式 Boltzmann 因子已经进入 vertex basis 变换；该例是 $G_{++}$，所以式 \eqref{eq:massive-full-pinch-normalization} 取 $\eta_e=+1$，在 MadStree 的共同 Hankel 阶 basis 中 subsector normalization 是
 \begin{equation}
  \cN_R^{\rm MS}=-\frac{4\ii}{\pi}k_s^{2\nu_1-1},
  \label{eq:madstree-common-order-child-normalization}
@@ -1798,7 +1769,7 @@ FlintNDE 在启动前分类局部奇点并执行 capability preflight；MadStree
 \label{sec:interface-reference}
 
 本节把当前版本的全部公开符号按一次完整计算的调用顺序集中列出：初始化、sector 与主积分
-表示、状态换基、迭代约化、解析矩阵与产物、边界、数值输运与运行环境。每项只给一句话
+表示、迭代约化、解析矩阵与产物、边界、数值输运与运行环境。每项只给一句话
 用途；公式推导、门禁条件与返回字段在所指小节展开，本表与 \texttt{Kernel/MadStree.wl}
 的 usage 字符串同源。所有入口对非法输入返回结构化 \texttt{Failure} 并携带原因，
 不静默降级。
@@ -1843,14 +1814,6 @@ context 建立后所有接口只读该值，无逐调用覆盖\\
 $\cN_s$ 与惰性等式（第~\ref{sec:normalized-J}~节）\\
 \texttt{MSMasterIntegrals[context]} & 矩阵序 master 记录，每条附带
 \texttt{integral}/\texttt{bareIntegral}/\texttt{normalization}/\texttt{definition} 字段\\
-\midrule
-\multicolumn{2}{@{}l}{\textbf{H/h 换基}}\\
-\texttt{MSHTohMatrix[nu, z, context]} & 式 \eqref{eq:package-H-to-h} 的局部
-$2\times2$ 矩阵 $T_{H\to h}$\\
-\texttt{MShToHMatrix[nu, z, context]} & 其逆 $T_{h\to H}$，式 \eqref{eq:package-h-to-H}\\
-\texttt{MSConvertBasis} & 局部二分量状态向量换基，或按 sector 的 slot registry 作
-Kronecker 积换整个状态向量；massless shared slot 作用为单位阵，积分对象换基 fail
-closed（第~\ref{sec:Hh-transform}~节）\\
 \midrule
 \multicolumn{2}{@{}l}{\textbf{迭代约化与 contact}}\\
 \texttt{MSRecurrenceStep[integral, component, context]} & 单步把一个非零 shift 移向零，
@@ -1948,7 +1911,7 @@ multi  = MSEvaluatePath[ctx,multipointSequence,
 \subsection{两顶点 massless Full：多 sector 与多点求值}
 
 \texttt{Examples/01\_massless\_full\_edge.wl} 从两个 \texttt{+} 顶点和一条公开
-\texttt{"massless"} 传播子开始；程序自动派生 Full/quotient、top/child sectors、主积分、contact
+\texttt{"massless"} 传播子开始；程序自动派生 Full/quotient、top sector 与 subsectors、主积分、contact
 map 与 dlog DE。例子把 \texttt{\{k1,k2\}} 作为表头，后续行只写坐标值，共同的
 \texttt{q/a1/a2} 只在 \texttt{ParameterRules} 中给一次；随后开启 FlintNDE 节点规划和 fast
 multipoint，并用 \texttt{MSExportEvaluationData} 导出保存点。临时途经点写成
@@ -1978,9 +1941,9 @@ FlintNDE 局部幂对数入口区分可去、pole 与 log 发散，不按变量�
 
 \texttt{Examples/06\_massless\_three\_vertex\_ep\_regularization.wl} 取
 $a_1=-1+\epsilon$、$a_2=a_3=1+\epsilon$，用户只指定 \texttt{MaximumEpPower->0}。进入数值前，
-例子先做三项符号自检：\texttt{MSReduce} 一次作用于两个相对主积分幂偏移 $-1$ 的积分之和并核对
+例子先做两项符号自检：\texttt{MSReduce} 一次作用于两个相对主积分幂偏移 $-1$ 的积分之和并核对
 status/residual/remaining/singularLayers；以正规化幂作为 \texttt{timePower} 重新初始化 context
-后重复同一约化（系数显式带 $\epsilon$）；以及 \texttt{MSConvertBasis} 的 H/h 局部换基往返。
+后重复同一约化（系数显式带 $\epsilon$）。
 之后程序先由符号边界和 DE
 认证最低幂，再自动选择生产/独立验证点；验证精度不足时只增加内部拟合阶数和新增点，并复用
 已计算值。坐标表只含不依赖 $\epsilon$ 的 $k_i$ 值，$a_i\to c_i+\epsilon$ 只写在
@@ -2001,9 +1964,9 @@ $\epsilon^0$ 有限项。
   \item 对 massless full propagator 固定式 \eqref{eq:SP-massless} 的 $S_e,P_e$ 和顶点 incidence；cross/external exponent 不建立任何 slot。
   \item 按式 \eqref{eq:global-M1}--\eqref{eq:global-M0} 逐顶点组装 Kronecker 和；一维指数项与所有二维项使用同一个 embedding API，并严格区分 $\varsigma_v$、$\sigma_e$ 与 $\epsilon_{ve}$。
   \item 先验证式 \eqref{eq:local-common-diagonalization-condition}，再用一个全局 $U_s$ 列举式 \eqref{eq:global-energy-letter} 的对角元；只反演 $M_1$ 和 $\widetilde M_0$ 的标量对角元。
-  \item 按式 \eqref{eq:common-theta-odd-subsets} 对 current-component bundles 做 event BFS；对 coincident spectators 构造 $S_s,P_s$ quotient，并用式 \eqref{eq:simultaneous-contact-base-power} 固定 child powers。
+  \item 按式 \eqref{eq:common-theta-odd-subsets} 对 current-component bundles 做 event BFS；对 coincident spectators 构造 $S_s,P_s$ quotient，并用式 \eqref{eq:simultaneous-contact-base-power} 固定 subsector powers。
   \item 用式 \eqref{eq:global-Aminus}--\eqref{eq:global-Aplus} 输出 general-index 单步递推；用事件级 contact selector 追加 lower-sector source，并按方向返回 $M_1/M_0$ 奇异层。
-  \item 用式 \eqref{eq:global-diagonal-omega}、\eqref{eq:global-offdiagonal-omega} 直接输出 block-triangular dlog candidate；非零 child shift 按式 \eqref{eq:shifted-contact-right-composition} 自动约回全局 masters，再应用式 \eqref{eq:normalization-adapter}。
+  \item 用式 \eqref{eq:global-diagonal-omega}、\eqref{eq:global-offdiagonal-omega} 直接输出 block-triangular dlog candidate；非零 subsector shift 按式 \eqref{eq:shifted-contact-right-composition} 自动约回全局 masters，再应用式 \eqref{eq:normalization-adapter}。
   \item 对所选或全部 root rank 调用 \texttt{MSBoundaryChartCertificate}；只有完整 connection、normalization、Jacobian、theta fixing 与 quotient 同时通过才进入自动边界。
 \end{enumerate}
 

@@ -5,10 +5,9 @@
 用途：演示真实无质量三顶点树图的时间幂解析正规化 a1=-1+ep、a2=a3=1+ep；
       顶点 1 的幂取 -1+ep，使 eps=0 处时间积分真正发散，Laurent 展开含单一
       1/ep 极点：请求返回到 ep^0 时，极点系数 c_{-1} 与有限部 c_0 一并返回。
-      数值阶段之前先做三项符号检查：任取两个相对主积分 tau 幂偏移 -1 的积分，
+      数值阶段之前先做两项符号检查：任取两个相对主积分 tau 幂偏移 -1 的积分，
       其和由 MSReduce 一次（而非分别）约化并检查闭合；以 a1=-1+ep、a2=a3=1+ep
-      作为 timePower 重新初始化后作代入约化，结果显式携带 ep 依赖；H/h 局部换基
-      正反往返对被积函数二分量状态向量应还原。
+      作为 timePower 重新初始化后作代入约化，结果显式携带 ep 依赖。
       程序在数值 NDE 前从符号边界与 dlog DE 认证最低幂 n_min=-1，
       再选择 exact ep 点并重构 Laurent 系数。用户也可提供冗余生产候选池、独立验证点
       和首轮内部最高幂；程序只按每轮所需点数消费候选前缀并复用既有结果。本例缺省
@@ -75,7 +74,7 @@ context = MSInitTree[treeSpec];
 formulaArtifacts = MSWriteFormulaArtifacts[context];
 
 (* ::Chapter:: *)
-(*数值前的符号检查：组合迭代约化与 H/h 局部换基往返*)
+(*数值前的符号检查：组合迭代约化与代入约化*)
 
 topKey = First[context["sectorOrder"]];
 
@@ -88,13 +87,6 @@ combinationReduction = MSReduce[shiftedCombination, context];
 combinationReduction["status"]
 combinationReduction["coefficientVector"]
 combinationReduction["singularLayers"]
-
-(* H/h 换基自检：被积函数二分量状态向量在局部正反换基后应还原（nu、z 保持符号）。 *)
-hhRoundTripVector = MSConvertBasis[
-  MSConvertBasis[{v1, v2}, "H" -> "h", nu, z, context],
-  "h" -> "H", nu, z, context
-];
-hhRoundTripQ = Simplify[hhRoundTripVector === {v1, v2}];
 
 If[! (AssociationQ[combinationReduction] &&
       combinationReduction["status"] === "reduced" &&
@@ -119,11 +111,6 @@ If[! (AssociationQ[regulatedReduction] &&
       TrueQ[regulatedReduction["nonMasterResidual"] === 0] &&
       regulatedReduction["remainingShiftedIntegrals"] === {}),
   Print["Example failed at MSReduce: the regulated reduction did not close."];
-  Exit[1]
-];
-
-If[! hhRoundTripQ,
-  Print["Example failed at the H/h basis round trip."];
   Exit[1]
 ];
 

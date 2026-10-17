@@ -2,9 +2,9 @@
 
 (***
 文件：Representation.wl
-用途：验证 MSIntegral、公开 normalized-to-bare 定义、执行 H/h 状态变换，并适配 dSIBP time-only J。
-范围：所有表示共用 sectorKey、timeShifts、stateBits 三槽；massless shared quotient 在 H/h
-变换中恒为单位作用，不重建未约四态表示或第二套指标约定。
+用途：验证 MSIntegral、公开 normalized-to-bare 定义，并适配 dSIBP time-only J。
+范围：所有表示共用 sectorKey、timeShifts、stateBits 三槽；massless shared quotient 不重建
+未约四态表示或第二套指标约定。
 ***)
 
 (* ::Chapter:: *)
@@ -73,70 +73,6 @@ msMasterRecordWithDefinition[record_Association, context_?MSContextQ] := Module[
 
 
 MSMasterIntegrals[context_?MSContextQ] := msMasterRecordWithDefinition[#, context] & /@ context["masters"];
-
-
-(* ::Section:: *)
-(* All-sector H/h state-vector transformation *)
-
-(* 输入按 sector stateBits 排序。massive endpoint 使用 z=-k tau；massless shared quotient
-   不是裸 Hankel endpoint pair，因此在 H/h 变换下恒为单位作用。 *)
-msSectorBasisTransformMatrix[
-  direction_Rule,
-  sector_Association,
-  componentTimes_List,
-  nuConvention_String
-] := Module[{localMatrices, componentPosition, zValue},
-  If[! MemberQ[{"H" -> "h", "h" -> "H"}, direction],
-    Return[msFailure["UnsupportedBasisDirection", <|"direction" -> direction|>]]
-  ];
-  localMatrices = Map[
-    Function[slot,
-      Switch[slot["kind"],
-        "masslessShared", msIdentity2,
-        "massiveEndpoint",
-        componentPosition = sector["rootToComponent"][slot["rootVertex"]];
-        zValue = -slot["momentum"] componentTimes[[componentPosition]];
-        If[direction === ("H" -> "h"),
-          msHTohMatrix[slot["nu"], zValue, nuConvention],
-          msHToHMatrix[slot["nu"], zValue, nuConvention]
-        ],
-        _, msFailure["UnsupportedTensorSlotKind", <|"slot" -> slot|>]
-      ]
-    ],
-    sector["slots"]
-  ];
-  If[! FreeQ[localMatrices, _Failure], Return[FirstCase[localMatrices, _Failure]]];
-  msQuotientMatrix[sector, msKroneckerAll[localMatrices]]
-];
-
-(*
-Returns the sector state vector in the same order as the input. This interface acts on integrand states and does not change the base time powers of MSIntegral; basis changes of integral objects require additional target-family metadata and remain rejected for now.
-*)
-MSConvertBasis[
-  vector_List,
-  direction_Rule,
-  key_String,
-  componentTimes_List,
-  context_?MSContextQ
-] := Module[{sector, matrix, nuConvention},
-  sector = msSectorByKey[context, key];
-  If[Head[sector] === Missing, Return[msFailure["UnknownSector", <|"sectorKey" -> key|>]]];
-  If[Length[componentTimes] =!= Length[sector["vertexComponents"]],
-    Return[msFailure[
-      "ComponentTimeCount",
-      <|"expected" -> Length[sector["vertexComponents"]], "actual" -> Length[componentTimes]|>
-    ]]
-  ];
-  If[Length[vector] =!= sector["masterCount"],
-    Return[msFailure[
-      "StateVectorDimension",
-      <|"expected" -> sector["masterCount"], "actual" -> Length[vector]|>
-    ]]
-  ];
-  nuConvention = context["convention"]["nuConvention"];
-  matrix = msSectorBasisTransformMatrix[direction, sector, componentTimes, nuConvention];
-  If[Head[matrix] === Failure, matrix, Simplify[matrix.vector]]
-];
 
 
 (* ::Chapter:: *)

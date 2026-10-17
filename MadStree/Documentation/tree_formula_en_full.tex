@@ -652,9 +652,9 @@ More concretely, for an ordinary single-propagator contact it can be written as
  \bm{\text I}_{s/e}\!\left(\chi_e(\bm n)\right).
  \label{eq:R-edge-sum}
 \end{equation}
-$\chi_e$ merges the time shifts belonging to the two vertices of the propagator and includes the fixed shift by which the delta contact makes the child base power one less. This parent-to-child structure is identical for massive and massless propagators; only the local matrices $C^{(v,e)}$ differ. A massive propagator uses the complementary state bits and signs at its two vertices, given by Eq.~(3.65) of \cite{Chen:2023eic}; a massless propagator first takes the $4\to2$ quotient and then uses the shared-bit selector of Eq.~\eqref{eq:contact-injection} together with the $-2,+2$ of Eq.~\eqref{eq:package-massless-contact-weight}. Hence massless contraction does not need a second set of recurrence formulas.
+$\chi_e$ merges the time shifts belonging to the two vertices of the propagator and includes the fixed shift by which the delta contact makes the subsector base power one less. This supersector-to-subsector structure is identical for massive and massless propagators; only the local matrices $C^{(v,e)}$ differ. A massive propagator uses the complementary state bits and signs at its two vertices, given by Eq.~(3.65) of \cite{Chen:2023eic}; a massless propagator first takes the $4\to2$ quotient and then uses the shared-bit selector of Eq.~\eqref{eq:contact-injection} together with the $-2,+2$ of Eq.~\eqref{eq:package-massless-contact-weight}. Hence massless contraction does not need a second set of recurrence formulas.
 
-The package fixes the child base power deliberately according to the delta contact: $\cR(\bm0)$ lands on child shift $-1$, while the $\cR(\bm e_v)$ needed by the DE lands exactly on child shift $0$. Below, the remaining term used by the raising step is denoted $R^{(1)}:=\cR_{v,s}(\bm e_v)$ and the one used by the lowering step $\cR_{v,s}(\bm0)$ is denoted $R^{(0)}$; they are the two remainders of the same one-step relation evaluated at different indices, their targets differ by one child shift, and they are not interchangeable. Hence $R^{(1)}$ of an ordinary single-propagator massive/massless contact already hits the child master directly; there is no problem of ``a dlog master being chosen but the iterative reduction failing to reach it.''
+The package fixes the subsector base power deliberately according to the delta contact: $\cR(\bm0)$ lands on subsector shift $-1$, while the $\cR(\bm e_v)$ needed by the DE lands exactly on subsector shift $0$. Below, the remaining term used by the raising step is denoted $R^{(1)}:=\cR_{v,s}(\bm e_v)$ and the one used by the lowering step $\cR_{v,s}(\bm0)$ is denoted $R^{(0)}$; they are the two remainders of the same one-step relation evaluated at different indices, their targets differ by one subsector shift, and they are not interchangeable. Hence $R^{(1)}$ of an ordinary single-propagator massive/massless contact already hits the subsector master directly; there is no problem of ``a dlog master being chosen but the iterative reduction failing to reach it.''
 
 The complete one-step IBP at vertex $v$ is
 \begin{equation}
@@ -802,7 +802,7 @@ The program uses the collected form \eqref{eq:common-theta-odd-subsets} rather t
 
 Hence an odd subset $S$ is a simultaneous contact event: the selected propagators are contracted at once, their two vertices merge only once, and the contact selector is the tensor product of the local selectors of the selected propagators times $2^{1-|S|}$. If the two vertices of an unselected massless full propagator become coincident after merging, its odd shared state is zero; an unselected massive full propagator uses the equal-time canonical quotient $10\sim01$. The program first builds the matrices in the raw binary space and then projects with $P_sM^{\rm raw}S_s$ onto the true sector masters, so the coincident quotient does not require a general large-matrix inversion.
 
-For an event-reachable component $C$, the child base power can be written directly from the final partition as
+For an event-reachable component $C$, the subsector base power can be written directly from the final partition as
 \begin{equation}
  A_{C,s}=\sum_{v\in C}A_v
  +\sum_{e\in E_s(C)}r_e+|C|-1,
@@ -873,7 +873,7 @@ If one changes to user coordinates or Wick coordinates, the DE is not rederived;
 The off-diagonal blocks of the DE must use the remaining term of the raising relation, i.e.
 $\cR_{v,s}(\bm e_v)$ at $\bm n=\bm e_v$ of Eq.~\eqref{eq:R-as-CF} in this document (denoted $R^{(1)}$
 above); one cannot substitute $\cR_{v,s}(\bm0)$ from the lowering step (denoted $R^{(0)}$ above) with its
-lower time powers reduced first, because the two child targets differ by one unit shift and do not
+lower time powers reduced first, because the two subsector targets differ by one unit shift and do not
 commute. The package uses $(-\tau)^A$, whose raising row is
 \begin{equation}
  M_{0;v,s}\bm{\text I}_s(\bm e_v)
@@ -908,7 +908,7 @@ For pure-massive events, $\varsigma_v$ is the vertex phase sign fixed at initial
 
 \subsection{Bit deletion, insertion and the massless quotient in Eq.~(3.68) of \texorpdfstring{\cite{Chen:2023eic}}{arXiv:2401.00129}}
 
-First write the pure-massive two-vertex result of Eq.~(3.68) of \cite{Chen:2023eic}, that is, the unreduced form before the extra massless reduction relations are inserted. Let the two states of the contracted propagator sit at positions $i,j$ of the left and right vertices, respectively; the parent states are $(\bm a,\bm b)$ and the child states are $(\widehat{\bm c},\widehat{\bm d})$. Define
+First write the pure-massive two-vertex result of Eq.~(3.68) of \cite{Chen:2023eic}, that is, the unreduced form before the extra massless reduction relations are inserted. Let the two states of the contracted propagator sit at positions $i,j$ of the left and right vertices, respectively; the supersector states are $(\bm a,\bm b)$ and the subsector states are $(\widehat{\bm c},\widehat{\bm d})$. Define
 \begin{equation}
  K_u^{\unred}=T_{n_u}^{-1}\widetilde\Omega_{0;u}T_{n_u},
  \qquad
@@ -932,12 +932,12 @@ Then the two terms of that equation, one at each of the two vertices, read compo
 \end{align}
 This is the precise meaning of ``deleting the bit of the contracted propagator at one vertex and inserting its complementary bit on the other side''; all undeleted bits are preserved by the Kronecker deltas. The $(-\tau)^A$ normalized-$J$ convention of this document converts the overall $-\ii$ of Eq.~\eqref{eq:unreduced-binary-top-to-sub} into the $+\ii\chi_v(E)$ of Eq.~\eqref{eq:global-offdiagonal-omega} according to Eq.~\eqref{eq:package-raising-contact-sign}; the fixed positive pure-massive vertices of \cite{Chen:2023eic} take $\chi_v=\varsigma_v=+1$. One must not change only the binary selector and miss this convention transformation.
 
-Now contract a massless propagator $e$. Since the shared slot breaks the vertex-by-vertex factorization, first define the global kernel on the full parent sector
+Now contract a massless propagator $e$. Since the shared slot breaks the vertex-by-vertex factorization, first define the global kernel on the full supersector
 \begin{equation}
  \mathcal K_{v,s}=U_s^{-1}\widetilde\Omega_{0;v,s}U_s.
  \label{eq:global-component-log-kernel}
 \end{equation}
-In the parent global binary string after the quotient, the propagator has a single shared bit, whose position is denoted by $p_e$; the child string is denoted by $\widehat{\bm c}$. The contact matrix components in the package basis are
+In the supersector global binary string after the quotient, the propagator has a single shared bit, whose position is denoted by $p_e$; the subsector string is denoted by $\widehat{\bm c}$. The contact matrix components in the package basis are
 \begin{equation}
  \left(C_{s,s/e}^{(v,e)}\right)_{\bm d,\widehat{\bm c}}
  =\eta_{s,e}\,w_e^{(v)}
@@ -976,12 +976,12 @@ Thus one does not keep two independent $2\times2$ vertex indices and then sum: t
 
 If another massless propagator $f\neq e$ is not contracted, its shared bit is a spectator and automatically gives
 \begin{equation}
- \delta_{r_f^{\rm parent},r_f^{\rm child}}.
+ \delta_{r_f^{\rm sup},r_f^{\rm sub}}.
  \label{eq:massless-spectator-delta}
 \end{equation}
 in Eq.~\eqref{eq:massless-contact-binary-component}. It does not produce an extra sum over the bits at its two vertices; it only continues to enter the energy letters and $\mathcal K_{v,s}$ of its two vertices with opposite incidence signs. In the mixed massive/massless case, one only needs to assemble the bits of the massive propagators and the other shared bits into the same global string according to Eq.~\eqref{eq:binary-state-order}; after deleting $p_e$, all remaining bits are preserved by the second delta of Eq.~\eqref{eq:massless-contact-binary-component}.
 
-If a generalized or multi-propagator contact makes $R^{(1)}$ land on a nonzero shift $\bm q$ of the child, the program now calls the same recurrence formula child state by child state and constructs
+If a generalized or multi-propagator contact makes $R^{(1)}$ land on a nonzero shift $\bm q$ of the subsector, the program now calls the same recurrence formula subsector state by subsector state and constructs
 \begin{equation}
  \bm{\text I}_t(\bm q)=\mathcal Q_t(\bm q\to0)\,\bm{\text I}_{\rm all}(0),
  \qquad
@@ -989,7 +989,7 @@ If a generalized or multi-propagator contact makes $R^{(1)}$ land on a nonzero s
  =-\mathcal K_{v,s}C_{st}^{(v,1)}\mathcal Q_t(\bm q_v\to0).
  \label{eq:shifted-contact-right-composition}
 \end{equation}
-Here $\bm{\text I}_{\rm all}(0)$ is ordered according to the global master-integral order of the context, so $\mathcal Q_t$ is allowed to continue down to the lower contact sectors of $t$, rather than keeping only the direct child. The program stores, column by column, the residual, the unresolved shifted integrals and the direction-sensitive singular layers. Only when all columns close is Eq.~\eqref{eq:shifted-contact-right-composition} written into the connection; otherwise it returns
+Here $\bm{\text I}_{\rm all}(0)$ is ordered according to the global master-integral order of the context, so $\mathcal Q_t$ is allowed to continue down to the lower contact sectors of $t$, rather than keeping only the direct subsector. The program stores, column by column, the residual, the unresolved shifted integrals and the direction-sensitive singular layers. Only when all columns close is Eq.~\eqref{eq:shifted-contact-right-composition} written into the connection; otherwise it returns
 \begin{center}
  \texttt{contactShiftReductionFailed}.
 \end{center}
@@ -1012,7 +1012,7 @@ After ordering the sectors by the number of remaining full propagators, the comp
  \end{pmatrix}.
  \label{eq:block-triangular-de}
 \end{equation}
-Whether the matrix is written as upper or lower triangular depends only on the sector ordering; the physical content is that contact only points from a parent to a strictly lower sector.
+Whether the matrix is written as upper or lower triangular depends only on the sector ordering; the physical content is that contact only points from a supersector to a strictly lower sector.
 
 \section{The dimensionless h equation, physical quadratic-momentum terms and realification}
 \label{sec:physical-k2}
@@ -1291,35 +1291,6 @@ In the normalized basis one must also use
 \end{equation}
 So the sector diagonal blocks receive an additional $\dd\log\cN_s\text{I}_s$, and the off-diagonal contact blocks are multiplied by $\cN_s/\cN_t$. Only when this ratio has been turned into a kinematics-independent constant by the basis normalization is Eq.~\eqref{eq:global-offdiagonal-omega} directly a constant-residue dlog; otherwise an additional basis/gauge transformation is needed, and one cannot claim completion merely from the literal $\log\kappa$.
 
-\subsection{The forward and inverse transformations of the H/h state vectors}
-\label{sec:Hh-transform}
-
-Let $p=s_\nu\nu$. The local relation between the same function $h$ and the bare Hankel states is
-\begin{equation}
- \begin{pmatrix}h(\nu,0;z)\\h(\nu,1;z)\end{pmatrix}
- =T_{H\to h}(p,z)
- \begin{pmatrix}H_\nu(z)\\\partial_zH_\nu(z)\end{pmatrix},
- \qquad
- T_{H\to h}(p,z)=
- \begin{pmatrix}
-  z^p&0\\p z^{p-1}&z^p
- \end{pmatrix}.
- \label{eq:package-H-to-h}
-\end{equation}
-Its inverse matrix is
-\begin{equation}
- T_{h\to H}(p,z)=
- \begin{pmatrix}
-  z^{-p}&0\\-p z^{-p-1}&z^{-p}
- \end{pmatrix},
- \qquad
- T_{h\to H}T_{H\to h}=\Id_2.
- \label{eq:package-h-to-H}
-\end{equation}
-MadStree's \texttt{MSHTohMatrix[nu,z,context]} and \texttt{MShToHMatrix[nu,z,context]} implement these two matrices directly. \texttt{MSConvertBasis} can also take their Kronecker product according to the slot registry of a fixed sector: each slot of a massive propagator uses its own $z=-k\tau_{\rm component}$, while the massless shared quotient is not a bare Hankel pair at the two vertices and therefore multiplies by identity in this basis change. \texttt{NuConvention} is chosen only at \texttt{MSInitTree}; after the context is built, both the local matrices and the full-sector basis change read that value fixedly and do not accept per-call overrides. The forward and inverse transformations have been checked separately for both positive/negative prefactor contexts to give the identity.
-
-What is transformed here is the same-ordered state vector of the integrand, not the already-integrated \texttt{MSIntegral}. The reason is that the $z^p$ and $z^{p-1}$ of Eq.~\eqref{eq:package-H-to-h} also change the component base time power at the same time; the first version has not built an independent H-family sector metadata, so overloading the integral object explicitly fails closed, and this step cannot be disguised as merely flipping a state bit.
-
 The public time-only representation of dSIBP is \texttt{J[sectorKey,timeShifts,stateBits]}, which corresponds slot by slot to MadStree's \texttt{MSIntegral[sectorKey,timeShifts,stateBits]}; \texttt{stateBits} are discrete states of the $n_i$ type in the full-sector registry and are not required to be grouped by vertex. This correspondence only converts the integral identity and does not replace the normalization: both contexts must use the same $\cN_s$ for every sector, and differentiation must include the $\partial\log\cN_s$ of Eq.~\eqref{eq:normalization-adapter}. The default massless input of MadStree is $\nu=1/2$ with positive prefactor; in this case \texttt{formulaNu}$\,=s_\nu\nu=+1/2$, and the code and the formulas of this document agree slot by slot on the same $+\nu$ base formula. With \texttt{NuConvention -> "Negative"} one has \texttt{formulaNu}$=-1/2=\nu_{\rm ref}$, used only to compare verbatim with the printed formulas of that paper. This convention does not replace propagator metadata, theta, or contact normalization.
 
 \subsection{Single-vertex families, local inverses and the complete reduction interface}
@@ -1417,7 +1388,7 @@ is restricted to
  n\geq 1-m,
 \end{equation}
 because the next shift reaches a non-positive integer. \texttt{MSRecurrenceStep},
-\texttt{MSReduce}, and shifted-child reduction in the dlog reject only an actual request that
+\texttt{MSReduce}, and shifted-subsector reduction in the dlog reject only an actual request that
 crosses this bound, returning the original vertices, sector, local branch, $\alpha$, and the
 requested shift. An $\alpha$ containing a symbolic analytic regulator remains symbolic and is not
 misclassified as an integer.
@@ -1536,7 +1507,7 @@ Let $v_C$ be the dominant root in $C$. The boundary form of any letter of Eq.~\e
 \end{equation}
 where the bracket equals $1$ at $x=0$. All energy letters of every contact-reachable sector are therefore a coordinate monomial times a boundary-nonzero unit; this is the direct resolution of the linear letters of arbitrary time graphs by the strict-rank blow-up.
 
-This conclusion is in fact more general than the component letters. The diagonal blocks of a fixed sector contain only the $\log\kappa$ of Eq.~\eqref{eq:global-omega0}. The top-to-sub formula \eqref{eq:global-offdiagonal-omega} merely multiplies the same $\widetilde\Omega_{0;v,s}$ of the parent by the kinematics-independent contact map $C_{st}^{(v,1)}$, so no new log argument is produced. If $R^{(1)}$ does not land directly on the child master and further reduction is needed, the new denominators come only from the $M_0^{-1}$ of the child and are still energy letters of the same type of the child component. Inducting along the strictly descending contact DAG, every denominator containing $K$ in the complete block-triangular DE has the form
+This conclusion is in fact more general than the component letters. The diagonal blocks of a fixed sector contain only the $\log\kappa$ of Eq.~\eqref{eq:global-omega0}. The top-to-sub formula \eqref{eq:global-offdiagonal-omega} merely multiplies the same $\widetilde\Omega_{0;v,s}$ of the supersector by the kinematics-independent contact map $C_{st}^{(v,1)}$, so no new log argument is produced. If $R^{(1)}$ does not land directly on the subsector master and further reduction is needed, the new denominators come only from the $M_0^{-1}$ of the subsector and are still energy letters of the same type of the subsector component. Inducting along the strictly descending contact DAG, every denominator containing $K$ in the complete block-triangular DE has the form
 \begin{equation}
  D_{\alpha,s}(K,q)
  =Q_{\alpha,s}(q)
@@ -1578,7 +1549,7 @@ The public interface \texttt{MSBoundaryChartCertificate} implements this certifi
 
 The theorem above also fixes the scope of automation. Singularities that contain no $K_v$ at all are already listed explicitly in the DE letters; they are not obstacles for this boundary producer.  An ordinary polyline can use \texttt{"Avoid"} to refuse a crossing.  For an explicitly supplied finite singular user point, \texttt{"Automatic"} uses the backend power--log basis to classify a finite limit, a pole, or a logarithmic divergence and uses the same local basis for user points on both sides inside its convergence disk.  More general blow-ups, non-collinear turning at a singularity, and new denominators introduced by an extra gauge transformation do not automatically inherit the proof above.
 
-The boundary condition of each sector must treat that sector itself as the top sector: use the post-contact component base power, the normalization and Eq.~\eqref{eq:component-energy-rank}. Compute the bottom sectors first, then move up along the sector DAG. After theta fixing, the homogeneous leading term factorizes into a product of component vertex-family boundary coefficients; but the parent may also receive a leading contribution from the lower-sector solution. In the five-dimensional example of Sec.~4.2 of the reference, the remaining integral already has nonzero leading coefficients on the second and third components of the original sector, which is exactly why writing only the homogeneous product misses terms. A general producer should solve the block-triangular Frobenius leading system, or equivalently keep the small-time expansions of the theta/delta, to obtain the complete same-ordered boundary vector recursively.
+The boundary condition of each sector must treat that sector itself as the top sector: use the post-contact component base power, the normalization and Eq.~\eqref{eq:component-energy-rank}. Compute the bottom sectors first, then move up along the sector DAG. After theta fixing, the homogeneous leading term factorizes into a product of component vertex-family boundary coefficients; but the supersector may also receive a leading contribution from the lower-sector solution. In the five-dimensional example of Sec.~4.2 of the reference, the remaining integral already has nonzero leading coefficients on the second and third components of the original sector, which is exactly why writing only the homogeneous product misses terms. A general producer should solve the block-triangular Frobenius leading system, or equivalently keep the small-time expansions of the theta/delta, to obtain the complete same-ordered boundary vector recursively.
 
 \subsection{Controlled transport of an auxiliary external-leg energy to zero}
 
@@ -1640,14 +1611,14 @@ $\cN_s$ is the sector normalization, $\Xi_{s,\bm a}$ collects the shared-massles
  \eta_e=\begin{cases}+1,&++\\-1,&--\end{cases},
  \label{eq:massive-full-pinch-normalization}
 \end{equation}
-to $\cN_s$. The factor $\eta_e$ defines only the normalization of the physical child master; it is not multiplied again into the normalized-master dlog contact block or recurrence event. The remaining constant coefficient of a massive contact is already complete in the defining-integral coefficient of each component, and no extra phase may be multiplied according to contact depth. All quantities are taken from the current sector metadata; one must not guess the child powers or two-state factors from the root sector.
+to $\cN_s$. The factor $\eta_e$ defines only the normalization of the physical subsector master; it is not multiplied again into the normalized-master dlog contact block or recurrence event. The remaining constant coefficient of a massive contact is already complete in the defining-integral coefficient of each component, and no extra phase may be multiplied according to contact depth. All quantities are taken from the current sector metadata; one must not guess the subsector powers or two-state factors from the root sector.
 
 Pull back the complete dlog potential along $K_{\sigma(j)}=B^{V-j+1}t^{-(V-j+1)}$ and denote the residue by $R_0$. For each $(s,\bm a)$, the program fixes the component of the corresponding root master in that sector to $1$ and the components of the non-ancestor sectors to $0$, and solves
 \begin{equation}
  (\lambda_{s,\bm a}I-R_0)v_{s,\bm a}=0.
  \label{eq:generic-sector-indicial-vector}
 \end{equation}
-Then $W_{s,\bm a}v_{s,\bm a}$ automatically contains the leading components injected into the parent by the child solutions. Repeated roots or integer-difference resonances do not create graph-specific parameters; the complete exact residue together with these $\{\lambda,0,v\}$ is handed to the power-log recurrences of FlintNDE. Finite defining integrals are independent-validation oracles only and never production inputs.
+Then $W_{s,\bm a}v_{s,\bm a}$ automatically contains the leading components injected into the supersector by the subsector solutions. Repeated roots or integer-difference resonances do not create graph-specific parameters; the complete exact residue together with these $\{\lambda,0,v\}$ is handed to the power-log recurrences of FlintNDE. Finite defining integrals are independent-validation oracles only and never production inputs.
 
 Writing only one power of $\tau$ per component above is not an omission but the counterpart of the two-power structure of $h$ and of the two states. Denote by $\mathsf c^{(\mathrm b)}_a$ the entry of \texttt{msVertexEndpointCoefficient} at Hankel branch $\mathrm b\in\{1,2\}$ and state bit $a\in\{0,1\}$, and let $s_\nu=\pm1$ be the prefactor convention ($\texttt{formulaNu}=s_\nu\nu$). The two Frobenius towers at small $z$ are
 \begin{equation}
@@ -1688,7 +1659,7 @@ This expression cannot be copied directly into the MadStree sector normalization
  e^{-\pi\mu}H^{(2)}_{-\ii\mu}(z)=H^{(2)}_{\ii\mu}(z).
  \label{eq:paper-endpoint-to-common-hankel-order}
 \end{equation}
-The explicit Boltzmann factor in Eq.~\eqref{eq:paper-two-vertex-child-normalization} is therefore absorbed by the conversion between the two bases at the vertices. This example is $G_{++}$, so Eq.~\eqref{eq:massive-full-pinch-normalization} has $\eta_e=+1$ and the child normalization in the common-Hankel-order MadStree basis is
+The explicit Boltzmann factor in Eq.~\eqref{eq:paper-two-vertex-child-normalization} is therefore absorbed by the conversion between the two bases at the vertices. This example is $G_{++}$, so Eq.~\eqref{eq:massive-full-pinch-normalization} has $\eta_e=+1$ and the subsector normalization in the common-Hankel-order MadStree basis is
 \begin{equation}
  \cN_R^{\rm MS}=-\frac{4\ii}{\pi}k_s^{2\nu_1-1},
  \label{eq:madstree-common-order-child-normalization}
@@ -1879,7 +1850,7 @@ The following are already checked end to end: the \cite{Chen:2024jms} boundary f
 \label{sec:interface-reference}
 
 This section lists every public symbol of the current version in the order in which a complete
-computation calls them: initialization, sector and master representation, basis conversion,
+computation calls them: initialization, sector and master representation,
 iterative reduction, analytic matrices and artifacts, boundary data, numerical transport, and
 the runtime environment. Each entry gives a one-line purpose; the formulas, gates and return
 fields are developed in the referenced sections, and the table follows the usage strings of
@@ -1928,15 +1899,6 @@ recurrence, DE or transport\\
 label, the exact $\cN_s$ and the inert identity (Sec.~\ref{sec:normalized-J})\\
 \texttt{MSMasterIntegrals[context]} & master records in matrix order, each carrying
 \texttt{integral}/\texttt{bareIntegral}/\texttt{normalization}/\texttt{definition}\\
-\midrule
-\multicolumn{2}{@{}l}{\textbf{H/h basis conversion}}\\
-\texttt{MSHTohMatrix[nu, z, context]} & the local $2\times2$ matrix $T_{H\to h}$ of
-Eq.~\eqref{eq:package-H-to-h}\\
-\texttt{MShToHMatrix[nu, z, context]} & its inverse $T_{h\to H}$, Eq.~\eqref{eq:package-h-to-H}\\
-\texttt{MSConvertBasis} & converts a local two-component state vector, or the whole sector
-state vector through the Kronecker product over the slot registry; the massless shared slot
-acts as the identity, and integral objects fail closed
-(Sec.~\ref{sec:Hh-transform})\\
 \midrule
 \multicolumn{2}{@{}l}{\textbf{Iterative reduction and contacts}}\\
 \texttt{MSRecurrenceStep[integral, component, context]} & one step moving a nonzero shift
@@ -2050,7 +2012,7 @@ point is merely a length-one \texttt{pointSequence}.
 \subsection{Two-vertex massless full propagator: multiple sectors and points}
 
 \texttt{Examples/01\_massless\_full\_edge.wl} starts from two \texttt{+} vertices and one public
-\texttt{"massless"} propagator. MadStree derives the Full/quotient classification, top and child sectors,
+\texttt{"massless"} propagator. MadStree derives the Full/quotient classification, the top sector and its subsectors,
 masters, contact map, and dlog DE. The example uses \texttt{\{k1,k2\}} as the header, puts only
 coordinate values in later rows, and supplies common \texttt{q/a1/a2} values once through
 \texttt{ParameterRules}. It then enables FlintNDE planning and fast multipoint evaluation and
@@ -2084,11 +2046,11 @@ log divergent without dispatching on a variable name or graph type.
 
 \texttt{Examples/06\_massless\_three\_vertex\_ep\_regularization.wl} sets
 $a_1=-1+\epsilon$ and $a_2=a_3=1+\epsilon$, while the user requests only \texttt{MaximumEpPower->0}. Before
-the numerical stage the example runs three symbolic self-checks: \texttt{MSReduce} acts once on the sum of
+the numerical stage the example runs two symbolic self-checks: \texttt{MSReduce} acts once on the sum of
 two integrals whose powers lie one unit below the master powers (with
 status/residual/remaining/singularLayers verified); the same reduction is repeated on a context
 re-initialized with the regulated powers as \texttt{timePower}, so the coefficients carry an explicit
-$\epsilon$; and \texttt{MSConvertBasis} performs an H/h local basis round trip. The package then
+$\epsilon$. The package then
 certifies the lowest power from the symbolic boundary and DE and then selects production and
 independent validation points. If validation misses the target, only the internal fit order and new
 points are added, while previous values are reused. Its coordinate table contains only
@@ -2112,9 +2074,9 @@ Without running a sampled IBP or reduction, the formula producer only needs to p
   \item Fix $S_e,P_e$ of Eq.~\eqref{eq:SP-massless} and the incidence of the two vertices for each massless full propagator; cross/external exponents do not create any slot.
   \item Assemble the Kronecker sums vertex by vertex according to Eqs.~\eqref{eq:global-M1}--\eqref{eq:global-M0}; the one-dimensional exponential terms and all two-dimensional terms use the same embedding API, and $\varsigma_v$, $\sigma_e$ and $\epsilon_{ve}$ are kept strictly separate.
   \item First verify Eq.~\eqref{eq:local-common-diagonalization-condition}, then enumerate the diagonal elements of Eq.~\eqref{eq:global-energy-letter} with one global $U_s$; invert only the scalar diagonal elements of $M_1$ and $\widetilde M_0$.
-  \item Run an event BFS over the current-component bundles according to Eq.~\eqref{eq:common-theta-odd-subsets}; construct the $S_s,P_s$ quotient for coincident spectators, and fix the child powers with Eq.~\eqref{eq:simultaneous-contact-base-power}.
+  \item Run an event BFS over the current-component bundles according to Eq.~\eqref{eq:common-theta-odd-subsets}; construct the $S_s,P_s$ quotient for coincident spectators, and fix the subsector powers with Eq.~\eqref{eq:simultaneous-contact-base-power}.
   \item Output the general-index one-step recurrences with Eqs.~\eqref{eq:global-Aminus}--\eqref{eq:global-Aplus}; append the lower-sector sources with the event-level contact selector, and return the $M_1/M_0$ singular layers by direction.
-  \item Output the block-triangular dlog candidate directly with Eqs.~\eqref{eq:global-diagonal-omega} and \eqref{eq:global-offdiagonal-omega}; nonzero child shifts are reduced back to the global masters automatically by Eq.~\eqref{eq:shifted-contact-right-composition}, and then Eq.~\eqref{eq:normalization-adapter} is applied.
+  \item Output the block-triangular dlog candidate directly with Eqs.~\eqref{eq:global-diagonal-omega} and \eqref{eq:global-offdiagonal-omega}; nonzero subsector shifts are reduced back to the global masters automatically by Eq.~\eqref{eq:shifted-contact-right-composition}, and then Eq.~\eqref{eq:normalization-adapter} is applied.
   \item Call \texttt{MSBoundaryChartCertificate} for the chosen or all root ranks; only when the complete connection, normalization, Jacobian, theta fixing and quotient all pass is the automatic boundary entered.
 \end{enumerate}
 
