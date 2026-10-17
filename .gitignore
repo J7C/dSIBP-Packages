@@ -8,18 +8,39 @@ results_temp/
 results_test/
 *.wl.tmp
 
-# LaTeX intermediates
+# LaTeX compilation intermediates
 *.aux
 *.bbl
+*.bcf
 *.blg
+*.dvi
 *.fdb_latexmk
 *.fls
-*.log
+*.glg
+*.glo
+*.gls
+*.idx
+*.ilg
+*.ind
+*.lof
+*.lol
+*.lot
+*.nav
 *.out
+*.pdfpc
+*.run.xml
+*.snm
+*.spl
+*.synctex.gz
+*.synctex(busy)
 *.toc
+*.vrb
 *.xdv
+*.log
 
 # Editors and OS
 .DS_Store
+Thumbs.db
+*.bak
 *.swp
 *~
