@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 import time
 import warnings
@@ -38,9 +39,11 @@ from flintnde import (  # noqa: E402
     frobenius_boundary,
     gaussian_rational,
     initialize_output_layout,
+    plan_transport_path,
     rational_function,
     relative_difference_inf,
     transport_path_refined,
+    transport_planned_path_refined,
 )
 
 
@@ -63,6 +66,12 @@ REFERENCE_ORDER = 55
 TARGET_RELATIVE_ERROR = "1e-10"
 PRIMARY_SAMPLES = 88
 REFERENCE_SAMPLES = 120
+CURVE_RSTAR_MIN = -6.0
+CURVE_RSTAR_MAX = 160.0
+CURVE_POINT_COUNT = 720
+# QNM 解在无穷远按 e^{Re(w) r*} 增长，长输运链上每步截断误差会被后续增长
+# 放大；规划步长收紧到半径的 6% 后，38/55 阶即可全程保持 1e-10 相对精度。
+CURVE_PLANNING_RADIUS_FRACTION = 0.06
 
 
 def load_convention_config(path: str | Path = DEFAULT_CONFIG_PATH) -> dict[str, Any]:
@@ -499,6 +508,7 @@ def run_frequency(
             "horizon_to_match": len(horizon_path),
             "infinity_to_match": len(infinity_path),
         },
+        "horizon_allowed_u_at_x_match": _complex_record(h_allowed[0, 0]),
         "transport_refinement_maximum": max(
             float(record["relative_difference_midpoint"])
             for record in (
@@ -522,6 +532,206 @@ def run_frequency(
     }
 
 
+def _x_from_tortoise(rstar: float) -> float:
+    """Newton 求解 ``x + ln(x-1) = rstar``（``x > 1``），返回 float 坐标。"""
+
+    target = rstar - 1.0
+    t = target - math.log(target) if target > 2.0 else math.exp(target)
+    for _ in range(60):
+        step = (t + math.log(t) - target) / (1.0 + 1.0 / t)
+        t -= step
+        if abs(step) < 1.0e-15 * max(1.0, abs(t)):
+            break
+    return 1.0 + t
+
+
+def run_curve(
+    iw: Any,
+    reference_u_at_match: acb,
+    ell: int = ELL,
+    *,
+    config_path: str | Path = DEFAULT_CONFIG_PATH,
+) -> dict[str, Any]:
+    """从视界单端输运，输出 QNM 解全曲线并做三层交叉验证。
+
+    曲线按 tortoise 坐标 ``rstar = x + ln(x-1)`` 均匀取点（近视界振荡在 ``x``
+    坐标下无限加密，均匀 ``rstar`` 才能均匀采样振荡），再 Newton 反解 ``x``。
+    除均匀网格外强制包含精确 ``x = 4``：该点的曲线值与 ``run_frequency`` 中
+    独立规划的 horizon→match 链端点比较，验证不同节点划分的路径一致性。
+    """
+
+    clock = time.perf_counter()
+    convention = load_convention_config(config_path)
+    exact_iw = gaussian_rational(iw)
+    iw_acb = exact_iw.to_acb()
+    system = unified_system(exact_iw, convention, ell)
+    _lam, _a_x, a_h, b_h, _b_x = _unified_parameters(exact_iw, convention, ell)
+    horizon_allowed_boundary = frobenius_boundary(
+        [{"a": 0, "b": 0, "C": [1, -b_h / a_h]}]
+    )
+
+    # tortoise 均匀网格 + 强制 x=4（rstar=4+ln3），按 rstar 排序去重。
+    rstar_grid = [
+        CURVE_RSTAR_MIN
+        + (CURVE_RSTAR_MAX - CURVE_RSTAR_MIN) * index / (CURVE_POINT_COUNT - 1)
+        for index in range(CURVE_POINT_COUNT)
+    ]
+    rstar_match = 4.0 + math.log(3.0)
+    rstar_grid = sorted(set(rstar_grid + [rstar_match]))
+    x_grid = [_x_from_tortoise(rstar) for rstar in rstar_grid]
+    x_grid = [4.0 if abs(value - 4.0) < 1.0e-12 else value for value in x_grid]
+
+    # 第一步：horizon 奇点起步到首个曲线点，得到普通初值并做独立递推种子核对。
+    x_start = x_grid[0]
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        seed_path = build_adaptive_path(
+            system,
+            NamedPoint("horizon", 1),
+            NamedPoint("curve_start", repr(x_start)),
+            max_step_over_radius=HORIZON_MATCH_RATIO,
+        )
+        seed_transport = transport_path_refined(
+            system,
+            horizon_allowed_boundary,
+            seed_path,
+            primary_order=PRIMARY_ORDER,
+            reference_order=REFERENCE_ORDER,
+            primary_sample_count=PRIMARY_SAMPLES,
+            reference_sample_count=REFERENCE_SAMPLES,
+            radius_fraction=CAUCHY_RADIUS_FRACTION,
+            target_relative_error=TARGET_RELATIVE_ERROR,
+        )
+    seed_vector = seed_transport["primary_snapshots"][-1]
+    seed_error = relative_difference_inf(
+        seed_vector, horizon_vector(exact_iw, acb(0), acb(repr(x_start)), convention, ell)
+    )
+
+    # 第二步：从普通起点整体规划剩余曲线点；前瞻规则让一个节点覆盖收敛盘内
+    # 的多个用户点，被跨过的点共享该段 Taylor 系数（桶式多点求值）。
+    # 规划入口消费认证过的 P(x)+Sum R_j/(x-p_j) 公式系统；本例矩阵只有
+    # 一阶有限极点加常数 -w^2，specialize 认证必然通过。
+    planning_system, specialization_report = system.specialize_polynomial_simple_poles()
+    if planning_system is None:
+        raise RuntimeError(
+            "QNM unified system failed the simple-pole specialization gate: "
+            f"{specialization_report.get('reason')}"
+        )
+    user_points = [repr(value) for value in x_grid[1:]]
+    plan = plan_transport_path(
+        planning_system,
+        acb(repr(x_start)),
+        user_points,
+        radius_fraction=CURVE_PLANNING_RADIUS_FRACTION,
+    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        curve = transport_planned_path_refined(
+            planning_system,
+            seed_vector,
+            plan,
+            primary_order=PRIMARY_ORDER,
+            reference_order=REFERENCE_ORDER,
+            primary_sample_count=PRIMARY_SAMPLES,
+            reference_sample_count=REFERENCE_SAMPLES,
+            radius_fraction=CAUCHY_RADIUS_FRACTION,
+            target_relative_error=TARGET_RELATIVE_ERROR,
+        )
+
+    # 第三步：按坐标收集采样值。被前瞻规则选为节点的用户点不在
+    # sample_results 里，其值取主链该节点快照；两来源以 40 位坐标串对齐。
+    values_by_key: dict[str, Any] = {}
+    for record in curve["sample_results"]:
+        values_by_key[record["coordinate"]] = record
+    for node, snapshot in zip(plan.nodes, curve["primary_snapshots"]):
+        values_by_key.setdefault(
+            node.str(40),
+            {"value": snapshot, "evaluation_algorithm": "node_snapshot"},
+        )
+    samples = []
+    max_relative_radius = 0.0
+    match_relative_difference = None
+    for rstar, x_float in zip(rstar_grid[1:], x_grid[1:]):
+        record = values_by_key[acb(repr(x_float)).str(40)]
+        u_value = record["value"][0, 0]
+        x_value = acb(repr(x_float))
+        t_value = x_value - 1
+        prefactor = (x_value**3) * (t_value ** (-iw_acb))
+        u_physical = prefactor * u_value
+        radius = max(u_value.real.rad(), u_value.imag.rad())
+        magnitude = abs(u_value)
+        relative_radius = float(radius / magnitude)
+        max_relative_radius = max(max_relative_radius, relative_radius)
+        if x_float == 4.0:
+            match_relative_difference = float(
+                (abs(u_value - reference_u_at_match) / abs(reference_u_at_match)).mid()
+            )
+        samples.append(
+            {
+                "rstar": rstar,
+                "x": x_float,
+                "re_u_physical": float(u_physical.real),
+                "im_u_physical": float(u_physical.imag),
+                "abs_u_physical": float(abs(u_physical)),
+                "relative_radius": relative_radius,
+                "evaluation_algorithm": record["evaluation_algorithm"],
+            }
+        )
+
+    dense_buckets = [
+        report["dense_evaluation"] for report in curve["primary_segments"]
+        if "dense_evaluation" in report
+    ]
+    bucket_sizes = [bucket["point_count"] for bucket in dense_buckets]
+    fast_buckets = sum(1 for bucket in dense_buckets if bucket["algorithm"] == "fast")
+    curve_checks = {
+        "seed_independent_recurrence": bool(float(seed_error.mid()) < 1.0e-20),
+        "x_match_path_consistency": bool(
+            match_relative_difference is not None
+            and match_relative_difference < float(TARGET_RELATIVE_ERROR)
+        ),
+        "target_relative_error_met": bool(curve["target_relative_error_met"]),
+    }
+    return {
+        "rstar_grid": {
+            "minimum": CURVE_RSTAR_MIN,
+            "maximum": CURVE_RSTAR_MAX,
+            "uniform_points": CURVE_POINT_COUNT,
+            "forced_x_match": 4.0,
+            "total_points": len(x_grid),
+        },
+        "planning": {
+            "node_count": len(plan.report["nodes"]),
+            "segment_count": plan.report["segment_count"],
+            "covered_sample_count": plan.report["covered_sample_count"],
+            "effective_radius_fraction": plan.report["effective_radius_fraction"],
+            "bucket_count": len(bucket_sizes),
+            "fast_multipoint_buckets": fast_buckets,
+            "largest_bucket": max(bucket_sizes),
+            "mean_bucket": sum(bucket_sizes) / len(bucket_sizes),
+        },
+        "precision": {
+            "target_relative_error": TARGET_RELATIVE_ERROR,
+            "chain_relative_difference": curve["relative_difference_midpoint"],
+            "seed_error_vs_independent_recurrence": seed_error.str(20),
+            "x_match_relative_difference": match_relative_difference,
+            "sample_value_note": (
+                "dense evaluation returns midpoint matrices; per-sample radii are "
+                "recorded in the samples file"
+            ),
+        },
+        "timing_seconds": {
+            "seed_transport": seed_transport["primary_seconds"]
+            + seed_transport["reference_seconds"],
+            "curve_primary": curve["primary_seconds"],
+            "curve_reference": curve["reference_seconds"],
+            "total": time.perf_counter() - clock,
+        },
+        "checks": curve_checks,
+        "samples": samples,
+    }
+
+
 def main() -> None:
     """运行 QNM 与 exact 频率偏移反事实，并保存可复核摘要。"""
 
@@ -532,6 +742,15 @@ def main() -> None:
     output_layout = initialize_output_layout(__file__)
     qnm_iw = gaussian_rational(QNM_IW_EXACT)
     qnm = run_frequency("qnm-frequency", qnm_iw, config_path=args.config)
+    match_record = qnm["horizon_allowed_u_at_x_match"]
+    reference_u_at_match = (
+        acb(match_record["re"]) + acb(match_record["im"]) * acb(0, 1)
+    )
+    curve = run_curve(
+        qnm_iw,
+        reference_u_at_match,
+        config_path=args.config,
+    )
     control = run_frequency(
         "shifted-frequency-control",
         qnm_iw * (1 + CONTROL_RELATIVE_SHIFT),
@@ -543,11 +762,13 @@ def main() -> None:
     control_hor = float(control["infinity_start_to_horizon_basis"]["forbidden_over_allowed"]["re"])
     status = (
         "passed"
-        if max(qnm_inf, qnm_hor) < 1.0e-10 and min(control_inf, control_hor) > 1.0e-8
+        if max(qnm_inf, qnm_hor) < 1.0e-10
+        and min(control_inf, control_hor) > 1.0e-8
+        and all(curve["checks"].values())
         else "failed"
     )
     summary = {
-        "schema": "flintnde_qnm_2x2_example_v2",
+        "schema": "flintnde_qnm_2x2_example_v3",
         "status": status,
         "package_root": str(PACKAGE_ROOT),
         "output_directory": str(output_layout.run_root),
@@ -576,8 +797,15 @@ def main() -> None:
         },
         "qnm": qnm,
         "control": control,
+        "curve": curve,
     }
     output_path = output_layout.write_json("summary", "qnm_2x2_summary.json", summary)
+    curve_path = output_layout.write_json(
+        "transport", "qnm_2x2_curve.json", {key: curve[key] for key in curve if key != "samples"}
+    )
+    samples_path = output_layout.write_json(
+        "transport", "qnm_2x2_curve_samples.json", curve["samples"]
+    )
     print(
         json.dumps(
             {
@@ -586,12 +814,26 @@ def main() -> None:
                 "qnm_hor": qnm_hor,
                 "control_inf": control_inf,
                 "control_hor": control_hor,
+                "curve": {
+                    "points": curve["rstar_grid"]["total_points"],
+                    "nodes": curve["planning"]["node_count"],
+                    "largest_bucket": curve["planning"]["largest_bucket"],
+                    "chain_relative_difference": curve["precision"][
+                        "chain_relative_difference"
+                    ],
+                    "x_match_relative_difference": curve["precision"][
+                        "x_match_relative_difference"
+                    ],
+                    "checks": curve["checks"],
+                },
             },
             indent=2,
         )
     )
     if status != "passed":
-        raise RuntimeError(f"QNM 2x2 example failed: {output_path}")
+        raise RuntimeError(
+            f"QNM 2x2 example failed: {output_path} / {curve_path} / {samples_path}"
+        )
 
 
 if __name__ == "__main__":

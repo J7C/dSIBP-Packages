@@ -459,18 +459,34 @@ relative shift $10^{-3}$ & $3.9002\times10^{-3}$ & $5.9175\times10^{-3}$\\
 \end{center}
 Infinity is first mapped to $z=1/x=0$.  Its $A_{-2}$ eigenvalues are simple and distinct, so
 Eq.~\eqref{eq:formal-rank-one-recurrence} constructs the outgoing and incoming branches and
-the nearest-root-gap rule with $q=3$ gives the first ordinary point $x\simeq74.20$.  At
-reference order 55 the outgoing/incoming five-order block ratios are approximately
-$0.02037$ and $0.02210$; neither branch has reached its least term in the available range.
-Their local vectors agree with the independently implemented scalar second-order recurrence
-to $1.2\times10^{-42}$ and $5.1\times10^{-42}$, respectively; the separate comparison at
-$x=28$ remains better than $3\times10^{-18}$.  The more distant start amplifies Cauchy--DFT
-aliasing between stiff exponential branches, so this example uses sampling-radius fraction
-$0.40$; the maximum primary/reference transport difference is then $3.75\times10^{-22}$.
+the nearest-root-gap rule with $q=3$ gives the first ordinary point $x\simeq74.20$.  At the
+requested order 38 the outgoing/incoming five-order block ratios are approximately
+$2.9034\times10^{-3}$ and $3.1998\times10^{-3}$; neither branch has reached its least term
+in the available range. Their local vectors agree with the independently implemented scalar
+second-order recurrence to $3.3\times10^{-36}$ and $9.4\times10^{-36}$, respectively; the
+separate comparison at $x=28$ remains better than $3\times10^{-18}$.  The more distant
+start amplifies Cauchy--DFT aliasing between stiff exponential branches, so this example
+uses sampling-radius fraction $0.40$; the maximum primary/reference transport difference is
+then $3.75\times10^{-22}$.
 Hence the first table row is consistent with zero at the demonstrated
 refinement scale, while the nonzero shifted row is a counterfactual boundary mismatch.  This
 is a formal/Gevrey infinity expansion, not a convergent Frobenius disk.  The example tests a
 radial connection problem only and introduces no integral-family assumption.
+
+A third block of the same script keeps the horizon start alone and evaluates the full
+radial profile of the mode at the same requested $10^{-10}$ relative accuracy.  Sample
+points are uniform in the tortoise coordinate $r_\ast=x+\ln(x-1)$ on $[-6,160]$ (uniform
+$x$ would compress the oscillation infinitely toward the horizon), inverted to $x>1$ by
+Newton iteration, plus the exact $x=4$: 721 points in total.  One planned transport
+covers them with 271 nodes at step fraction $0.06$; 585 points are interior samples
+sharing their segment's Taylor coefficients, the largest bucket holding 32 points.  The
+two-chain endpoint difference is $1.5\times10^{-17}$, and the $x=4$ value agrees with the
+independently planned horizon chain to $5.2\times10^{-32}$.  The tightened step fraction
+matters: the profile grows like $\mathrm{e}^{\mathrm{Re}(w)r_\ast}$ and reaches
+$|u^-_o|\simeq2.8\times10^{12}$ at $r_\ast=160$, so truncation injected along the chain is
+amplified by the remaining growth; with the default planning cap $1/4$ the two-chain
+comparison at the profile end fails outright at orders 38/55.  The curve samples are
+written to \texttt{transport/qnm\_2x2\_curve\_samples.json}.
 
 \section{Technical details}
 \label{sec:technical-details}

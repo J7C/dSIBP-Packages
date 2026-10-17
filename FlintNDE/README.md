@@ -50,7 +50,7 @@ FlintNDE/
   FlintNDE.m           Wolfram loader
   Kernel/init.m
   Mathematica/         Wolfram front end
-  examples/            seven runnable cases
+  examples/            eight runnable cases
   config/              configuration file used by the QNM example
   Documentation/       the paper (.tex and .pdf)
 ```
@@ -212,14 +212,15 @@ interval cannot prove the bound.
 
 ## Examples
 
-`examples/` keeps seven runnable cases; each one resolves the package through a path variable at
+`examples/` keeps eight runnable cases; each one resolves the package through a path variable at
 the top of the file.
 
 | Example | Shows |
 | --- | --- |
-| `qnm_2x2.py` | An exact 2x2 first-order system in a unified `u`: two runs start from `{a, b, C}` boundaries at the horizon and at infinity, transport to a common matching point, and check the components that must vanish on the other side. |
+| `qnm_2x2.py` | An exact 2x2 first-order system in a unified `u`: two runs start from `{a, b, C}` boundaries at the horizon and at infinity, transport to a common matching point, and check the components that must vanish on the other side; a third block evaluates the full radial profile (721 tortoise-uniform points, one planned transport, shared-coefficient buckets) at 1e-10 relative accuracy. |
 | `regular_singular_save.py` | Transport from an `{a, b, C}` start at a scalar regular singular point to an ordinary point, saving both boundaries. |
 | `exponential_boundary_save.py` | A strictly decoupled exponential singularity: transport from a `{phi, a, b, C}` start, save that boundary, read it back in. |
+| `exponential_polynomial_boundary.py` | A diagonal system with a third-order pole (an essential singularity): two `{phi, a, b, C}` records, one per decoupled sector, each carrying a two-term negative-power exponential-polynomial phase, checked against the closed form at the endpoint. |
 | `ep_series_reconstruction.py` | Adaptive reconstruction of the `1/ep` and finite parts from a `leading_power = -1` certificate, with a redundant candidate pool, independent validation points, order growth on failure, and an open complex-angle range variant. |
 | `ep_parallel.py` | Bounded multiprocess transport over different fixed `ep` values. |
 | `mathematica_interface_example.wl` | The Wolfram route: exact rational system, explicit path plan, execution, comparison against the closed form. |

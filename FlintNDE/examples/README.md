@@ -14,12 +14,22 @@ directly from this source tree without an installation.
 - `qnm_2x2.py` — an exact 2x2 first-order system in a unified `u`. Two runs start from the
   `{a, b, C}` boundaries at the literal horizon `1` and at infinity `"inf"`, transport to a
   common matching point, and check the components that must vanish on the other side. A
-  slightly shifted frequency runs as a counterfactual.
+  slightly shifted frequency runs as a counterfactual. A third block keeps the horizon
+  start alone and evaluates the full radial profile: 721 points uniform in the tortoise
+  coordinate `r* = x + ln(x-1)` on `[-6, 160]` (plus the exact `x = 4`) in one planned
+  transport at 1e-10 relative accuracy — 271 nodes, 585 shared-coefficient samples, largest
+  bucket 32, two-chain endpoint difference 1.5e-17, agreement with the independently
+  planned horizon chain at `x = 4` to 5.2e-32. Curve samples are written to
+  `transport/qnm_2x2_curve_samples.json`.
 - `regular_singular_save.py` — a scalar regular singular point. Transports from an
   `{a, b, C}` start to an ordinary point and saves both the reusable singular boundary and
   the ordinary endpoint.
 - `exponential_boundary_save.py` — a strictly decoupled exponential singularity. Transports
   from a `{phi, a, b, C}` start, saves that boundary, and reads the same boundary back in.
+- `exponential_polynomial_boundary.py` — a diagonal system with a third-order pole (an
+  essential singularity). Two `{phi, a, b, C}` records, one per decoupled sector, each carry
+  a two-term negative-power exponential-polynomial phase; the closed form at the endpoint is
+  `(e^{1/4}, e^{-11/6})`, checked against the transported values by relative difference.
 - `ep_series_reconstruction.py` — reconstructs `1/ep` and the finite part adaptively from the
   `leading_power = -1` certificate supplied by the upstream symbolic stage. It consumes only 4
   of 7 explicit production candidates in the first round, adds 2 more after a failed
@@ -45,6 +55,7 @@ python qnm_2x2.py
 python qnm_2x2.py --config ../config/qnm_u_unified_it0_3_it1_minus1.json
 python regular_singular_save.py
 python exponential_boundary_save.py
+python exponential_polynomial_boundary.py
 python ep_parallel.py
 python ep_series_reconstruction.py
 wolframscript -file ep_parallel_mathematica.wl
