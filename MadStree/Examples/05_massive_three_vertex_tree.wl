@@ -2,7 +2,8 @@
 
 (***
 文件：05_massive_three_vertex_tree.wl
-用途：演示三顶点、两条 massive 传播子的树图从拓扑初始化到主积分、递推、dlog DE 和多点数值求值。
+用途：演示三顶点、两条 massive 传播子的树图从拓扑初始化到主积分、递推、dlog DE 和多点数值求值；
+含 normalized/bare 定义自检（单对象 MSIntegralDefinition 与 master 记录逐条一致）。
 数值分组：原非零点列与中间顶点外腿能量 k2=0 的点列共用同一 context，但分别规划、求值和导出。
 结构：1 --(q12)-- 2 --(q23)-- 3；传播子按输入顺序在内部编号为 1、2。
 nu 约定：取 nu12=3/4、nu23=1/3，避免半整数引起的表示退化。
@@ -60,6 +61,24 @@ formulaArtifacts["files", "dlogDE"]
 
 shiftedIntegral = MSIntegral[topKey, {1, 0, 0}, {0, 0, 0, 0}];
 shiftedDefinition = MSIntegralDefinition[shiftedIntegral, context];
+
+(* 自检：单对象 MSIntegralDefinition 必须逐条复现 master 记录自带的
+   integral/bareIntegral/normalization 字段；shifted 积分的 normalization
+   始终读取所在 sector，须与该 sector 全部 master 记录一致。 *)
+masterDefinitions = MSIntegralDefinition[#, context] & /@ Lookup[masters, "integral"];
+definitionFieldsMatchQ = And @@ MapThread[
+  Lookup[#1, {"integral", "bareIntegral", "normalization"}] ===
+    Lookup[#2, {"integral", "bareIntegral", "normalization"}] &,
+  {masters, masterDefinitions}
+];
+topMasterNormalizations = Union@Lookup[
+  Select[masters, MatchQ[#["integral"], MSIntegral[topKey, _, _]] &],
+  "normalization"
+];
+shiftedDefinitionSectorQ =
+  Length[topMasterNormalizations] === 1 &&
+    shiftedDefinition["normalization"] === First[topMasterNormalizations];
+
 reduction = MSReduce[shiftedIntegral, context];
 topStates = Take[First[MSSectors[context]]["stateOrder"], 2];
 shiftedTable = Table[
@@ -229,6 +248,8 @@ zeroMiddleEnergyExport
 exampleGateFailures = Select[
   {
     formulaArtifacts,
+    masterDefinitions,
+    shiftedDefinition,
     tableReduction,
     targetValue,
     batchEvaluation,
@@ -241,6 +262,10 @@ exampleGateFailures = Select[
 If[exampleGateFailures =!= {},
   Print["Example FAILED: ", Length[exampleGateFailures], " result(s) are Failure objects."];
   Scan[Print["  ", #] &, exampleGateFailures];
+  Exit[1]
+];
+If[! (definitionFieldsMatchQ && shiftedDefinitionSectorQ),
+  Print["Example FAILED: normalized-to-bare definitions are inconsistent."];
   Exit[1]
 ];
 If[

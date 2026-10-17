@@ -2,7 +2,7 @@
 
 \usepackage[margin=2.35cm]{geometry}
 \usepackage{amsmath,amssymb,mathtools,bm}
-\usepackage{booktabs,array}
+\usepackage{booktabs,array,longtable}
 \usepackage{enumitem}
 \usepackage[numbers,sort&compress]{natbib}
 \usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
@@ -28,19 +28,20 @@
 
 \title{MadStree: tree formula}
 \author{\texttt{MadStree} formula handbook}
-\date{2026-08-21}
+\date{2026-10-17}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
 This handbook corresponds to \texttt{MadStree}; time-only sectors continue to be identified by fixed-length strings in the order of the root propagators.
-This document is the formula handbook of \texttt{MadStree}. The package targets arbitrary massive/massless mixed dS tree graphs. It does not generate a general system of IBP equations; instead, it assembles the master integrals, the iterative reduction and the block-triangular dlog-form differential equation directly from the topology, and a concrete usage guide will be added after the public interface stabilizes. This document rederives the required formulas from the tensor-product structure of the local function systems. The purely massive formulas of ref.~\cite{Chen:2023eic} can be understood uniformly as Kronecker sums of several one-dimensional theta-free exponential systems and two-dimensional Hankel systems; each vertex carries exactly one such exponential parameter $k_{0,v}$, whose generator $\ii p_{0,v}$ is the tensor product of that one-dimensional factor with the identity on all the remaining factors. A massless full propagator containing theta cannot be identified with a single theta-free exponential factor: before reduction, it has $2\otimes2=4$ Hankel states at its two vertices; after using the massless $00/11$ and $10/01$ relations, these four states are compressed by a constant projection into a two-dimensional state shared by the whole propagator. This two-dimensional factor enters the time-IBPs of both vertices of the propagator, so a vertex-by-vertex tensor factorization fails, but the tensor-product/Kronecker-sum construction on the full graph still holds. All regular IBPs, iteration matrices and dlog diagonal blocks can therefore be written directly from the topology; theta derivatives only add fixed off-diagonal blocks connecting sectors with a contracted propagator, without first generating a large IBP system and then extracting the formulas from it. Any quantity quoted verbatim from \cite{Chen:2023eic} carries the superscript or subscript ${\rm unreduced}$, whose meaning is given in Section~2: it is the formula of that paper, already rewritten in the $+\nu$, positive-prefactor convention of this document, but not yet combined with the extra massless reduction relations above.
+This document is the formula handbook of \texttt{MadStree}. The package targets arbitrary massive/massless mixed dS tree graphs. It does not generate a general system of IBP equations; instead, it assembles the master integrals, the iterative reduction and the block-triangular dlog-form differential equation directly from the topology; the complete public interface is tabulated in Section~\ref{sec:interface-reference}. This document rederives the required formulas from the tensor-product structure of the local function systems. The purely massive formulas of ref.~\cite{Chen:2023eic} can be understood uniformly as Kronecker sums of several one-dimensional theta-free exponential systems and two-dimensional Hankel systems; each vertex carries exactly one such exponential parameter $k_{0,v}$, whose generator $\ii p_{0,v}$ is the tensor product of that one-dimensional factor with the identity on all the remaining factors. A massless full propagator containing theta cannot be identified with a single theta-free exponential factor: before reduction, it has $2\otimes2=4$ Hankel states at its two vertices; after using the massless $00/11$ and $10/01$ relations, these four states are compressed by a constant projection into a two-dimensional state shared by the whole propagator. This two-dimensional factor enters the time-IBPs of both vertices of the propagator, so a vertex-by-vertex tensor factorization fails, but the tensor-product/Kronecker-sum construction on the full graph still holds. All regular IBPs, iteration matrices and dlog diagonal blocks can therefore be written directly from the topology; theta derivatives only add fixed off-diagonal blocks connecting sectors with a contracted propagator, without first generating a large IBP system and then extracting the formulas from it. Any quantity quoted verbatim from \cite{Chen:2023eic} carries the superscript or subscript ${\rm unreduced}$, whose meaning is given in Section~2: it is the formula of that paper, already rewritten in the $+\nu$, positive-prefactor convention of this document, but not yet combined with the extra massless reduction relations above.
 \end{abstract}
 
 \tableofcontents
 
 \section{Topology input convention}
+\label{sec:topology-input}
 
 Every vertex explicitly sets its Schwinger--Keldysh contour branch through
 \texttt{vertexType -> "+"|"-"}. A propagator no longer repeats \texttt{skType},
@@ -64,7 +65,10 @@ The ordered types of the two vertices determine Full/Cross/External, the
 Names such as \texttt{masslessFull} and $\sigma_e$ in formulas are derived internal physical
 data, not duplicated user fields. Vertex IDs may be integers. The public propagator interface neither defines nor reads an ID and
 are always numbered internally by their exact \texttt{lines} input positions; only an explicit
-\texttt{thetaBundles} declaration uses these position numbers.
+\texttt{thetaBundles} declaration uses these position numbers. The fields above serve two
+initialization entries: \texttt{MSInitTree[spec]} accepts a tree topology, and
+\texttt{MSInitTimeGraph[spec]} accepts a time-only graph with cycles (no loop momentum or ISP);
+both return the same kind of context and share every downstream interface.
 
 The field \texttt{externalLegEnergy} is the theta-free external-leg exponent parameter
 attached to vertex $v$; it does not mean that the vertex itself owns an energy.
@@ -581,6 +585,7 @@ is performed; the user's $q_e$ are not silently renamed \texttt{pik} or \texttt{
 The second term comes from the theta-free massless cross/external branches: such a branch creates no slot, and only adds the momentum moduli of those of its vertices that lie in $C$, each with the SK contour sign $-\varsigma_v$ of that vertex, into the same scalar; the sum runs over active propagators only. The first term alone is $p_{0,v}$, so for a single-vertex component, Eq.~\eqref{eq:component-energy} reduces to the $p_{0,v}$ of Eq.~\eqref{eq:signed-vertex-M0} exactly when that vertex carries no theta-free propagator branch.
 
 \section{Direct iterative reduction: without first generating a large IBP system}
+\label{sec:direct-reduction}
 
 \subsection{The \texorpdfstring{\cite{Chen:2023eic}}{arXiv:2401.00129} binary order and the precise domain of the recurrences}
 
@@ -807,6 +812,7 @@ where $r_e$ is the raw contact power of the contracted propagator. The last term
 Every event strictly reduces the number of components, so the sector BFS terminates automatically, and a repeated contact of an active propagator whose two vertices already lie in one component is excluded.
 
 \section{The full-graph tensor formula for the dlog DE}
+\label{sec:dlog-tensor}
 
 Define the diagonal matrix-valued logarithm of each vertex
 \begin{equation}
@@ -1220,6 +1226,7 @@ generates $M_1,M_0$, the iterative reduction and the complete block-triangular d
 quotient space and retains no four-state production branch.
 
 \subsection{\texorpdfstring{$(-\tau)^A$ and normalized-$J$}{(-tau)A and normalized-J}}
+\label{sec:normalized-J}
 
 The previous text used the $\tau^{\nu_0}$ convention of \cite{Chen:2023eic}. The integral object used by recurrence, DEs and numerical transport is the normalized object
 \begin{equation}
@@ -1285,6 +1292,7 @@ In the normalized basis one must also use
 So the sector diagonal blocks receive an additional $\dd\log\cN_s\text{I}_s$, and the off-diagonal contact blocks are multiplied by $\cN_s/\cN_t$. Only when this ratio has been turned into a kinematics-independent constant by the basis normalization is Eq.~\eqref{eq:global-offdiagonal-omega} directly a constant-residue dlog; otherwise an additional basis/gauge transformation is needed, and one cannot claim completion merely from the literal $\log\kappa$.
 
 \subsection{The forward and inverse transformations of the H/h state vectors}
+\label{sec:Hh-transform}
 
 Let $p=s_\nu\nu$. The local relation between the same function $h$ and the bare Hankel states is
 \begin{equation}
@@ -1315,6 +1323,7 @@ What is transformed here is the same-ordered state vector of the integrand, not 
 The public time-only representation of dSIBP is \texttt{J[sectorKey,timeShifts,stateBits]}, which corresponds slot by slot to MadStree's \texttt{MSIntegral[sectorKey,timeShifts,stateBits]}; \texttt{stateBits} are discrete states of the $n_i$ type in the full-sector registry and are not required to be grouped by vertex. This correspondence only converts the integral identity and does not replace the normalization: both contexts must use the same $\cN_s$ for every sector, and differentiation must include the $\partial\log\cN_s$ of Eq.~\eqref{eq:normalization-adapter}. The default massless input of MadStree is $\nu=1/2$ with positive prefactor; in this case \texttt{formulaNu}$\,=s_\nu\nu=+1/2$, and the code and the formulas of this document agree slot by slot on the same $+\nu$ base formula. With \texttt{NuConvention -> "Negative"} one has \texttt{formulaNu}$=-1/2=\nu_{\rm ref}$, used only to compare verbatim with the printed formulas of that paper. This convention does not replace propagator metadata, theta, or contact normalization.
 
 \subsection{Single-vertex families, local inverses and the complete reduction interface}
+\label{sec:reduction-interface}
 
 A single-vertex family does not need to construct a fake graph. The compact input is
 \begin{verbatim}
@@ -1387,7 +1396,7 @@ result, masterBasis, masterRules, coefficientVector,
 nonMasterResidual, remainingShiftedIntegrals,
 memoizedIntegralCount, singularLayers
 \end{verbatim}
-where the master basis, the coefficient vector and the rules are strictly in the same order, and \texttt{result} is the explicit linear combination of master integrals. The status is \texttt{reduced} only when the residual is zero and the shifted-integral list is empty. \texttt{MasterBasis} may be any permutation of all context masters, but it cannot miss or repeat entries. The singular layers record, for each step, the direction, the component and the denominator that was actually inverted: toward zero with a positive shift only the energy letters of $M_0$ are reported; with a negative shift only the $M_1$ eigenvalues are reported. This is exactly the program contract of Eqs.~\eqref{eq:M1-lowering-resonance}--\eqref{eq:M0-raising-resonance}.
+where the master basis, the coefficient vector and the rules are strictly in the same order, and \texttt{result} is the explicit linear combination of master integrals. The status is \texttt{reduced} only when the residual is zero and the shifted-integral list is empty. \texttt{MasterBasis} may be any permutation of all context masters, but it cannot miss or repeat entries. The singular layers record, for each step, the direction, the component and the denominator that was actually inverted: toward zero with a positive shift only the energy letters of $M_0$ are reported; with a negative shift only the $M_1$ eigenvalues are reported. This is exactly the program contract of Eqs.~\eqref{eq:M1-lowering-resonance}--\eqref{eq:M0-raising-resonance}. The reduction runs on the vertex time powers fixed at initialization: to substitute numerical or regulated powers (such as $a_1=-1+\epsilon$), re-initialize the context with these values as \texttt{timePower} and reduce there (Example 06 demonstrates both paths), or substitute into the symbolic result afterwards; \texttt{MSReduce} itself carries no substitution option.
 
 The same entry directly accepts \texttt{List}, regular \texttt{Table}, empty lists and ragged
 nested lists. The returned \texttt{result}, per-element
@@ -1396,6 +1405,7 @@ all elements share one recursion memo. A failed element reports its exact list p
 not mark the partial results of other elements as a complete reduction.
 
 \subsection{The small-time end of the integration path and the safe time-IBP shift}
+\label{sec:time-ibp-domain}
 
 Integer time-IBP shifts may not cross a divergent point on the path. MadStree does not solve a new local
 series here. It substitutes only the known two leading small-time powers of h into every reachable
@@ -1598,6 +1608,7 @@ If the target point itself lies on $M_0=0$, one must first reduce at generic ver
 The recommended flow is therefore: first choose the preferred chart according to Eq.~\eqref{eq:preferred-rank-from-point}, obtain the same-ordered vector from the boundary of Eq.~\eqref{eq:nested-blowup-coordinates}, take a small but finite ordinary point inside the chart, and then let the user provide a multivariable polyline in the required homotopy class to the preferred ordinary point and the final target.  \texttt{"Avoid"} reports a direct crossing of a letter hypersurface, \texttt{"Automatic"} classifies an explicitly supplied singular user point and resumes from an outgoing ordinary match on the same straight continuation branch, and \texttt{"SingularityJump"} explicitly selects the local crossing branch and requires confirmation of its multivaluedness.  Auxiliary vertex energies may be taken to zero one at a time; a finite singular point returns either a finite value or \texttt{Infinity}.  A singularity at a complex-affine turn still fails closed because the input does not uniquely specify a continuation branch.
 
 \subsection{The \texorpdfstring{\cite{Chen:2024jms}}{arXiv:2411.03088} infinity boundary and FlintNDE transport}
+\label{sec:infinity-boundary-transport}
 
 The production entry point does not compute the defining integral directly at a finite Euclidean ordinary point. \texttt{MSBoundaryData} uses the $K_v\to\infty$ data of \cite{Chen:2024jms} as the only boundary source. If a vertex has no physical external leg, the program internally introduces a private auxiliary external-leg energy $k_{0,v}^{\rm aux}$ in the same analytic dlog system, first constructs the boundary data from the corresponding damped limit $K_v^{\rm aux}\to\infty$, and then uses FlintNDE to transport along that auxiliary coordinate to the physical target $k_{0,v}^{\rm aux}=0$. The user does not enter this private coordinate in \texttt{pointSequence} or \texttt{ParameterRules}. Every closed tree/time-only context, including the single-vertex massive-external family, uniformly consumes the sector DAG, components, slot registry, normalization, state order and strict rank and follows the ``boundary leading term plus FlintNDE Frobenius recurrence'' route. The explicit multivariable series of Eqs.~(3.44)--(3.46) of \cite{Chen:2024jms} is retained only as a test oracle and is not a production dispatch.
 
@@ -1778,6 +1789,7 @@ match ratios, rotation factors, and winding/monodromy retain the current Arb pre
 All geometry retains the current Arb precision.
 
 \subsection{Symbolic Laurent-support certificate and regulator error control}
+\label{sec:regulator-certificate}
 
 Let the shared regulator be $\epsilon$.  In
 \texttt{MSReconstructEpSeries[..., MaximumEpPower -> $m$]} the user specifies only the
@@ -1863,7 +1875,158 @@ In the original-coordinate formulation, the $e^{-K_vt_v}$ damping of the integra
 
 The following are already checked end to end: the \cite{Chen:2024jms} boundary for a single vertex with three massive propagators, the analytic chamber boundary for the two-vertex pure-massless case, the generic 15-dimensional boundary and transport for the three-vertex massive/massless case, and the five-dimensional $G_{++}$ two-vertex system. For the pure-massless defining integral, both DE residuals of the contact-atom weights and the complete target vector are checked; for the massive five-dimensional system, the connection, the singular pullback, the five leading vectors, the five coefficients and the target vector all agree with an independent paper-based route. Structural checks also cover common-theta simultaneous events, massless/massive coincident quotients, the per-propagator equal-time mean of the boundary coefficients of coincident massive full propagators of Eq.~\eqref{eq:coincident-line-endpoint-average}, with arbitrarily many of them joining the two vertices, and the generic boundary/residue of the triangle time-only loop graph. The FlintNDE adapter additionally checks ordinary/regular-singular save points and the fail-closed behavior for super-capability poles. Representative run evidence is not a point-by-point certification of all topologies and parameter regions; the generality comes from the same metadata data flow and the joint regression over structurally different topologies, not from an enumeration of dedicated production branches.
 
+\section{Public interface reference}
+\label{sec:interface-reference}
+
+This section lists every public symbol of the current version in the order in which a complete
+computation calls them: initialization, sector and master representation, basis conversion,
+iterative reduction, analytic matrices and artifacts, boundary data, numerical transport, and
+the runtime environment. Each entry gives a one-line purpose; the formulas, gates and return
+fields are developed in the referenced sections, and the table follows the usage strings of
+\texttt{Kernel/MadStree.wl}. Every entry returns a structured \texttt{Failure} with a reason
+for illegal input instead of degrading silently.
+
+\begingroup\footnotesize
+\begin{longtable}{@{}p{6.9cm}p{8.9cm}@{}}
+\caption{Complete public interface of MadStree, grouped in call order.}
+\label{tab:interface-reference}\\
+\toprule
+symbol & purpose\\
+\midrule
+\endfirsthead
+\multicolumn{2}{@{}l}{\tablename~\thetable{} (continued)}\\
+\toprule
+symbol & purpose\\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+\multicolumn{2}{@{}l}{\textbf{Initialization and context}}\\
+\texttt{MSInitTree[spec]} & initializes a tree topology and returns a context; every massless
+Full line uses the shared two-state quotient (Sec.~\ref{sec:topology-input})\\
+\texttt{MSInitTimeGraph[spec]} & initializes a time-only graph with cycles from the same
+vertex/propagator fields, without loop momentum or ISP\\
+\texttt{MSInitVertexFamily[spec]} & initializes a single-vertex function family without graph
+topology, from compact \texttt{ki/nui} or explicit \texttt{hBlocks/exponentialBlocks} input
+(Sec.~\ref{sec:reduction-interface})\\
+\texttt{MSContextQ[obj]} & tests whether an object is a valid MadStree context; the shared
+input gate of the public entries\\
+option \texttt{NuConvention} & selects $s_\nu$ of Eq.~\eqref{eq:positive-order-h} at
+initialization; every interface reads it from the context afterwards, with no per-call override\\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{Sectors and master representation}}\\
+\texttt{MSSectors[context]} & the deterministic order of contact-reachable sectors, with
+sector keys, contracted propagators and master counts\\
+\texttt{MSSlotRegistry[context, sector]} & the graph-wide two-state slot registry of a sector,
+the authority for the \texttt{stateBits} order; accepts a sector key or \texttt{All}\\
+\texttt{MSIntegral[s, n, a]} & the normalized master $J_s(\bm n;\bm a)$ with the domain of
+Eqs.~\eqref{eq:MSIntegral-domain} and \eqref{eq:sector-bit-string-key}\\
+\texttt{MSBareIntegral[s, n, a]} & the inert bare integral $\text{I}_s(\bm n;\bm a)$ with the
+same three indices, Eq.~\eqref{eq:package-bare-integral}; display and audit only, never
+recurrence, DE or transport\\
+\texttt{MSIntegralDefinition[integral, context]} & single-object query returning the bare
+label, the exact $\cN_s$ and the inert identity (Sec.~\ref{sec:normalized-J})\\
+\texttt{MSMasterIntegrals[context]} & master records in matrix order, each carrying
+\texttt{integral}/\texttt{bareIntegral}/\texttt{normalization}/\texttt{definition}\\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{H/h basis conversion}}\\
+\texttt{MSHTohMatrix[nu, z, context]} & the local $2\times2$ matrix $T_{H\to h}$ of
+Eq.~\eqref{eq:package-H-to-h}\\
+\texttt{MShToHMatrix[nu, z, context]} & its inverse $T_{h\to H}$, Eq.~\eqref{eq:package-h-to-H}\\
+\texttt{MSConvertBasis} & converts a local two-component state vector, or the whole sector
+state vector through the Kronecker product over the slot registry; the massless shared slot
+acts as the identity, and integral objects fail closed
+(Sec.~\ref{sec:Hh-transform})\\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{Iterative reduction and contacts}}\\
+\texttt{MSRecurrenceStep[integral, component, context]} & one step moving a nonzero shift
+toward zero, a single application of Eq.~\eqref{eq:package-lowering} or
+\eqref{eq:package-raising}; with the component omitted it takes the first nonzero shift, and
+it refuses steps that cross a divergent layer (Sec.~\ref{sec:time-ibp-domain})\\
+\texttt{MSReduce[expr, context, opts]} & the complete iterative reduction: a scalar returns
+one ordered coefficient vector, lists and nested tables preserve their shape with per-element
+reports (Sec.~\ref{sec:reduction-interface})\\
+option \texttt{MasterBasis} & the master ordering of the reduction output; must be a
+permutation of all context masters without omissions or repeats\\
+\texttt{MSContactMaps[context, sector]} & per-event injection matrices by component, target
+sectors, target shifts and normalization ratios, corresponding to
+Eqs.~\eqref{eq:R-as-CF}--\eqref{eq:contact-injection}\\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{Analytic matrices and artifacts}}\\
+\texttt{MSFormulaMatrices[context, sector]} & per-component $\text{M}_1$, $\text{M}_0$ and
+energy letters, with the sector diagonalizer \texttt{U} and \texttt{UInverse}\\
+\texttt{MSDLogDE[context]} & the ordered masters with the block-triangular dlog connection,
+letters, residual and certification status; the closure check calls \texttt{MSReduce}
+internally (Sec.~\ref{sec:dlog-tensor})\\
+\texttt{MSFormulaData[context]} & the aggregate of all-sector masters, per-sector recurrence
+metadata and the complete dlog DE\\
+\texttt{MSWriteFormulaArtifacts[context]} & writes the aggregate as \texttt{masters.wl},
+\texttt{recurrence\_metadata.wl}, \texttt{dlog\_de.wl} and \texttt{manifest.wl} below
+\texttt{results/madstree\_formula/}\allowbreak\texttt{run-UUID} by default and returns every
+actual path\\
+options \texttt{TimePowerRules} / \texttt{MSOutputDirectory} & vertex time powers enter the
+recurrence metadata only, never the analytic dlog DE / the artifact output directory\\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{Boundary and blow-up certificates}}\\
+\texttt{MSBoundaryData[context, targetRules]} & a finite starting vector in the dlog master
+order from the $k_0\to\infty$ Frobenius formula; \texttt{WorkingPrecision} defaults to 200
+digits and unsupported cases fail closed\\
+\texttt{MSBoundaryChartCertificate[context, targetRules]} & the machine certificate of nested
+blow-up, per-sector theta fixing and normal crossing; \texttt{RankOrder -> All} checks all
+strict charts\\
+\texttt{MSBlowupCoordinate[i]}, \texttt{MSDampingEnergy[v]} & the local coordinate $x_i$ and
+damping energy $K_v$ symbols appearing in certificates and boundary records
+(Sec.~\ref{sec:boundary-blowup})\\
+options \texttt{RankOrder} / \texttt{BoundaryScale} / \texttt{BoundarySeriesOrder} & energy
+rank order / finite anchor scale / boundary series truncation
+(Sec.~\ref{sec:infinity-boundary-transport})\\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{Numerical transport, regulator and export}}\\
+\texttt{MSNumericalSystem[de, spec]} & validates the numerical substitutions and boundary
+vector and constructs the numerical DE data\\
+\texttt{MSEvaluatePath[context, pointSequence, opts]} & single-stage multipoint evaluation:
+boundary initialization and full-sequence transport in one backend process
+(Sec.~\ref{sec:infinity-boundary-transport})\\
+\texttt{MSReconstructEpSeries[context, ep, pointSequence, opts]} & Laurent reconstruction in
+the common regulator: certified lowest power, automatic sampling and incremental fitting
+(Sec.~\ref{sec:regulator-certificate})\\
+\texttt{MSExportEvaluationData[evaluation, opts]} & exports the saved ordinary-point records
+of one evaluation to CSV/JSON; transient waypoints are excluded\\
+numerical and regulator options & \texttt{WorkingPrecision}, \texttt{TransportOrder},
+\texttt{ReferenceTransportOrder}, \texttt{TargetRelativeError},
+\texttt{FlintNDEPathPlanning}, \texttt{SingularityMode}, \texttt{ParameterRules},
+\texttt{ParallelTaskCount}, \texttt{MessageLanguage}, \texttt{MaximumEpPower},
+\texttt{EpGoalDigits}, \texttt{EpFitExtraOrder}, \texttt{EpFitOrderIncrement},
+\texttt{EpFitMaximumRounds}, \texttt{EpSamplePoints}, \texttt{EpValidationPoints},
+\texttt{EpInitialInternalMaximumPower}, \texttt{EpSampleAngleRange}; defaults and gates in
+Secs.~\ref{sec:infinity-boundary-transport} and \ref{sec:regulator-certificate}\\
+options \texttt{ExportFormats} / \texttt{SignificantDigits} & export format selection and
+exported significant digits\\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{Runtime environment}}\\
+\texttt{MSFlintNDEConfiguration[]} & returns the current version directory, the built-in
+FlintNDE relative path and availability\\
+\texttt{MSSetFlintNDERelativePath[path]} & changes the single version-directory-relative path
+to the FlintNDE package\\
+option \texttt{MSRuntimeDirectory} & runtime root; \texttt{Automatic} writes
+\texttt{results\_temp} beside the calling script, an explicit path is used directly\\
+option \texttt{PythonExecutable} & the backend Python command; the default reads the
+\texttt{MADSTREE\_PYTHON} environment variable and otherwise \texttt{python} from PATH\\
+\end{longtable}
+\endgroup
+
+Initialization itself writes no files. The four analytic artifact files above are written and
+reused only when \texttt{MSWriteFormulaArtifacts} is called explicitly or before a numerical
+entry starts the backend, with the actual paths returned under \texttt{formulaArtifacts}; the
+numerical phase constructs a local parameterized DE inside the function and never overwrites
+the formal analytic artifacts. Runtime temporaries (requests and logs under \texttt{nde/},
+successful caches under \texttt{cache/}) live under the root set by
+\texttt{MSRuntimeDirectory} and never enter the package source directories. The seven
+distributed \texttt{Examples} scripts cover the main workflow
+(Sec.~\ref{sec:handbook-examples}).
+
 \section{Typical usage examples}
+\label{sec:handbook-examples}
 
 \subsection{Single-vertex family: definition, reduction, and unified point input}
 
@@ -1920,7 +2083,12 @@ log divergent without dispatching on a variable name or graph type.
 \subsection{Three-vertex regulator: automatic Laurent support and incremental fitting}
 
 \texttt{Examples/06\_massless\_three\_vertex\_ep\_regularization.wl} sets
-$a_1=-1+\epsilon$ and $a_2=a_3=1+\epsilon$, while the user requests only \texttt{MaximumEpPower->0}. The package first
+$a_1=-1+\epsilon$ and $a_2=a_3=1+\epsilon$, while the user requests only \texttt{MaximumEpPower->0}. Before
+the numerical stage the example runs three symbolic self-checks: \texttt{MSReduce} acts once on the sum of
+two integrals whose powers lie one unit below the master powers (with
+status/residual/remaining/singularLayers verified); the same reduction is repeated on a context
+re-initialized with the regulated powers as \texttt{timePower}, so the coefficients carry an explicit
+$\epsilon$; and \texttt{MSConvertBasis} performs an H/h local basis round trip. The package then
 certifies the lowest power from the symbolic boundary and DE and then selects production and
 independent validation points. If validation misses the target, only the internal fit order and new
 points are added, while previous values are reused. Its coordinate table contains only

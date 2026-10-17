@@ -86,7 +86,9 @@ massive Full 传播子收缩时，该 normalization 含唯一的 contour 因子�
 `++` child 为 `-4 I/Pi`，`--` child 为 `+4 I/Pi`；该符号不重复进入 dlog contact block。
 二态因子要么是 massive 传播子在其中一个顶点上的二维态，要么是整条 massless Full 传播子
 共享的 quotient 二态；其逐位顺序由 `MSSlotRegistry` 给出。`++/--` 的 h 组合只在手册统一定义，
-不在每条输出中展开。
+不在每条输出中展开。`MSSectors[context]` 返回 contact-reachable sectors 的确定顺序（键、
+被收缩传播子与 master 数），与 `context["sectorOrder"]` 一致；`MSContextQ[obj]` 判定对象
+是否为本包合法 context，是全部公开入口共用的输入门禁。
 
 `"vertexType" -> "+"|"-"` 是顶点的 Schwinger--Keldysh 轮廓支，必须在每个顶点上
 显式给出。传播子不再输入 `skType`、`sigma` 或顶点符号；程序从 `"endpoints"` 指向的
@@ -192,7 +194,7 @@ Gaussian-rational 后再求值。上述选项缺省均为 `Automatic`，因此�
 每个 sector 的 `sectorKey` 是按初始化时 root `lines` 顺序排列的定长字符串：`0` 表示对应传播子已收缩，`1` 表示未收缩；不能 contact shrink 的传播子位始终为 `1`。top 是全 `1` 字符串。前导零是身份的一部分，禁止把 key 当整数。`context["sectorKeySchema"]` 给出 `rootLineOrder`、位宽和位语义；例如 `{e1,e2,e3,e4}` 中收缩 `{e1,e2,e4}` 得到 `"0010"`。master 的完整身份是 `MSIntegral[sectorKey,timeShifts,stateBits]`，所以不同 subsector 即使局部 shifts/bits 相同也不是同一积分。`MSInitTree` 的 `sectorIdentityCertificate` 会一次性检查 contraction set、sector key、完整 master、global index 和按完整 master 顺序计算的 SHA-256 digest；碰撞时拒绝初始化。massless top-to-sub dlog 的 contact 原子按 event 中实际被收缩的 massless 传播子数乘 `(-1)^N`，simultaneous contact 不使用图专用符号表。
 
 `MSBoundaryChartCertificate[context,targetRules]` 在边界计算前构造
-`1/K[sigma[j]]=Product[x[r],{r,j,V}]` 的 nested blow-up，逐 sector 固化所有 theta，并检查完整 dlog letters、normalization、坐标 Jacobian 与 shifted-contact 新分母都是 coordinate monomial 乘边界非零 unit。`RankOrder -> All` 检查全部 root-time strict charts；证书不通过时 `MSBoundaryData` 返回 `BoundaryChartNotCertified`。
+`1/K[sigma[j]]=Product[x[r],{r,j,V}]` 的 nested blow-up，逐 sector 固化所有 theta，并检查完整 dlog letters、normalization、坐标 Jacobian 与 shifted-contact 新分母都是 coordinate monomial 乘边界非零 unit。`RankOrder -> All` 检查全部 root-time strict charts；证书不通过时 `MSBoundaryData` 返回 `BoundaryChartNotCertified`。证书与边界记录中的局部量使用两个公开符号：`MSBlowupCoordinate[i]` 是嵌套 blow-up 的第 `i` 个局部坐标，`MSDampingEnergy[v]` 是顶点 `v` 的正阻尼能量 `K_v`。
 
 ## 共同 theta 与 time-only 圈图
 
@@ -247,7 +249,15 @@ reduction = MSReduce[
 ];
 ```
 
-`MSReduce` 只处理固定初始化 context 内的合法 `MSIntegral[sectorKey,timeShifts,stateBits]`：`sectorKey` 必须属于 contact-reachable sector DAG，`timeShifts` 是该 sector 每个 component 的整数平移，`stateBits` 按 2401.00129 的二进制顺序遍历该 sector 全部二维 slots。它可线性处理有限多个这样的对象，也可直接接受 `List`、规则 `Table`、空列表和 ragged 嵌套列表；返回的 `result`、逐元素 `coefficientVector/masterRules`、residual 和 remaining shifts 保持输入形状，并共享同一次调用的递归 memo。任一元素失败时会报告其精确位置。它不支持新增传播子幂、新离散指标、context 外 sector 或另一个函数族。约化沿 shift/contact DAG 递归到零 shift masters，并缓存重复子问题。标量返回的 `masterBasis`、`coefficientVector` 和 `masterRules` 严格同序；`result` 是显式主积分线性组合；`nonMasterResidual` 与 `remainingShiftedIntegrals` 必须同时为空才是完全约化。`MasterBasis` 可给 context 全部 masters 的任意排列，但缺项、重复或额外对象都会拒绝。`singularLayers` 逐步保存方向、分量和分母：正 shift 向零的 raising 只报告 `M0` energy letters，负 shift 向零的 lowering 只报告 `M1` 本征值。
+`MSReduce` 只处理固定初始化 context 内的合法 `MSIntegral[sectorKey,timeShifts,stateBits]`：`sectorKey` 必须属于 contact-reachable sector DAG，`timeShifts` 是该 sector 每个 component 的整数平移，`stateBits` 按 2401.00129 的二进制顺序遍历该 sector 全部二维 slots。它可线性处理有限多个这样的对象，也可直接接受 `List`、规则 `Table`、空列表和 ragged 嵌套列表；返回的 `result`、逐元素 `coefficientVector/masterRules`、residual 和 remaining shifts 保持输入形状，并共享同一次调用的递归 memo。任一元素失败时会报告其精确位置。它不支持新增传播子幂、新离散指标、context 外 sector 或另一个函数族。约化沿 shift/contact DAG 递归到零 shift masters，并缓存重复子问题。标量返回的 `masterBasis`、`coefficientVector` 和 `masterRules` 严格同序；`result` 是显式主积分线性组合；`nonMasterResidual` 与 `remainingShiftedIntegrals` 必须同时为空才是完全约化。`MasterBasis` 可给 context 全部 masters 的任意排列，但缺项、重复或额外对象都会拒绝。`singularLayers` 逐步保存方向、分量和分母：正 shift 向零的 raising 只报告 `M0` energy letters，负 shift 向零的 lowering 只报告 `M1` 本征值。约化使用初始化时固定的顶点时间幂：要代入数值或正规化幂（如 `a1=-1+ep`），以这些值作为 `timePower` 重新初始化 context 后约化（Example 06 演示），或对符号结果事后代入；`MSReduce` 本身没有替换选项。
+
+单步入口为 `MSRecurrenceStep[integral, component, context]`：对选定 component 把一个非零 shift
+移向零一步，省略 component 时自动取第一个非零 shift，返回 `reducedOneStep`、`nearerShift`
+和该步实际被反演的分母；`MSReduce` 即其 memo 化的完整入口。contact 注入结构可用
+`MSContactMaps[context, sectorKey]` 单独读取：每个 contact 事件一条记录，含按分量的注入矩阵
+（`matricesByComponent`）、目标 sector 与零/升幂两档目标 time shifts（`R0TargetShift`、
+`R1TargetShiftsByComponent`）、normalization 比值和被收缩传播子列表；省略 sectorKey 或传
+`All` 时按 `context["sectorOrder"]` 返回全部 sector。
 
 初始化会用已知 h 两支小时间领头幂次，为每个 reachable component 保存时间-IBP 安全 shift
 下界。零 shift master 已命中 Gamma 非正整数时立即拒绝；正整数起点仍可初始化，但实际约化
@@ -289,7 +299,8 @@ shell `Run`、命令引号拼接或重定向，也不提供重试 fallback；连
 回归由当前数值门禁和 Vendor `25/25` 接口测试共同覆盖。
 
 解析 `de = MSDLogDE[context]` 本身是正式用户结果。纯符号工作流可显式执行
-`MSWriteFormulaArtifacts[context]`；`MSEvaluatePath` 与 `MSReconstructEpSeries` 则在启动任何
+`MSWriteFormulaArtifacts[context]`，它的两个专用选项是 `TimePowerRules`（只特化写出的递推
+元数据，不改解析 DE）与 `MSOutputDirectory`（重定向产物目录）；`MSEvaluatePath` 与 `MSReconstructEpSeries` 则在启动任何
 Python/FlintNDE 数值任务前自动写出或复用同一 context/调用根的解析资产。写出失败时数值 NDE
 不启动；成功返回值的 `"formulaArtifacts"` 给出正式目录与全部文件路径。缺省写入：
 
@@ -324,7 +335,7 @@ MSExportEvaluationData[
 导出。`ExportFormats` 可取 `Automatic`、单个 `"CSV"`/`"JSON"` 或两者组成的列表；JSON 中
 本来就是字符串的精度/相对差字段原样 round-trip，不会再包一层字面引号。`results/` 只放用户正式结果，`results_temp/` 只放请求、日志和 cache，
 `test/results_test/` 只放开发测试产物；程序包源码目录不接收运行产物。
-完整公式、massless `4 -> 2` quotient、contact shift 与 top-to-sub dlog 推导见 [Documentation/tree_formula.pdf](Documentation/tree_formula.pdf)。
+完整公式、massless `4 -> 2` quotient、contact shift 与 top-to-sub dlog 推导见 [Documentation/tree_formula.pdf](Documentation/tree_formula.pdf)；全部公开符号的一句话总表见该手册「公开接口总表」一节。
 
 ## Examples
 
@@ -333,12 +344,16 @@ MSExportEvaluationData[
 - [03_time_only_cycle_chart.wl](Examples/03_time_only_cycle_chart.wl)：time-only 圈图、共同 theta、contact sector 与全部 strict-rank chart。
 - [04_three_vertex_tree.wl](Examples/04_three_vertex_tree.wl)：三顶点 massless 树图（+++ 顶点结构），后接批量多点求值与 CSV/JSON 导出。
 - [05_massive_three_vertex_tree.wl](Examples/05_massive_three_vertex_tree.wl)：三顶点 massive 树图
-  （+++ 顶点结构、非半整数 nu）。同一 context 下先计算并导出原非零点列，再以第二次独立
+  （+++ 顶点结构、非半整数 nu），含 normalized/bare 定义自检：逐 master 比对
+  `MSIntegralDefinition` 与 `MSMasterIntegrals` 记录的 integral/bareIntegral/normalization 字段，
+  并校验 shifted 积分读取所在 sector 的 normalization。同一 context 下先计算并导出原非零点列，再以第二次独立
   `MSEvaluatePath` 调用计算中间顶点外腿能量 `k2=0` 的四点列；两组不混合规划或结果。
 - [06_massless_three_vertex_ep_regularization.wl](Examples/06_massless_three_vertex_ep_regularization.wl)：
   三顶点 massless 树的时间幂正规化 `a1=-1+ep`、`a2=a3=1+ep`，`ep=0` 处时间积分真正发散；
-  用户只要求返回到 `ep^0`，程序在数值 NDE 前由符号边界与 DE 认证最低幂为 `-1`，
-  再选择生产/验证点并一并提取 `ep^-1` 极点系数与有限项。
+  数值 NDE 前先做三项符号自检：`MSReduce` 一次作用于两个相对主积分幂偏移 `-1` 的积分之和并核对
+  status/residual/remaining/singularLayers；以 `a1=-1+ep, a2=a3=1+ep` 代入 `timePower` 重新初始化
+  context 后重复同一约化（系数显式带 `ep`）；以及 `MSConvertBasis` 的 H/h 局部换基往返。
+  之后由符号边界与 DE 认证最低幂为 `-1`，再选择生产/验证点并一并提取 `ep^-1` 极点系数与有限项。
 - [07_zero_external_leg_energy.wl](Examples/07_zero_external_leg_energy.wl)：无物理外腿的顶点省略
   `externalLegEnergy` 或显式输入 0；私有辅助能量保留在解析 dlog 中并自动输运到物理零点。
 

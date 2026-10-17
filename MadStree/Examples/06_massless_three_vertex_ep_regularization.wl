@@ -5,6 +5,10 @@
 用途：演示真实无质量三顶点树图的时间幂解析正规化 a1=-1+ep、a2=a3=1+ep；
       顶点 1 的幂取 -1+ep，使 eps=0 处时间积分真正发散，Laurent 展开含单一
       1/ep 极点：请求返回到 ep^0 时，极点系数 c_{-1} 与有限部 c_0 一并返回。
+      数值阶段之前先做三项符号检查：任取两个相对主积分 tau 幂偏移 -1 的积分，
+      其和由 MSReduce 一次（而非分别）约化并检查闭合；以 a1=-1+ep、a2=a3=1+ep
+      作为 timePower 重新初始化后作代入约化，结果显式携带 ep 依赖；H/h 局部换基
+      正反往返对被积函数二分量状态向量应还原。
       程序在数值 NDE 前从符号边界与 dlog DE 认证最低幂 n_min=-1，
       再选择 exact ep 点并重构 Laurent 系数。用户也可提供冗余生产候选池、独立验证点
       和首轮内部最高幂；程序只按每轮所需点数消费候选前缀并复用既有结果。本例缺省
@@ -69,6 +73,60 @@ treeSpec = <|
 
 context = MSInitTree[treeSpec];
 formulaArtifacts = MSWriteFormulaArtifacts[context];
+
+(* ::Chapter:: *)
+(*数值前的符号检查：组合迭代约化与 H/h 局部换基往返*)
+
+topKey = First[context["sectorOrder"]];
+
+(* 任取两个相对主积分 tau 幂偏移 -1 的积分；MSReduce 一次作用于它们的和，
+   而不是分别约化。 *)
+shiftedCombination =
+  MSIntegral[topKey, {-1, 0, 0}, {0, 0}] +
+  MSIntegral[topKey, {0, -1, 0}, {1, 0}];
+combinationReduction = MSReduce[shiftedCombination, context];
+combinationReduction["status"]
+combinationReduction["coefficientVector"]
+combinationReduction["singularLayers"]
+
+(* H/h 换基自检：被积函数二分量状态向量在局部正反换基后应还原（nu、z 保持符号）。 *)
+hhRoundTripVector = MSConvertBasis[
+  MSConvertBasis[{v1, v2}, "H" -> "h", nu, z, context],
+  "h" -> "H", nu, z, context
+];
+hhRoundTripQ = Simplify[hhRoundTripVector === {v1, v2}];
+
+If[! (AssociationQ[combinationReduction] &&
+      combinationReduction["status"] === "reduced" &&
+      TrueQ[combinationReduction["nonMasterResidual"] === 0] &&
+      combinationReduction["remainingShiftedIntegrals"] === {}),
+  Print["Example failed at MSReduce: the combined reduction did not close."];
+  Exit[1]
+];
+
+(* 代入正规化幂后的约化：约化使用 context 初始化时固定的时间幂，把
+   a1=-1+ep、a2=a3=1+ep 直接作为 timePower 重新初始化同一拓扑，
+   同一组合的约化结果即显式携带 ep 依赖与奇面。 *)
+regulatedSpec = treeSpec /. {a1 -> -1 + ep, a2 -> 1 + ep, a3 -> 1 + ep};
+regulatedContext = MSInitTree[regulatedSpec];
+regulatedReduction = MSReduce[shiftedCombination, regulatedContext];
+regulatedReduction["status"]
+regulatedReduction["coefficientVector"]
+regulatedReduction["singularLayers"]
+
+If[! (AssociationQ[regulatedReduction] &&
+      regulatedReduction["status"] === "reduced" &&
+      TrueQ[regulatedReduction["nonMasterResidual"] === 0] &&
+      regulatedReduction["remainingShiftedIntegrals"] === {}),
+  Print["Example failed at MSReduce: the regulated reduction did not close."];
+  Exit[1]
+];
+
+If[! hhRoundTripQ,
+  Print["Example failed at the H/h basis round trip."];
+  Exit[1]
+];
+
 pointSequence = {{k1, k2, k3}, {9 I, 3 I, 5 I}};
 parameterRules = {
   q12 -> 1, q23 -> 2,

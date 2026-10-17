@@ -2,7 +2,7 @@
 
 \usepackage[margin=2.35cm]{geometry}
 \usepackage{amsmath,amssymb,mathtools,bm}
-\usepackage{booktabs,array}
+\usepackage{booktabs,array,longtable}
 \usepackage{enumitem}
 \usepackage[numbers,sort&compress]{natbib}
 \usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
@@ -25,19 +25,20 @@
 
 \title{MadStree: tree formula}
 \author{\texttt{MadStree} 公式手册}
-\date{2026-08-21}
+\date{2026-10-17}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
 本手册对应 \texttt{MadStree}；time-only sector 继续由 root propagator 顺序的定长字符串标识。
-本文是 \texttt{MadStree} 的公式手册。该程序包面向任意 massive/massless 混合 dS 树图，不生成一般 IBP 方程组，而由 topology 直接组装主积分、迭代约化和 block-triangular dlog 微分方程；具体使用指南在公开接口稳定后补入。本文从局部函数系统的张量积结构重新推导所需公式。文献 \cite{Chen:2023eic} 的纯 massive 公式可统一理解为若干一维无 theta 指数系统与二维 Hankel 系统的 Kronecker 和；每个顶点只带一个这样的指数参数 $k_{0,v}$，其生成元 $\ii p_{0,v}$ 是该一维因子与其余单位矩阵的张量积。含 theta 的 massless full propagator 不能等同于无 theta 的单指数因子：约化前，它在两个顶点同样具有 $2\otimes2=4$ 个 Hankel 状态；利用 massless 的 $00/11$、$10/01$ 关系后，这四态被一个常数投影压成整条传播子共享的二维状态。该二维因子同时出现在两个顶点的 time-IBP 中，故按顶点独立的 tensor factorization 失效，但全图上的 tensor-product/Kronecker-sum 构造仍然成立。所有 regular IBP、迭代矩阵和 dlog 对角块因而可由 topology 直接写出；theta 导数只增加连接缩并后 sector 的固定非对角块，无需先生成大规模 IBP 系统再反推出公式。本文凡从 \cite{Chen:2023eic} 原样引用的量都加上标或下标 ${\rm unreduced}$，含义在第~2 节给出：它是该文的原式，已按本文的 $+\nu$、正 prefactor convention 重写，但尚未代入上述 massless 额外约化关系。
+本文是 \texttt{MadStree} 的公式手册。该程序包面向任意 massive/massless 混合 dS 树图，不生成一般 IBP 方程组，而由 topology 直接组装主积分、迭代约化和 block-triangular dlog 微分方程；全部公开接口集中在第~\ref{sec:interface-reference}~节的总表中。本文从局部函数系统的张量积结构重新推导所需公式。文献 \cite{Chen:2023eic} 的纯 massive 公式可统一理解为若干一维无 theta 指数系统与二维 Hankel 系统的 Kronecker 和；每个顶点只带一个这样的指数参数 $k_{0,v}$，其生成元 $\ii p_{0,v}$ 是该一维因子与其余单位矩阵的张量积。含 theta 的 massless full propagator 不能等同于无 theta 的单指数因子：约化前，它在两个顶点同样具有 $2\otimes2=4$ 个 Hankel 状态；利用 massless 的 $00/11$、$10/01$ 关系后，这四态被一个常数投影压成整条传播子共享的二维状态。该二维因子同时出现在两个顶点的 time-IBP 中，故按顶点独立的 tensor factorization 失效，但全图上的 tensor-product/Kronecker-sum 构造仍然成立。所有 regular IBP、迭代矩阵和 dlog 对角块因而可由 topology 直接写出；theta 导数只增加连接缩并后 sector 的固定非对角块，无需先生成大规模 IBP 系统再反推出公式。本文凡从 \cite{Chen:2023eic} 原样引用的量都加上标或下标 ${\rm unreduced}$，含义在第~2 节给出：它是该文的原式，已按本文的 $+\nu$、正 prefactor convention 重写，但尚未代入上述 massless 额外约化关系。
 \end{abstract}
 
 \tableofcontents
 
 \section{拓扑输入约定}
+\label{sec:topology-input}
 
 每个顶点必须用 \texttt{vertexType -> "+"|"-"} 指定 Schwinger--Keldysh 轮廓支。
 传播子不再重复输入 \texttt{skType}、\texttt{sigma} 或顶点符号；公开
@@ -59,7 +60,9 @@
 \texttt{++/--/+-/-+}、Full 整体符号、顶点符号和缺省 Hankel branches。公式中的
 \texttt{masslessFull}、$\sigma_e$ 等名称是归一化后的内部物理量，不是重复的用户字段。
 顶点 ID 可为整数。传播子公开接口不定义或读取 ID，而始终按 \texttt{lines} 输入位置内部编号；只有
-显式 \texttt{thetaBundles} 需要引用传播子时才使用这一位置编号。
+显式 \texttt{thetaBundles} 需要引用传播子时才使用这一位置编号。上述字段同时用于两个初始化
+入口：\texttt{MSInitTree[spec]} 接受树拓扑，\texttt{MSInitTimeGraph[spec]} 接受允许 cycles 的
+time-only 图（不含 loop momentum 与 ISP）；两者返回同一类 context，此后共用全部下游接口。
 
 字段 \texttt{externalLegEnergy} 表示附着在顶点 $v$ 的外腿无 theta 指数参数，不是
 “顶点自身具有的能量”。\texttt{vertexType=+} 给 $\exp(-\ii k_v\tau_v)$，
@@ -571,6 +574,7 @@ $M_1$ 不含一维指数；massive h 的 $P_1,\sigma_2$ 原子也不因 Hankel b
 第二项来自没有 theta 的 massless cross/external 分支：这类分支不建立 slot，只把落在 $C$ 内的那些顶点的动量模长按该顶点的 SK contour sign $-\varsigma_v$ 并入同一个标量，求和只对 active propagators 进行。第一项单独就是 $p_{0,v}$，因此单顶点 component 的式 \eqref{eq:component-energy} 退化为式 \eqref{eq:signed-vertex-M0} 的 $p_{0,v}$，当且仅当该顶点不携带任何没有 theta 的 propagator 分支。
 
 \section{直接迭代约化：不先生成大规模 IBP}
+\label{sec:direct-reduction}
 
 \subsection{\texorpdfstring{\cite{Chen:2023eic}}{arXiv:2401.00129} 的二进制顺序与递推的精确定义域}
 
@@ -793,6 +797,7 @@ $h=z^{\pm\nu}H_\nu$ 只把式 \eqref{eq:physical-late-time-branches} 的 $\pm\nu
 其中 $r_e$ 是被缩并的传播子的 raw contact power。最后一项 $|C|-1$ 是真正发生的顶点合并数；共同 theta 的 $k$ 条传播子的 event 只贡献一次，而不是错误的 $k$ 次。式 \eqref{eq:simultaneous-contact-base-power} 只依赖最终 component 与 contracted set，故不同合法 contact 路径得到同一 base power。每个 event 都严格减少 component 数，sector BFS 自动终止，并排除 active self-propagator 的再次 contact。
 
 \section{dlog DE 的全图张量公式}
+\label{sec:dlog-tensor}
 
 定义每个顶点的对角矩阵值对数
 \begin{equation}
@@ -1184,6 +1189,7 @@ $P_{J\leftarrow h}$ 投影后恰为式 \eqref{eq:package-massless-contact-weight
 block-triangular dlog，不保留四态生产分支。
 
 \subsection{\texorpdfstring{$(-\tau)^A$ 与 normalized-$J$}{(-tau)A 与 normalized-J}}
+\label{sec:normalized-J}
 
 前文的递推与 DE 一直在本文的 $\tau^{\nu_0}$ convention 下写出。package 中参与递推、DE 与数值输运的积分对象是 normalized object
 \begin{equation}
@@ -1251,6 +1257,7 @@ normalized basis 中还必须使用
 所以 sector 对角块增加 $\dd\log\cN_s\text{I}_s$，非对角 contact 块乘 $\cN_s/\cN_t$。只有当该比值已由 basis normalization 变成运动学无关常数时，式 \eqref{eq:global-offdiagonal-omega} 才直接是 constant-residue dlog；否则需要额外 basis/gauge 变换，不能只凭字面上的 $\log\kappa$ 宣称完成。
 
 \subsection{H/h 状态向量的正反变换}
+\label{sec:Hh-transform}
 
 令 $p=s_\nu\nu$。同一个函数 $h$ 与裸 Hankel 状态的局部关系为
 \begin{equation}
@@ -1281,6 +1288,7 @@ MadStree 的 \texttt{MSHTohMatrix[nu,z,context]}、\texttt{MShToHMatrix[nu,z,con
 dSIBP 的 public time-only 表示为 \texttt{J[sectorKey,timeShifts,stateBits]}，与 MadStree 的 \texttt{MSIntegral[sectorKey,timeShifts,stateBits]} 逐槽对应；\texttt{stateBits} 是全 sector registry 中的 $n_i$ 类离散态，不要求按顶点分组。该对应只转换积分身份，不替换 normalization：两边 context 必须对每个 sector 使用同一 $\cN_s$，且求导时都包含式~\eqref{eq:normalization-adapter} 的 $\partial\log\cN_s$。MadStree 的缺省 massless 输入是 $\nu=1/2$ 和正 prefactor，此时 \texttt{formulaNu}$\,=s_\nu\nu=+1/2$，代码与本文公式在同一份 $+\nu$ 基准式上逐槽一致；取 \texttt{NuConvention -> "Negative"} 时 \texttt{formulaNu}$=-1/2=\nu_{\rm ref}$，只用于与该文印刷式逐字对照。这一约定不替代传播子 metadata、theta 或 contact normalization。
 
 \subsection{单顶点函数族、局部逆与完整约化接口}
+\label{sec:reduction-interface}
 
 单顶点函数族不需要构造伪图。紧凑输入为
 \begin{verbatim}
@@ -1347,7 +1355,7 @@ result, masterBasis, masterRules, coefficientVector,
 nonMasterResidual, remainingShiftedIntegrals,
 memoizedIntegralCount, singularLayers
 \end{verbatim}
-其中 master basis、系数向量和 rules 严格同序，result 是显式主积分线性组合。只有 residual 为零且 shifted-integral 列表为空时状态才是 \texttt{reduced}。\texttt{MasterBasis} 可以是全部 context masters 的任意排列，但不能缺项或重复。singular layers 对每一步记录方向、component 和实际被反演的分母：正 shift 向零只报告 $M_0$ 的 energy letters；负 shift 向零只报告 $M_1$ 本征值。这正是式 \eqref{eq:M1-lowering-resonance}--\eqref{eq:M0-raising-resonance} 的程序合同。
+其中 master basis、系数向量和 rules 严格同序，result 是显式主积分线性组合。只有 residual 为零且 shifted-integral 列表为空时状态才是 \texttt{reduced}。\texttt{MasterBasis} 可以是全部 context masters 的任意排列，但不能缺项或重复。singular layers 对每一步记录方向、component 和实际被反演的分母：正 shift 向零只报告 $M_0$ 的 energy letters；负 shift 向零只报告 $M_1$ 本征值。这正是式 \eqref{eq:M1-lowering-resonance}--\eqref{eq:M0-raising-resonance} 的程序合同。约化使用初始化时固定的顶点时间幂：要代入数值或正规化幂（如 $a_1=-1+\epsilon$），以这些值作为 \texttt{timePower} 重新初始化 context 后约化（Example 06 两条路径都演示），或对符号结果事后代入；\texttt{MSReduce} 本身没有替换选项。
 
 同一入口也直接接受 \texttt{List}、规则 \texttt{Table}、空列表和 ragged 嵌套列表。返回的
 \texttt{result}、逐元素 \texttt{coefficientVector/masterRules}、residual 和 remaining shifts
@@ -1355,6 +1363,7 @@ memoizedIntegralCount, singularLayers
 不把其它元素的部分结果标成完整约化。
 
 \subsection{小时间区间的端点与 time-IBP 安全 shift}
+\label{sec:time-ibp-domain}
 
 时间 IBP 的指标平移不能越过发散点。MadStree 不重新解局部级数，而只把已知的 h 两支
 小时间领头幂次代入每个 reachable component，并枚举该 component 的全部二进制分支组合。
@@ -1554,6 +1563,7 @@ shift。含通用符号解析正规化参数的 $\alpha$ 保持符号化，不�
 因此推荐流程是：先按式 \eqref{eq:preferred-rank-from-point} 选择首选 chart，从式 \eqref{eq:nested-blowup-coordinates} 的边界得到同序向量，在 chart 内取一个小而有限的普通点，再由用户按所需同伦类给出到 preferred 普通点和最终目标点的多变量折线。\texttt{"Avoid"} 报告穿过 letter hypersurface 的问题点对；\texttt{"Automatic"} 对显式奇点用户点使用局部基分类并输出，且在同一直线分支上从出射普通匹配点继续；\texttt{"SingularityJump"} 显式选择穿越分支并要求确认多值性。辅助顶点能量可逐个取零；若零点是有限奇点，则返回有限值或 \texttt{Infinity}。若奇点位于复仿射段转向处，则输入没有唯一指定延拓分支，程序仍 fail closed。
 
 \subsection{\texorpdfstring{\cite{Chen:2024jms}}{arXiv:2411.03088} 无穷远边界与 FlintNDE 输运}
+\label{sec:infinity-boundary-transport}
 
 生产入口不在有限 Euclidean 普通点直接计算定义积分。\texttt{MSBoundaryData} 以文献 \cite{Chen:2024jms} 的 $K_v\to\infty$ 数据为唯一边界来源。若某个顶点没有物理外腿，程序在同一解析 dlog 系统中内部引入私有辅助外腿能量 $k_{0,v}^{\rm aux}$，先从对应 $K_v^{\rm aux}\to\infty$ 的阻尼极限构造边界数据，再由 FlintNDE 沿该辅助坐标输运到物理目标 $k_{0,v}^{\rm aux}=0$；用户无需在 \texttt{pointSequence} 或 \texttt{ParameterRules} 中输入该私有坐标。包括单顶点 massive-external family 在内，所有已闭合 tree/time-only context 都统一消费 sector DAG、component、slot registry、normalization、state order 与 strict rank，并走“边界领头项 + FlintNDE Frobenius 递推”路线。文献 \cite{Chen:2024jms} 式 (3.44)--(3.46) 的单顶点显式多变量级数只作为测试 oracle，不进入生产分派。
 
@@ -1709,6 +1719,7 @@ $\lceil p_{\rm dec}\log_2 10\rceil+32$：缺省 200 位对应 697 bit，70、100
 因子和 winding/monodromy 均保持当前 Arb 精度。
 
 \subsection{正规化参数的符号 Laurent 支撑证书与误差控制}
+\label{sec:regulator-certificate}
 
 共同正规化参数记为 $\epsilon$。用户调用
 \texttt{MSReconstructEpSeries[..., MaximumEpPower -> $m$]} 时只指定需要返回的最高幂 $m$；
@@ -1783,7 +1794,140 @@ FlintNDE 在启动前分类局部奇点并执行 capability preflight；MadStree
 
 当前已经端到端检查单顶点三 massive 的文献 \cite{Chen:2024jms} 边界、两顶点 pure-massless 的解析 chamber 边界、三顶点 massive/massless 的通用 15 维边界与输运，以及两顶点 $G_{++}$ 五维系统。pure-massless 定义积分同时检查 contact 原子权重的两张 DE residual 和完整目标向量；massive 五维系统的 connection、奇点拉回、五个 leading vectors、五个系数和目标向量均与基于文献 \cite{Chen:2023eic} 印刷公式的独立推导路线一致。结构检查还覆盖共同-theta simultaneous events、massless/massive coincident quotient、等时 massive full 传播子边界系数按传播子取平均（式 \eqref{eq:coincident-line-endpoint-average}，含两顶点之间任意条 spectator 传播子），以及 triangle time-only 圈图的通用 boundary/residue。FlintNDE 适配器另检查普通/正则奇点保存点和超能力 pole 的 fail-closed。代表性运行证据不等于对所有 topology 与参数区域逐点认证；通用性来自同一 metadata 数据流与结构不同拓扑的共同回归，而不是列举专用生产分支。
 
+\section{公开接口总表}
+\label{sec:interface-reference}
+
+本节把当前版本的全部公开符号按一次完整计算的调用顺序集中列出：初始化、sector 与主积分
+表示、状态换基、迭代约化、解析矩阵与产物、边界、数值输运与运行环境。每项只给一句话
+用途；公式推导、门禁条件与返回字段在所指小节展开，本表与 \texttt{Kernel/MadStree.wl}
+的 usage 字符串同源。所有入口对非法输入返回结构化 \texttt{Failure} 并携带原因，
+不静默降级。
+
+\begingroup\footnotesize
+\begin{longtable}{@{}p{6.9cm}p{8.9cm}@{}}
+\caption{MadStree 公开接口总表，按调用顺序分组。}
+\label{tab:interface-reference}\\
+\toprule
+符号 & 用途\\
+\midrule
+\endfirsthead
+\multicolumn{2}{@{}l}{\tablename~\thetable（续）}\\
+\toprule
+符号 & 用途\\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+\multicolumn{2}{@{}l}{\textbf{初始化与 context}}\\
+\texttt{MSInitTree[spec]} & 初始化树拓扑并返回 context；massless Full 线一律使用共享二态
+quotient（第~\ref{sec:topology-input}~节）\\
+\texttt{MSInitTimeGraph[spec]} & 用同一套顶点/传播子字段初始化允许 cycles 的 time-only 图，
+不含 loop momentum 与 ISP\\
+\texttt{MSInitVertexFamily[spec]} & 初始化单顶点函数族，不需要图拓扑；紧凑
+\texttt{ki/nui} 或显式 \texttt{hBlocks/exponentialBlocks} 输入
+（第~\ref{sec:reduction-interface}~节）\\
+\texttt{MSContextQ[obj]} & 检验对象是否为本包合法 context，是公开入口共同的输入门禁\\
+选项 \texttt{NuConvention} & 初始化时选择式 \eqref{eq:positive-order-h} 的 $s_\nu$；
+context 建立后所有接口只读该值，无逐调用覆盖\\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{sector 与主积分表示}}\\
+\texttt{MSSectors[context]} & contact 可达 sector 的确定顺序，含 sectorKey、收缩传播子
+与 master 计数\\
+\texttt{MSSlotRegistry[context, sector]} & sector 的全图二维 slot 登记，即
+\texttt{stateBits} 顺序的权威；接受 sectorKey 或 \texttt{All}\\
+\texttt{MSIntegral[s, n, a]} & normalized master $J_s(\bm n;\bm a)$，定义域为式
+\eqref{eq:MSIntegral-domain} 与 \eqref{eq:sector-bit-string-key}\\
+\texttt{MSBareIntegral[s, n, a]} & 同指标惰性裸积分 $\text{I}_s(\bm n;\bm a)$，即式
+\eqref{eq:package-bare-integral}；只用于显示与审计，不进递推、DE 或输运\\
+\texttt{MSIntegralDefinition[integral, context]} & 单对象查询：返回裸积分标签、精确
+$\cN_s$ 与惰性等式（第~\ref{sec:normalized-J}~节）\\
+\texttt{MSMasterIntegrals[context]} & 矩阵序 master 记录，每条附带
+\texttt{integral}/\texttt{bareIntegral}/\texttt{normalization}/\texttt{definition} 字段\\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{H/h 换基}}\\
+\texttt{MSHTohMatrix[nu, z, context]} & 式 \eqref{eq:package-H-to-h} 的局部
+$2\times2$ 矩阵 $T_{H\to h}$\\
+\texttt{MShToHMatrix[nu, z, context]} & 其逆 $T_{h\to H}$，式 \eqref{eq:package-h-to-H}\\
+\texttt{MSConvertBasis} & 局部二分量状态向量换基，或按 sector 的 slot registry 作
+Kronecker 积换整个状态向量；massless shared slot 作用为单位阵，积分对象换基 fail
+closed（第~\ref{sec:Hh-transform}~节）\\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{迭代约化与 contact}}\\
+\texttt{MSRecurrenceStep[integral, component, context]} & 单步把一个非零 shift 移向零，
+即式 \eqref{eq:package-lowering} 或 \eqref{eq:package-raising} 的一次作用；省略
+component 时自动取第一个非零 shift，越出发散层立即拒绝
+（第~\ref{sec:time-ibp-domain}~节）\\
+\texttt{MSReduce[expr, context, opts]} & 完整迭代约化：标量返回同序系数向量，列表与嵌套
+表保持形状并逐元素报告（第~\ref{sec:reduction-interface}~节）\\
+选项 \texttt{MasterBasis} & 约化输出使用的 master 顺序；必须是全部 context masters
+的排列，不得缺项或重复\\
+\texttt{MSContactMaps[context, sector]} & 逐 contact 事件的注入矩阵（按分量）、目标
+sector、目标 shift 与 normalization 比值，对应式
+\eqref{eq:R-as-CF}--\eqref{eq:contact-injection}\\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{解析矩阵与产物}}\\
+\texttt{MSFormulaMatrices[context, sector]} & 逐分量 $\text{M}_1$、$\text{M}_0$ 与
+energy letters，以及 sector 对角化 \texttt{U} 与 \texttt{UInverse}\\
+\texttt{MSDLogDE[context]} & 同序主积分与 block-triangular dlog connection、letters、
+residual 与认证状态；闭合检查内部调用 \texttt{MSReduce}（第~\ref{sec:dlog-tensor}~节）\\
+\texttt{MSFormulaData[context]} & 全 sector masters、逐 sector 递推 metadata 与完整
+dlog DE 的聚合\\
+\texttt{MSWriteFormulaArtifacts[context]} & 把聚合写成 \texttt{masters.wl}、
+\texttt{recurrence\_metadata.wl}、\texttt{dlog\_de.wl} 与 \texttt{manifest.wl}；缺省目录
+\texttt{results/madstree\_formula/}\allowbreak\texttt{run-UUID}，返回全部实际路径\\
+选项 \texttt{TimePowerRules} / \texttt{MSOutputDirectory} & 顶点时间幂只代入递推
+metadata，不替换解析 dlog DE / 产物输出目录\\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{边界与 blow-up 证书}}\\
+\texttt{MSBoundaryData[context, targetRules]} & 由 $k_0\to\infty$ Frobenius 公式生成与
+dlog masters 同序的有限起点向量；\texttt{WorkingPrecision} 缺省 200 位，不支持的场合
+fail closed\\
+\texttt{MSBoundaryChartCertificate[context, targetRules]} & 嵌套 blow-up、逐 sector
+theta 固化与 normal crossing 的机器证书；\texttt{RankOrder -> All} 检查全部严格图\\
+\texttt{MSBlowupCoordinate[i]}、\texttt{MSDampingEnergy[v]} & 证书与边界记录中出现的
+局部坐标 $x_i$ 与阻尼能量 $K_v$ 符号（第~\ref{sec:boundary-blowup}~节）\\
+选项 \texttt{RankOrder} / \texttt{BoundaryScale} / \texttt{BoundarySeriesOrder} & 能量
+rank 顺序 / 有限锚点尺度 / 边界级数截断
+（第~\ref{sec:infinity-boundary-transport}~节）\\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{数值输运、正规化与导出}}\\
+\texttt{MSNumericalSystem[de, spec]} & 校验数值替换与边界向量并构造数值 DE 数据\\
+\texttt{MSEvaluatePath[context, pointSequence, opts]} & 单阶段多点求值：边界初始化与
+整段输运在同一后端进程内完成（第~\ref{sec:infinity-boundary-transport}~节）\\
+\texttt{MSReconstructEpSeries[context, ep, pointSequence, opts]} & 共同正规化参数下的
+Laurent 重构：认证最低幂、自动采样与增量拟合
+（第~\ref{sec:regulator-certificate}~节）\\
+\texttt{MSExportEvaluationData[evaluation, opts]} & 把一次求值保存的普通点记录导出为
+CSV/JSON；临时途经点不导出\\
+数值与正规化选项 & \texttt{WorkingPrecision}、\texttt{TransportOrder}、
+\texttt{ReferenceTransportOrder}、\texttt{TargetRelativeError}、
+\texttt{FlintNDEPathPlanning}、\texttt{SingularityMode}、\texttt{ParameterRules}、
+\texttt{ParallelTaskCount}、\texttt{MessageLanguage}、\texttt{MaximumEpPower}、
+\texttt{EpGoalDigits}、\texttt{EpFitExtraOrder}、\texttt{EpFitOrderIncrement}、
+\texttt{EpFitMaximumRounds}、\texttt{EpSamplePoints}、\texttt{EpValidationPoints}、
+\texttt{EpInitialInternalMaximumPower}、\texttt{EpSampleAngleRange}；缺省值与门禁见
+第~\ref{sec:infinity-boundary-transport}、\ref{sec:regulator-certificate}~节\\
+选项 \texttt{ExportFormats} / \texttt{SignificantDigits} & 导出格式选择与导出有效位数\\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{运行环境}}\\
+\texttt{MSFlintNDEConfiguration[]} & 返回当前版本目录、内嵌 FlintNDE 相对路径与可用性\\
+\texttt{MSSetFlintNDERelativePath[path]} & 修改唯一的版本目录相对 FlintNDE 路径\\
+选项 \texttt{MSRuntimeDirectory} & 临时运行根；\texttt{Automatic} 写调用脚本旁的
+\texttt{results\_temp}，显式路径直接使用\\
+选项 \texttt{PythonExecutable} & 后端 Python 命令；缺省读 \texttt{MADSTREE\_PYTHON}
+环境变量，否则取 PATH 中的 \texttt{python}\\
+\end{longtable}
+\endgroup
+
+初始化本身不写任何文件。上表的四个解析产物文件只在 \texttt{MSWriteFormulaArtifacts}
+显式调用或数值入口启动后端之前写出与复用，实际路径放在返回值的
+\texttt{formulaArtifacts}；数值阶段只在函数内部构造局部参数化 DE，不覆盖这些正式解析
+产物。运行期临时件（\texttt{nde/} 的请求与日志、\texttt{cache/} 的成功缓存）位于
+\texttt{MSRuntimeDirectory} 指定的运行根，不写入程序包源码目录。随包 \texttt{Examples}
+的七个脚本覆盖主流程（第~\ref{sec:handbook-examples}~节）。
+
 \section{典型使用例子}
+\label{sec:handbook-examples}
 
 \subsection{单顶点函数族：定义、约化与统一点序列}
 
@@ -1833,7 +1977,11 @@ FlintNDE 局部幂对数入口区分可去、pole 与 log 发散，不按变量�
 \subsection{三顶点正规化：自动 Laurent 支撑与增量拟合}
 
 \texttt{Examples/06\_massless\_three\_vertex\_ep\_regularization.wl} 取
-$a_1=-1+\epsilon$、$a_2=a_3=1+\epsilon$，用户只指定 \texttt{MaximumEpPower->0}。程序先由符号边界和 DE
+$a_1=-1+\epsilon$、$a_2=a_3=1+\epsilon$，用户只指定 \texttt{MaximumEpPower->0}。进入数值前，
+例子先做三项符号自检：\texttt{MSReduce} 一次作用于两个相对主积分幂偏移 $-1$ 的积分之和并核对
+status/residual/remaining/singularLayers；以正规化幂作为 \texttt{timePower} 重新初始化 context
+后重复同一约化（系数显式带 $\epsilon$）；以及 \texttt{MSConvertBasis} 的 H/h 局部换基往返。
+之后程序先由符号边界和 DE
 认证最低幂，再自动选择生产/独立验证点；验证精度不足时只增加内部拟合阶数和新增点，并复用
 已计算值。坐标表只含不依赖 $\epsilon$ 的 $k_i$ 值，$a_i\to c_i+\epsilon$ 只写在
 \texttt{ParameterRules}；该例的认证最低幂是 $-1$，返回值同时含 $\epsilon^{-1}$ 极点系数与
