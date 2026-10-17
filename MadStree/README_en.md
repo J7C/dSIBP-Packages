@@ -1,9 +1,5 @@
 # MadStree
 
-This directory is upgraded from v0.15; interface changes are listed in
-[`MadStree-v0.17-en.md`](../../历史版本更新日志/MadStree-v0.17-en.md) (Chinese:
-[`MadStree-v0.17.md`](../../历史版本更新日志/MadStree-v0.17.md)).
-
 `MadStree` is a Wolfram Language package that works directly with the time-integral tensor formula. The input can be an ordered dS tree topology or a pure time-only incidence graph that does not integrate loop momenta; the output includes contact-reachable sectors, ordered master integrals, stepwise or full iterative reduction, a block-triangular dlog connection and automatic boundary certificates. The main algorithm does not generate general IBP systems and does not call Kira.
 
 The default conventions are
@@ -34,7 +30,7 @@ components return Acb values; divergent components return the text value `Infini
 ## Loading
 
 ```wl
-packageRoot = ".../package-MadStree/versions/MadStree-v0.17";
+packageRoot = "/absolute/path/to/MadStree";
 AppendTo[$Path, packageRoot];
 Needs["MadStree`"];
 ```

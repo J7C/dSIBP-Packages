@@ -2,10 +2,7 @@
 
 English version: [README_en.md](README_en.md)。
 
-本目录从 v0.15 升级；接口变化见
-[`../../历史版本更新日志/MadStree-v0.17.md`](../../历史版本更新日志/MadStree-v0.17.md)。
-
-`MadStree`` 是一个直接使用 time-integral tensor formula 的 Wolfram Language 程序包。输入可以是有序 dS 树拓扑，也可以是不积分 loop momentum 的纯 time-only incidence graph；输出包括 contact-reachable sectors、同序主积分、逐步或完整迭代约化、block-triangular dlog connection 和自动边界证书。主算法不生成一般 IBP 方程组，也不调用 Kira。
+`MadStree` 是一个直接使用 time-integral tensor formula 的 Wolfram Language 程序包。输入可以是有序 dS 树拓扑，也可以是不积分 loop momentum 的纯 time-only incidence graph；输出包括 contact-reachable sectors、同序主积分、逐步或完整迭代约化、block-triangular dlog connection 和自动边界证书。主算法不生成一般 IBP 方程组，也不调用 Kira。
 
 当前缺省 convention 为
 
@@ -34,7 +31,7 @@ NuConvention: "Positive"
 ## 加载
 
 ```wl
-packageRoot = ".../package-MadStree/versions/MadStree-v0.17";
+packageRoot = "/absolute/path/to/MadStree";
 AppendTo[$Path, packageRoot];
 Needs["MadStree`"];
 ```
