@@ -16,15 +16,22 @@
 from __future__ import annotations
 
 import sys
-import warnings
 from pathlib import Path
 
 from flint import acb, arb
 
 
-# 独立复制 example 时只需让该路径指向已安装源码或删除本段后使用正式安装。
+# 仓库内示例集中设置源码路径；安装 FlintNDE 后可删除本段并直接 import。
 EXAMPLE_DIR = Path(__file__).resolve().parent
+# 发布布局直接取上级目录；发展仓布局取 versions/ 下唯一的当前版本目录。
 PACKAGE_ROOT = (EXAMPLE_DIR / "..").resolve()
+if not (PACKAGE_ROOT / "flintnde").is_dir():
+    _version_dirs = sorted((PACKAGE_ROOT / "versions").glob("FlintNDE-*"))
+    if len(_version_dirs) != 1:
+        raise RuntimeError(
+            "expected exactly one versions/FlintNDE-* directory beside examples/"
+        )
+    PACKAGE_ROOT = _version_dirs[0].resolve()
 OUTPUT_DIR = EXAMPLE_DIR / "results" / "exponential_polynomial_boundary"
 if str(PACKAGE_ROOT) not in sys.path:
     sys.path.insert(0, str(PACKAGE_ROOT))
@@ -80,6 +87,8 @@ def main() -> None:
             },
         ]
     )
+
+    import warnings
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")

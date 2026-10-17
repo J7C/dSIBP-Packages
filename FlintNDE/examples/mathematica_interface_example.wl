@@ -8,9 +8,17 @@
 (*程序包加载与路径配置*)
 
 exampleDirectory = DirectoryName[$InputFileName];
-versionDirectory = ExpandFileName[FileNameJoin[{
-  exampleDirectory, ".."
-}]];
+(* 发布布局直接取上级目录；发展仓布局取 versions/ 下唯一的当前版本目录。 *)
+packageRoot = ExpandFileName[FileNameJoin[{exampleDirectory, ".."}]];
+If[! DirectoryQ[FileNameJoin[{packageRoot, "flintnde"}]],
+  versionDirs = FileNames["FlintNDE-*", FileNameJoin[{packageRoot, "versions"}]];
+  If[Length[versionDirs] != 1,
+    Print["expected exactly one versions/FlintNDE-* directory beside examples/"];
+    Abort[]
+  ];
+  packageRoot = ExpandFileName[First[versionDirs]]
+];
+versionDirectory = packageRoot;
 runtimeDirectory = FileNameJoin[{exampleDirectory, "results_temp"}];
 resultDirectory = FileNameJoin[{
   exampleDirectory, "results", "mathematica_interface_example"
