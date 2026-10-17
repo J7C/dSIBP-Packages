@@ -40,7 +40,7 @@ parameterProbeRules = {
 
 (* 顶点交换 symmetry 只在 reference P1=P2=-P0 时成立；独立 P1/P2 family 不得复用本配置。 *)
 caseInput = <|
-   "name" -> "phase2PureMassiveBubbleMinusMinus",
+   "name" -> "pureMassiveBubbleMinusMinus",
    "vertices" -> {
      <|"id" -> v1, "vertexType" -> "-", "externalLegEnergy" -> P0|>,
      <|"id" -> v2, "vertexType" -> "-", "externalLegEnergy" -> P0|>

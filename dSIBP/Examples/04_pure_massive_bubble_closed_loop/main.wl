@@ -47,7 +47,7 @@ parameterProbeRules = {
 (* ss11=Sqrt[k.k]=ks 与 P0 是 ds 的独立变量；P_pkg=P0，reference P1=P2=-P0。 *)
 (* J 只保存整数指标；a0=2 nu、b0=-2 nu 留在 metadata，并在 shrink/tree 投影时进入完整物理幂次。 *)
 caseInput = <|
-   "name" -> "phase2PureMassiveBubbleMinusMinus",
+   "name" -> "pureMassiveBubbleMinusMinus",
    "vertices" -> {
      <|"id" -> v1, "vertexType" -> "-", "externalLegEnergy" -> P0|>,
      <|"id" -> v2, "vertexType" -> "-", "externalLegEnergy" -> P0|>

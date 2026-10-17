@@ -15,7 +15,7 @@ Get[FileNameJoin[{exampleDir, "..", "load_current_package.wl"}], CharacterEncodi
 (* 图论圈数为零，因此缺省就是 timeOnly。这里仍显式写出模式，作为用户输入模板。
    p12 是 lineInput 中实际出现的独立无圈动量；程序只为其模长建立 sE1。 *)
 treeCaseInput = <|
-   "name" -> "020TreeTwoVertexPlusPlus",
+   "name" -> "treeTwoVertexPlusPlus",
    "vertices" -> {
      <|"id" -> v1, "vertexType" -> "+", "externalLegEnergy" -> E1|>,
      <|"id" -> v2, "vertexType" -> "+", "externalLegEnergy" -> E2|>
@@ -36,7 +36,7 @@ treeCaseInput = <|
 (* masslessFull 在 Private relation 层约到二维物理基；公开 stateBits 中整边共享一位。
    DSSeeds 与 tree 结果都使用同一个 time-only J，不需要私有状态选项。 *)
 atomicMasslessInput = <|
-   "name" -> "020AtomicMasslessTimeOnly",
+   "name" -> "atomicMasslessTimeOnly",
    "vertices" -> {
      <|"id" -> u1, "vertexType" -> "+", "externalLegEnergy" -> EM1|>,
      <|"id" -> u2, "vertexType" -> "+", "externalLegEnergy" -> EM2|>
