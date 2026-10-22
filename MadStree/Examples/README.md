@@ -27,5 +27,5 @@ Run products are written next to this directory, not into the package sources:
 - `results_temp/` — transient bridge input, logs and the successful result cache.
 - `results/` — durable formula artifacts and exported evaluation data.
 
-Both follow the directory contract described in `../README.md`, and both are regenerated on
+Both follow the directory contract described in `../README-cn.md`, and both are regenerated on
 demand; nothing in them is required as input by any example.

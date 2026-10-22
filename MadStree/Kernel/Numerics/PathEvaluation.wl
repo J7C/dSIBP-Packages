@@ -135,6 +135,34 @@ msEvaluationPointSequenceNormalize[
 ];
 
 
+(* Final-scan constants can still move on the infinity-to-first-point leg.
+   Retain external energies as coordinates until that leg has been transported. *)
+msEvaluationPromoteFixedEnergies[
+  normalizedInput_Association,
+  context_?MSContextQ
+] := Module[{energySymbols, energyRules, remainingRules},
+  energySymbols = Lookup[context["vertices"], "externalLegEnergy"];
+  energyRules = Select[
+    normalizedInput["parameterRules"], MemberQ[energySymbols, First[#]] &
+  ];
+  remainingRules = Select[
+    normalizedInput["parameterRules"], ! MemberQ[energySymbols, First[#]] &
+  ];
+  Join[normalizedInput, <|
+    "coordinateSymbols" -> Join[
+      normalizedInput["coordinateSymbols"], First /@ energyRules
+    ],
+    "points" -> Map[
+      Function[point, Join[point, <|
+        "coordinate" -> Join[point["coordinate"], energyRules]
+      |>]],
+      normalizedInput["points"]
+    ],
+    "parameterRules" -> remainingRules
+  |>]
+];
+
+
 (* 私有辅助外腿能量属于解析 dlog 坐标，但不进入公开 pointSequence；所有用户点自动取其物理目标 0。 *)
 msEvaluationAddAuxiliaryCoordinates[
   normalizedInput_Association,
@@ -482,6 +510,8 @@ MSEvaluatePath[
     context, de, pointSequence, parameterRules, {}, messageLanguage
   ];
   If[Head[normalizedInput] === Failure, Return[normalizedInput]];
+  normalizedInput = msEvaluationPromoteFixedEnergies[normalizedInput, context];
+  parameterRules = normalizedInput["parameterRules"];
   normalizedInput = msEvaluationAddAuxiliaryCoordinates[normalizedInput, context];
   coordinateSymbols = normalizedInput["coordinateSymbols"];
   points = normalizedInput["points"];
@@ -636,6 +666,8 @@ msPrepareEpEvaluationTask[
     context, de, pointSequence, parameterRules, {}, messageLanguage
   ];
   If[Head[normalizedInput] === Failure, Return[normalizedInput]];
+  normalizedInput = msEvaluationPromoteFixedEnergies[normalizedInput, context];
+  parameterRules = normalizedInput["parameterRules"];
   normalizedInput = msEvaluationAddAuxiliaryCoordinates[normalizedInput, context];
   coordinateSymbols = normalizedInput["coordinateSymbols"];
   points = normalizedInput["points"];

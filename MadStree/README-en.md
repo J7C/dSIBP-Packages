@@ -1,5 +1,9 @@
 # MadStree
 
+Chinese version: [README-cn.md](README-cn.md)。
+
+Changelog: [CHANGELOG-en.md](CHANGELOG-en.md) (Chinese: [CHANGELOG-cn.md](CHANGELOG-cn.md)).
+
 `MadStree` is a Wolfram Language package that works directly with the time-integral tensor formula. The input can be an ordered dS tree topology or a pure time-only incidence graph that does not integrate loop momenta; the output includes contact-reachable sectors, ordered master integrals, stepwise or full iterative reduction, a block-triangular dlog connection and automatic boundary certificates. The main algorithm does not generate general IBP systems and does not call Kira.
 
 The default conventions are
@@ -125,6 +129,15 @@ once through `ParameterRules`. The header and `ParameterRules` must be disjoint 
 every symbol required by the analytic DE and boundary. Missing or still nonnumeric values return a
 structured `Failure` listing the relevant symbols before a runtime directory is created or
 Python/FlintNDE is started. A transient row is `{{values...},"tmp"}`.
+
+External energies that remain constant on the user scan may be supplied through
+`ParameterRules`. Since the automatic infinity boundary moves all external energies,
+MadStree adds those energies to the internal path coordinates, transports from the actual
+boundary matching point to the first user point, and keeps their supplied values at all user
+points. The returned `coordinateSymbols` and point coordinates can therefore include these
+additional energies; the returned `parameterRules` no longer contains them. Listing every
+external energy explicitly in the header, with repeated constants in each row, also remains
+valid. Internal momenta, masses, and time powers are unchanged.
 
 `TransportOrder -> 80` is the production order: returned nodes, dense user points, segment
 endpoints, and regulator-fit samples come from the lower-order primary chain.
@@ -312,7 +325,7 @@ function returns `EvaluationExportFailed` and never reports the whole export as 
 overlong target remains a separate `RuntimePathTooLong`. `results/` contains durable user outputs,
 `results_temp/` contains requests, logs, and cache, and `test/results_test/` contains development
 test artifacts. Package source directories receive no runtime products.
-The full formulas, the massless `4 -> 2` quotient, contact shifts and the top-to-sub dlog derivation are in [Documentation/tree_formula_en_full.pdf](Documentation/tree_formula_en_full.pdf); the one-line table of every public symbol is in its "Public interface reference" section.
+The full formulas, the massless `4 -> 2` quotient, contact shifts and the top-to-sub dlog derivation are in [Documentation/handbook.pdf](Documentation/handbook.pdf); the one-line table of every public symbol is in its "Public interface reference" section.
 
 ## Examples
 
@@ -336,7 +349,7 @@ After deleting the existing `results/` and `results_temp/` trees, all seven exam
 
 The notation, the functionality and the public interfaces of this package were designed by the
 authors, who also specified the derivation recorded in
-[Documentation/tree_formula.pdf](Documentation/tree_formula.pdf) and audited every formula against
+[Documentation/handbook.pdf](Documentation/handbook.pdf) and audited every formula against
 it. The implementation was produced under their direction by a number of different agent programs
 driven by large language models, and the authors designed the verification tasks that establish the
 reliability of what those programs produced. Only the tasks that cross-check computed results are

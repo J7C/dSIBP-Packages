@@ -87,7 +87,7 @@ MadStree::moduleContractMissing = "MadStree module did not provide its required 
 
 Begin["`Private`"];
 
-$MadStreeVersion = "1.0";
+$MadStreeVersion = "1.01";
 $MadStreeKernelDirectory = DirectoryName[$InputFileName];
 
 $MadStreeModuleContracts = {

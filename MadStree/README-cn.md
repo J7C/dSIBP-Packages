@@ -1,6 +1,8 @@
 # MadStree
 
-English version: [README_en.md](README_en.md)。
+English version: [README-en.md](README-en.md)。
+
+更新日志：[CHANGELOG-cn.md](CHANGELOG-cn.md)；英文版 [CHANGELOG-en.md](CHANGELOG-en.md)。
 
 `MadStree` 是一个直接使用 time-integral tensor formula 的 Wolfram Language 程序包。输入可以是有序 dS 树拓扑，也可以是不积分 loop momentum 的纯 time-only incidence graph；输出包括 contact-reachable sectors、同序主积分、逐步或完整迭代约化、block-triangular dlog connection 和自动边界证书。主算法不生成一般 IBP 方程组，也不调用 Kira。
 
@@ -126,6 +128,12 @@ result = MSEvaluatePath[
 只拉回一次并把全部 exact 复参数点交给 FlintNDE；MadStree 不规划节点或绕行。普通值行缺省
 返回，`{{values...},"tmp"}` 是不进入最终保存结果的途经点；其它字符串标签一律拒绝。点结果
 携带 `coordinate`、`value`、`status` 和 `userIndex`。
+
+外能量可以在用户扫描中保持固定并由 `ParameterRules` 给出。由于自动无穷远边界会改变全部
+外能量，程序在内部把这些固定外能量补入路径坐标：从真实的边界匹配点输运到首个用户点，
+随后在各用户点保持给定值。返回的 `coordinateSymbols` 和逐点 `coordinate` 因而可能比输入
+表头多出这些外能量；返回的 `parameterRules` 不再含已补入坐标的外能量。用户也可以直接把
+全部外能量列进表头，并在各行重复固定值。内动量、质量和时间幂次参数的处理不变。
 
 `TransportOrder -> 80` 是生产阶数，返回的节点值、dense 用户点、段末值及后续正规化拟合均取
 低阶 primary chain。`ReferenceTransportOrder -> 104` 只运行高阶 reference chain，并用两链
@@ -330,7 +338,7 @@ MSExportEvaluationData[
 导出。`ExportFormats` 可取 `Automatic`、单个 `"CSV"`/`"JSON"` 或两者组成的列表；JSON 中
 本来就是字符串的精度/相对差字段原样 round-trip，不会再包一层字面引号。`results/` 只放用户正式结果，`results_temp/` 只放请求、日志和 cache，
 `test/results_test/` 只放开发测试产物；程序包源码目录不接收运行产物。
-完整公式、massless `4 -> 2` quotient、contact shift 与 top-to-sub dlog 推导见 [Documentation/tree_formula.pdf](Documentation/tree_formula.pdf)；全部公开符号的一句话总表见该手册「公开接口总表」一节。
+完整公式、massless `4 -> 2` quotient、contact shift 与 top-to-sub dlog 推导见 [Documentation/用户手册.pdf](Documentation/用户手册.pdf)；全部公开符号的一句话总表见该手册「公开接口总表」一节。
 
 ## Examples
 
@@ -358,7 +366,7 @@ Example 06 自适应检查为 `17/17`，使用 4 个生产点、2 个独立验�
 
 ## 开发与验证说明
 
-本程序包的记号、功能与对外接口由作者设计，[Documentation/tree_formula.pdf](Documentation/tree_formula.pdf)
+本程序包的记号、功能与对外接口由作者设计，[Documentation/用户手册.pdf](Documentation/用户手册.pdf)
 记录的推导亦由作者给出，实现由作者指导的多个大语言模型 agent 程序完成，每条公式都对照推导审阅过。
 可靠性由作者设计的验证任务确立；下面只列出交叉验证计算结果的任务及其参照数据来源。
 
