@@ -22,15 +22,21 @@ from flint import acb, acb_mat
 
 # 独立复制 example 时只需让该路径指向已安装源码或删除本段后使用正式安装。
 EXAMPLE_DIR = Path(__file__).resolve().parent
-# 发布布局直接取上级目录；发展仓布局取 versions/ 下唯一的当前版本目录。
+# 发布布局直接取上级目录；发展仓布局取 versions/ 下版本号最大的当前版本目录。
 PACKAGE_ROOT = (EXAMPLE_DIR / "..").resolve()
 if not (PACKAGE_ROOT / "flintnde").is_dir():
     _version_dirs = sorted((PACKAGE_ROOT / "versions").glob("FlintNDE-*"))
-    if len(_version_dirs) != 1:
-        raise RuntimeError(
-            "expected exactly one versions/FlintNDE-* directory beside examples/"
-        )
-    PACKAGE_ROOT = _version_dirs[0].resolve()
+    if not _version_dirs:
+        raise RuntimeError("no versions/FlintNDE-* directory beside examples/")
+
+    def _version_key(path: Path) -> tuple[int, ...]:
+        parts = path.name.removeprefix("FlintNDE-").lstrip("v").split(".")
+        try:
+            return tuple(int(part) for part in parts)
+        except ValueError:
+            raise RuntimeError(f"cannot parse version directory name: {path}") from None
+
+    PACKAGE_ROOT = max(_version_dirs, key=_version_key).resolve()
 DEFAULT_CONFIG_PATH = EXAMPLE_DIR / ".." / "config" / "qnm_u_unified_it0_3_it1_minus1.json"
 if str(PACKAGE_ROOT) not in sys.path:
     sys.path.insert(0, str(PACKAGE_ROOT))

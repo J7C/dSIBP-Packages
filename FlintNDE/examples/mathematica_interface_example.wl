@@ -8,15 +8,23 @@
 (*程序包加载与路径配置*)
 
 exampleDirectory = DirectoryName[$InputFileName];
-(* 发布布局直接取上级目录；发展仓布局取 versions/ 下唯一的当前版本目录。 *)
+(* 发布布局直接取上级目录；发展仓布局取 versions/ 下版本号最大的当前版本目录。 *)
 packageRoot = ExpandFileName[FileNameJoin[{exampleDirectory, ".."}]];
 If[! DirectoryQ[FileNameJoin[{packageRoot, "flintnde"}]],
-  versionDirs = FileNames["FlintNDE-*", FileNameJoin[{packageRoot, "versions"}]];
-  If[Length[versionDirs] != 1,
-    Print["expected exactly one versions/FlintNDE-* directory beside examples/"];
+  versionDirs =
+    FileNames["FlintNDE-*", FileNameJoin[{packageRoot, "versions"}]];
+  If[Length[versionDirs] == 0,
+    Print["no versions/FlintNDE-* directory beside examples/"];
     Abort[]
   ];
-  packageRoot = ExpandFileName[First[versionDirs]]
+  versionKey[name_] := Module[{parts},
+    parts = StringPadLeft[StringSplit[
+      StringReplace[StringDrop[name, StringLength["FlintNDE-"]],
+        StartOfString ~~ "v" -> ""], "."], 4, "0"];
+    StringRiffle[Join[parts,
+      ConstantArray["0000", Max[0, 4 - Length[parts]]]], "."]
+  ];
+  packageRoot = ExpandFileName[Last[SortBy[versionDirs, versionKey]]]
 ];
 versionDirectory = packageRoot;
 runtimeDirectory = FileNameJoin[{exampleDirectory, "results_temp"}];
