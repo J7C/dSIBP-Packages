@@ -44,3 +44,6 @@ Thumbs.db
 *.bak
 *.swp
 *~
+
+# C++ engine build output
+FlintNDE/engine/build/

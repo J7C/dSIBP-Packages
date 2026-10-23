@@ -24,6 +24,10 @@ MessageLanguage::usage =
   "MessageLanguage selects the language of runtime notices and diagnostics; the default is \"EN\" and \"CN\" selects Chinese.";
 SingularityMode::usage =
   "SingularityMode selects path treatment: \"Avoid\" (default) refuses a segment crossing a singularity, while \"SingularityJump\" explicitly permits a singularity jump whose multivalued branch must be confirmed by the user.";
+FlintNDEEngineEvaluateEpBatch::usage =
+  "FlintNDEEngineEvaluateEpBatch[{job1,...}] runs independent fixed-ep jobs on the bundled C++ engine with the certified direct user-node route. Each job contains ep, system, start, points and initialVector; the system must be a partialFraction system with a zero polynomial part. WorkingPrecisionDigits->200, ParallelTaskCount->12 and ResidueKernel->\"auto\" are the defaults. The engine treats every user point strictly as a node; a single job may also be given directly as an association.";
+ResidueKernel::usage =
+  "ResidueKernel selects the engine residue-multiplication kernel: \"auto\" (default, density-based), \"sparse\" or \"dense\".";
 
 FlintNDEBridgeError::usage = "FlintNDEBridgeError represents a Python bridge failure.";
 
@@ -47,7 +51,7 @@ Begin["`Private`"];
 (* ::Chapter:: *)
 (*程序包位置与通用参数*)
 
-$FlintNDEVersion = "1.0";
+$FlintNDEVersion = "1.01";
 $FlintNDEMathematicaDirectory = DirectoryName[$InputFileName];
 $FlintNDEVersionDirectory = DirectoryName[$FlintNDEMathematicaDirectory];
 $FlintNDEPythonModule = "flintnde.mathematica_bridge";
@@ -852,6 +856,540 @@ FlintNDEEvaluateEpBatch[___] := Failure[
     "MessageTemplate" ->
       "FlintNDEEvaluateEpBatch 收到的参数不符合调用形态，它需要一个 ep 任务列表，并可选地用 ParallelTaskCount 指定并行上限；请按 FlintNDEEvaluateEpBatch[{job1,...}, ParallelTaskCount->12] 传入任务列表后重试。 \
 FlintNDEEvaluateEpBatch received arguments that do not match its calling form, which needs a list of ep jobs and optionally a ParallelTaskCount setting for the parallel limit; call it as FlintNDEEvaluateEpBatch[{job1,...}, ParallelTaskCount->12] with a job list, then try again."|>
+];
+
+
+(* ::Chapter:: *)
+(*C++ 引擎固定 ep 批量求值*)
+
+(* 实现思路：本入口不经 Python bridge，直接以参数列表 RunProcess 启动版本内
+   engine/build 下的 flintnde_engine；系统必须是多项式部分恒为零的
+   partialFraction 精确系统，极点 p 编码为 alpha=p、beta=-1 的 dlog letter，
+   起点与用户点严格作为节点走 direct user-node 认证双链。 *)
+
+Options[FlintNDEEngineEvaluateEpBatch] = {
+  ParallelTaskCount -> 12,
+  "Engine" -> Automatic,
+  "EngineLibraryPath" -> Automatic,
+  "WorkDirectory" -> Automatic,
+  "WorkingPrecisionDigits" -> 200,
+  "PrimaryOrder" -> 40,
+  "ReferenceOrder" -> 48,
+  "TargetRelativeError" -> "1e-30",
+  ResidueKernel -> "auto",
+  MessageLanguage -> "EN"
+};
+
+
+(* ::Section::Closed:: *)
+(*选项与路径规整*)
+
+
+flintNDEEngineExecutableName[] :=
+  If[$OperatingSystem === "Windows", "flintnde_engine.exe", "flintnde_engine"];
+
+
+flintNDEResolveEngine[Automatic] := FileNameJoin[
+  {$FlintNDEVersionDirectory, "engine", "build", flintNDEEngineExecutableName[]}
+];
+flintNDEResolveEngine[path_String] := ExpandFileName[path];
+flintNDEResolveEngine[other_] := Failure[
+  "InvalidEngineExecutable",
+  <|"value" -> other,
+    "MessageTemplate" ->
+      "Engine 选项只接受 Automatic 或引擎可执行文件路径字符串，当前收到的是其它类型的无效值；请把 Engine 改为 Automatic（使用 engine/build 内已构建的引擎）或有效的可执行文件路径后重试。 \
+The Engine option accepts only Automatic or an executable path string, and the given value is of another, invalid kind; set Engine to Automatic (to use the engine built under engine/build) or a valid executable path and try again."|>
+];
+
+
+flintNDEResolveEngineLibraryPath[Automatic] := None;
+flintNDEResolveEngineLibraryPath[path_String] := path;
+flintNDEResolveEngineLibraryPath[other_] := Failure[
+  "InvalidEngineLibraryPath",
+  <|"value" -> other,
+    "MessageTemplate" ->
+      "EngineLibraryPath 选项只接受 Automatic 或包含 FLINT 运行库的目录路径字符串，当前收到的是其它类型的无效值；请把 EngineLibraryPath 改为 Automatic（沿用当前 PATH）或有效的运行库目录后重试。 \
+The EngineLibraryPath option accepts only Automatic or a directory path string containing the FLINT runtime, and the given value is of another, invalid kind; set EngineLibraryPath to Automatic (keeping the current PATH) or a valid runtime directory and try again."|>
+];
+
+
+flintNDENormalizeResidueKernel[value_] := If[
+  MemberQ[{"auto", "sparse", "dense"}, value],
+  value,
+  Failure[
+    "InvalidResidueKernel",
+    <|"value" -> value, "acceptedValues" -> {"auto", "sparse", "dense"},
+      "MessageTemplate" ->
+        "ResidueKernel 只接受 \"auto\"、\"sparse\" 或 \"dense\"，当前值不在其中；请改用这三个值之一后重试。 \
+ResidueKernel accepts only \"auto\", \"sparse\" or \"dense\", and the current value is none of them; use one of these three values and try again."|>
+  ]
+];
+
+
+(* ::Section::Closed:: *)
+(*exact 标量与系统编码*)
+
+
+(* 引擎只接受 exact 有理（含 Q(i) 复有理）标量；近似实数与符号值结构化拒绝。
+   注意 WL 无内建 RationalQ，精确有理判定用 Head === Rational。 *)
+flintNDEEngineExactRationalQ[value_] :=
+  IntegerQ[value] || Head[value] === Rational;
+
+
+flintNDEEngineScalarRecord[value_] := Module[{real, imag},
+  real = Re[value]; imag = Im[value];
+  If[! flintNDEEngineExactRationalQ[real] ||
+     ! flintNDEEngineExactRationalQ[imag],
+    Return[Failure[
+      "EngineInexactScalar",
+      <|"value" -> value,
+        "MessageTemplate" ->
+          "引擎入口的标量必须是精确有理数（可含 Q(i) 复有理），当前值含近似实数或符号成分；请把该标量改写为精确值后重试。 \
+Scalars for the engine entry must be exact rationals (Gaussian rationals allowed), but the given value contains approximate or symbolic parts; rewrite the scalar exactly and try again."|>
+    ]]
+  ];
+  <|"real" -> ToString[InputForm[real]], "imag" -> ToString[InputForm[imag]]|>
+];
+
+
+(* segments[].start 按实标量文本读取；复数起点结构化拒绝并指回规划路线。 *)
+flintNDEEngineStartText[value_] := If[
+  flintNDEEngineExactRationalQ[value],
+  ToString[InputForm[value]],
+  Failure[
+    "EngineRealStartRequired",
+    <|"value" -> value,
+      "MessageTemplate" ->
+        "引擎批量入口的 start 必须是精确有理实数（引擎按实标量文本读取起点），当前起点不是；请给出精确有理实起点，或改用 FlintNDEEvaluateEpBatch 走支持复起点的规划路线后重试。 \
+The start of an engine batch job must be an exact rational real, because the engine reads the start as a real scalar text, and the given start is not; provide an exact rational real start, or use FlintNDEEvaluateEpBatch with the planning route that supports complex starts, and try again."|>
+  ]
+];
+
+
+(* 单个极点的 dlog letter：alpha=p、beta=-1；p=0 无法编码，fail closed。
+   独立命名函数承载 Return，避免纯函数经 MapThread 求值时 Return 不剥离。 *)
+flintNDEEnginePoleLetter[residue_, pole_] := Module[{alpha, residueRecords, failure},
+  alpha = flintNDEEngineScalarRecord[pole];
+  If[Head[alpha] === Failure, Return[alpha]];
+  If[alpha["real"] === "0" && alpha["imag"] === "0",
+    Return[Failure[
+      "EngineZeroPoleUnrepresentable",
+      <|"pole" -> pole,
+        "MessageTemplate" ->
+          "引擎把极点 p 编码为 alpha=p、beta=-1 的 dlog letter，p=0 时 alpha=0 会被引擎按零 letter 拒绝；含零极点的系统请改用 FlintNDEEvaluateEpBatch 的 Python 路线后重试。 \
+The engine encodes a pole p as the dlog letter alpha=p, beta=-1, and p=0 would give alpha=0, which the engine rejects as a vanishing letter; for systems with a zero pole use the Python route of FlintNDEEvaluateEpBatch and try again."|>
+    ]]
+  ];
+  residueRecords = Map[flintNDEEngineScalarRecord, residue, {2}];
+  failure = FirstCase[residueRecords, _Failure, None, Infinity];
+  If[failure =!= None, Return[failure]];
+  <|
+    "alpha" -> alpha,
+    "beta" -> <|"real" -> "-1", "imag" -> "0"|>,
+    "residue" -> residueRecords
+  |>
+];
+
+
+(* partialFraction 系统 -> 引擎 dlog letters：极点 p 记 alpha=p、beta=-1。 *)
+flintNDEEngineSystemLetters[system_Association] := Module[
+  {polynomial, residues, poles, letters, failure},
+  If[Lookup[system, "type", None] =!= "partialFraction",
+    Return[Failure[
+      "EngineSystemNotSupported",
+      <|"systemType" -> Lookup[system, "type", None],
+        "MessageTemplate" ->
+          "引擎批量入口只接受 FlintNDEPartialFractionSystem 构造的 partialFraction 系统，当前系统不是该类型；请改用 FlintNDEPartialFractionSystem 构造系统，或改用 FlintNDEEvaluateEpBatch 走通用有理矩阵路线后重试。 \
+The engine batch entry accepts only a partialFraction system built by FlintNDEPartialFractionSystem, and the given system is not of that type; build the system with FlintNDEPartialFractionSystem, or use FlintNDEEvaluateEpBatch with the general rational-matrix route, and try again."|>
+    ]]
+  ];
+  polynomial = Lookup[system, "polynomialCoefficients", {}];
+  If[! AllTrue[Flatten[polynomial], # === 0 &],
+    Return[Failure[
+      "EnginePolynomialPartMustVanish",
+      <|"polynomialCoefficients" -> polynomial,
+        "MessageTemplate" ->
+          "引擎批量入口要求系统的多项式部分全为零，因为引擎只实现 A(x)=Sum Rj/(x-pj) 的直接用户节点输运；当前系统含非零多项式系数；请改用 FlintNDEEvaluateEpBatch 走带规划的执行路线后重试。 \
+The engine batch entry requires a vanishing polynomial part, because the engine implements direct user-node transport for A(x)=Sum Rj/(x-pj) only, while the system has nonzero polynomial coefficients; use FlintNDEEvaluateEpBatch with the planned execution route and try again."|>
+    ]]
+  ];
+  residues = Lookup[system, "residues", {}];
+  poles = Lookup[system, "poles", {}];
+  If[residues === {} || poles === {},
+    Return[Failure[
+      "EngineResiduesRequired",
+      <|"MessageTemplate" ->
+        "引擎批量入口要求系统至少带一个极点，多项式部分与极点同时为零的系统没有可输运内容；请检查系统构造或改用 FlintNDEEvaluateEpBatch 后重试。 \
+The engine batch entry requires at least one pole, because a system whose polynomial part and pole list both vanish has nothing to transport; check the system construction or use FlintNDEEvaluateEpBatch and try again."|>
+    ]]
+  ];
+  If[Length[residues] =!= Length[poles],
+    Return[Failure[
+      "EnginePoleResidueLengthMismatch",
+      <|"residueCount" -> Length[residues], "poleCount" -> Length[poles],
+        "MessageTemplate" ->
+          "留数矩阵个数与极点个数不相等，二者无法一一配对；请把系统改用 FlintNDEPartialFractionSystem 重新构造后重试。 \
+The number of residue matrices differs from the number of poles, so they cannot be paired one-to-one; rebuild the system with FlintNDEPartialFractionSystem and try again."|>
+    ]]
+  ];
+  letters = MapThread[flintNDEEnginePoleLetter, {residues, poles}];
+  failure = FirstCase[letters, _Failure, None];
+  If[failure =!= None, Return[failure]];
+  letters
+];
+
+
+(* ::Section::Closed:: *)
+(*job 到引擎请求的转换*)
+
+
+flintNDEEngineJobRequest[job_Association, options_Association, jobIndex_Integer] := Module[
+  {required, missing, letters, start, points, pointRecords, initialVector,
+   initialRecords, residueMatrices, dimension, failure},
+  required = {"ep", "system", "start", "points", "initialVector"};
+  missing = Select[required, ! KeyExistsQ[job, #] &];
+  If[missing =!= {},
+    Return[Failure["InvalidEngineEpJob", <|"missingKeys" -> missing, "job" -> job,
+      "MessageTemplate" ->
+        "某个引擎 ep 任务缺少必需字段（ep、system、start、points、initialVector 中的一项或多项）；请为每个任务补齐全部必需字段后重试。 \
+An engine ep job is missing one or more required fields among ep, system, start, points and initialVector; complete every required field for each job and try again."|>]]
+  ];
+  letters = flintNDEEngineSystemLetters[job["system"]];
+  If[Head[letters] === Failure, Return[letters]];
+  start = flintNDEEngineStartText[job["start"]];
+  If[Head[start] === Failure, Return[start]];
+  points = job["points"];
+  If[! ListQ[points] || points === {},
+    Return[Failure["EngineJobPointsRequired", <|
+      "MessageTemplate" ->
+        "引擎 ep 任务的 points 必须是非空的用户点列表；请提供至少一个精确用户点后重试。 \
+The points of an engine ep job must be a nonempty list of user points; provide at least one exact user point and try again."|>]]
+  ];
+  pointRecords = flintNDEEngineScalarRecord /@ points;
+  failure = FirstCase[pointRecords, _Failure, None, Infinity];
+  If[failure =!= None, Return[failure]];
+  initialVector = job["initialVector"];
+  If[! ListQ[initialVector] || initialVector === {},
+    Return[Failure["EngineJobInitialVectorRequired", <|
+      "MessageTemplate" ->
+        "引擎 ep 任务的 initialVector 必须是非空的精确标量列表；请提供与系统同维的初始向量后重试。 \
+The initialVector of an engine ep job must be a nonempty list of exact scalars; provide an initial vector of the system dimension and try again."|>]]
+  ];
+  initialRecords = flintNDEEngineScalarRecord /@ initialVector;
+  failure = FirstCase[initialRecords, _Failure, None, Infinity];
+  If[failure =!= None, Return[failure]];
+  residueMatrices = job["system"]["residues"];
+  dimension = Length[First[residueMatrices]];
+  If[Length[initialRecords] =!= dimension,
+    Return[Failure["EngineBoundaryDimensionMismatch", <|
+      "dimension" -> dimension, "vectorLength" -> Length[initialRecords],
+      "MessageTemplate" ->
+        "initialVector 的长度与系统维数不一致；请把初始向量调整为与留数矩阵同维后重试。 \
+The initialVector length does not match the system dimension; resize the initial vector to the dimension of the residue matrices and try again."|>]]
+  ];
+  <|
+    "schema" -> "madstree_flintnde_evaluate_v1",
+    "backendPackagePath" -> $FlintNDEVersionDirectory,
+    "masterDigest" -> "FlintNDE-engine-wolfram-" <> IntegerString[jobIndex, 4],
+    "dimension" -> dimension,
+    "segments" -> {<|
+      "start" -> start,
+      "points" -> pointRecords,
+      "letters" -> letters,
+      "fromUserIndex" -> 0,
+      "userIndices" -> Range[Length[points]]
+    |>},
+    "pathPlanning" -> False,
+    "singularityMode" -> "avoid",
+    "boundary" -> <|"kind" -> "finite", "values" -> initialRecords|>,
+    "workingPrecisionDigits" -> options["WorkingPrecisionDigits"],
+    "primaryOrder" -> options["PrimaryOrder"],
+    "referenceOrder" -> options["ReferenceOrder"],
+    "targetRelativeError" -> options["TargetRelativeError"],
+    "certificationMode" -> "certified",
+    "messageLanguage" -> options[MessageLanguage],
+    "columnVectorConvention" -> "Y'=A(s)Y",
+    "dlogStatus" -> "certifiedByFormulaChecks"
+  |>
+];
+
+
+(* ::Section::Closed:: *)
+(*引擎进程调用*)
+
+
+flintNDEInvokeEngine[
+  request_Association,
+  enginePath_String,
+  libraryPath_,
+  workers_Integer,
+  residueKernel_String,
+  workDirectoryOption_
+] := Module[
+  {workDirectory, bridgeDirectory, token, requestFile, outputFile, logFile,
+   pathFailure, requestWrite, command, baseEnvironment, environment, separator,
+   runOptions, processResult, exitCode, standardOutput, standardError, logText,
+   launchFailure, outputLoad},
+  workDirectory = flintNDEResolveWorkDirectory[workDirectoryOption];
+  If[Head[workDirectory] === Failure, Return[workDirectory]];
+  bridgeDirectory = FileNameJoin[{workDirectory, "bridge"}];
+  token = flintNDECreateToken[];
+  requestFile = FileNameJoin[{bridgeDirectory, "i-" <> token <> ".json"}];
+  outputFile = FileNameJoin[{bridgeDirectory, "o-" <> token <> ".json"}];
+  logFile = FileNameJoin[{bridgeDirectory, "l-" <> token <> ".txt"}];
+  pathFailure = flintNDEPathLengthFailure[
+    {enginePath, workDirectory, bridgeDirectory, requestFile, outputFile, logFile}
+  ];
+  If[Head[pathFailure] === Failure, Return[pathFailure]];
+  If[! DirectoryQ[bridgeDirectory],
+    Quiet@Check[
+      CreateDirectory[bridgeDirectory, CreateIntermediateDirectories -> True],
+      Return[Failure["WorkDirectoryCreationFailed", <|"path" -> bridgeDirectory,
+        "MessageTemplate" ->
+          "无法创建 bridge 运行目录，可能是路径无效或没有写权限；请检查该路径的权限，或通过 WorkDirectory 指定一个可写目录后重试。 \
+The bridge runtime directory could not be created, possibly because the path is invalid or not writable; check the permissions of this path or point WorkDirectory at a writable directory, then try again."|>]]
+    ]
+  ];
+  requestWrite = Quiet@Check[
+    Export[requestFile, flintNDEEncode[request], "JSON"], $Failed];
+  If[requestWrite === $Failed || ! FileExistsQ[requestFile],
+    Return[Failure["EngineRuntimeInputWriteFailed", <|
+      "path" -> requestFile, "pathLength" -> StringLength[requestFile],
+      "MessageTemplate" ->
+        "引擎请求文件写入失败，可能是运行目录不可写或磁盘已满；请检查所列路径的写权限与磁盘剩余空间后重试。 \
+Writing the engine request file failed, possibly because the runtime directory is not writable or the disk is full; check write permission for the listed path and the free disk space, then try again."|>]]
+  ];
+  environment = None;
+  If[StringQ[libraryPath],
+    separator = If[$OperatingSystem === "Windows", ";", ":"];
+    (* GetEnvironment[] 返回规则列表；转为 Association 后合并，并剔除
+       MSYS 的 "=C:" 一类奇异键。 *)
+    baseEnvironment = KeySelect[
+      Association[GetEnvironment[]], ! StringStartsQ[#, "="] &];
+    environment = Join[
+      baseEnvironment,
+      <|"PATH" ->
+        libraryPath <> separator <> Lookup[baseEnvironment, "PATH", ""]|>
+    ]
+  ];
+  command = {enginePath, requestFile, outputFile,
+    "--workers", ToString[workers], "--residues", residueKernel};
+  runOptions = {ProcessDirectory -> workDirectory};
+  If[environment =!= None,
+    runOptions = Append[runOptions, ProcessEnvironment -> environment]];
+  launchFailure = False;
+  processResult = Quiet@Check[
+    RunProcess[command, All, Sequence @@ runOptions],
+    launchFailure = True;
+    $Failed
+  ];
+  If[AssociationQ[processResult],
+    exitCode = Lookup[processResult, "ExitCode", $Failed];
+    standardOutput = Lookup[processResult, "StandardOutput", ""];
+    standardError = Lookup[processResult, "StandardError", ""],
+    launchFailure = True;
+    exitCode = $Failed;
+    standardOutput = "";
+    standardError = ""
+  ];
+  logText = StringRiffle[
+    Select[{standardOutput, standardError}, StringLength[#] > 0 &], "\n"];
+  Quiet@Check[Export[logFile, logText, "Text", CharacterEncoding -> "UTF-8"], Null];
+  If[launchFailure,
+    Return[Failure["EngineLaunchFailed", <|"command" -> command, "log" -> logText,
+      "MessageTemplate" ->
+        "引擎进程未能启动，通常是 Engine 指向的可执行文件不存在或不可执行；请先在版本目录的 engine/ 内完成构建，或用 Engine 选项指向已构建的 flintnde_engine 后重试。 \
+The engine process could not be started, usually because the executable given by Engine does not exist or is not executable; build it inside engine/ of the version directory first, or point the Engine option at a built flintnde_engine, then try again."|>]]
+  ];
+  If[! FileExistsQ[outputFile],
+    Message[FlintNDEBridgeError::outputMissing, logText];
+    Return[Failure["EngineOutputMissing", <|
+      "exitCode" -> exitCode, "log" -> logText, "requestFile" -> requestFile,
+      "MessageTemplate" ->
+        "引擎进程已退出但没有生成输出文件；请查看进程日志，确认引擎构建完整、其运行库可通过 PATH 或 EngineLibraryPath 找到后重试。 \
+The engine process exited without creating its output file; see the process log, confirm that the engine build is complete and that its runtime libraries are reachable through PATH or EngineLibraryPath, then try again."|>]]
+  ];
+  outputLoad = Quiet@Check[Import[outputFile, "RawJSON"], $Failed];
+  If[outputLoad === $Failed || ! AssociationQ[outputLoad],
+    Return[Failure["EngineOutputInvalid", <|
+      "path" -> outputFile, "log" -> logText,
+      "MessageTemplate" ->
+        "引擎输出文件存在但无法作为 JSON 读取，内容可能已损坏；请检查该文件内容与进程日志后重试。 \
+The engine output file exists but cannot be read as JSON and may be corrupted; inspect the file contents and the process log and try again."|>]]
+  ];
+  Quiet[DeleteFile /@ Select[{requestFile, outputFile, logFile}, FileExistsQ]];
+  outputLoad
+];
+
+
+(* ::Section:: *)
+(*结果解码与公开入口*)
+
+
+flintNDEDecodeEngineResult[result_Association, digits_Integer] := Module[
+  {decoded, segments, pointValues},
+  decoded = result;
+  If[KeyExistsQ[result, "finalValues"],
+    decoded = Join[decoded, <|
+      "finalValueRecords" -> result["finalValues"],
+      "finalValues" -> flintNDEDecodeVector[result["finalValues"], digits]
+    |>]
+  ];
+  segments = Lookup[result, "segments", {}];
+  If[segments =!= {} && AssociationQ[First[segments]],
+    pointValues = Lookup[First[segments], "pointValues", {}];
+    decoded = Join[decoded, <|"pointValues" -> Map[
+      Join[#, <|
+        "valueRecords" -> #["values"],
+        "values" -> flintNDEDecodeVector[#["values"], digits]
+      |>] &,
+      pointValues
+    ]|>]
+  ];
+  decoded
+];
+
+
+FlintNDEEngineEvaluateEpBatch[jobs_List, opts : OptionsPattern[]] := Module[
+  {unknownOptions, parallelCount, language, kernel, enginePath, libraryPath,
+   workingDigits, primaryOrder, referenceOrder, targetError, optionValues,
+   requests, failure, request, result, digits, decodedResults},
+  unknownOptions = flintNDEUnknownOptionNames[
+    {opts}, Options[FlintNDEEngineEvaluateEpBatch]];
+  If[unknownOptions =!= {},
+    Return[Failure["UnknownOption",
+      <|"function" -> "FlintNDEEngineEvaluateEpBatch", "options" -> unknownOptions,
+        "MessageTemplate" ->
+          "FlintNDEEngineEvaluateEpBatch 收到了其当前 Options 之外的未知选项；请删除多余规则或改用 FlintNDEEngineEvaluateEpBatch 的合法选项后重试。 \
+FlintNDEEngineEvaluateEpBatch received option names that are not in its current Options; remove the extra rules or use only valid FlintNDEEngineEvaluateEpBatch options and try again."|>]]
+  ];
+  If[jobs === {},
+    Return[Failure["EngineEpJobListEmpty", <|
+      "MessageTemplate" ->
+        "FlintNDEEngineEvaluateEpBatch 收到了空的任务列表；请至少提供一个包含 ep、system、start、points 和 initialVector 的任务后重试。 \
+FlintNDEEngineEvaluateEpBatch received an empty job list; provide at least one job containing ep, system, start, points and initialVector, then try again."|>]]
+  ];
+  failure = FirstCase[jobs, Except[_Association], None];
+  If[failure =!= None,
+    Return[Failure["EngineEpJobAssociationRequired", <|"value" -> failure,
+      "MessageTemplate" ->
+        "每个 ep 任务必须是一个含 ep、system、start、points、initialVector 字段的关联，当前任务列表中存在非关联元素；请把任务列表元素改为关联形式后重试。 \
+Each ep job must be an association with the ep, system, start, points and initialVector fields, but the job list contains a non-association element; convert the job-list elements to associations and try again."|>]]
+  ];
+  parallelCount = OptionValue[ParallelTaskCount];
+  If[! IntegerQ[parallelCount] || parallelCount < 1,
+    Return[Failure["ParallelTaskCountPositiveIntegerRequired",
+      <|"value" -> parallelCount, "default" -> 12,
+        "MessageTemplate" ->
+          "ParallelTaskCount 必须是正整数（缺省为 12），当前值不是；请把 ParallelTaskCount 改为不小于 1 的整数后重试。 \
+ParallelTaskCount must be a positive integer (default 12), and the current value is not; set ParallelTaskCount to an integer of at least 1 and try again."|>]]
+  ];
+  language = flintNDENormalizeLanguage[OptionValue[MessageLanguage]];
+  If[Head[language] === Failure, Return[language]];
+  kernel = flintNDENormalizeResidueKernel[OptionValue[ResidueKernel]];
+  If[Head[kernel] === Failure, Return[kernel]];
+  workingDigits = OptionValue["WorkingPrecisionDigits"];
+  If[! IntegerQ[workingDigits] || workingDigits < 20,
+    Return[Failure["EngineWorkingPrecisionDigitsRequired", <|
+      "value" -> workingDigits, "minimum" -> 20,
+      "MessageTemplate" ->
+        "WorkingPrecisionDigits 必须是不小于 20 的正整数（引擎按该位数同时确定输出记录位数），当前值不是；请调整 WorkingPrecisionDigits 后重试。 \
+WorkingPrecisionDigits must be a positive integer of at least 20 (the engine also uses it for its output records), and the current value is not; adjust WorkingPrecisionDigits and try again."|>]]
+  ];
+  primaryOrder = OptionValue["PrimaryOrder"];
+  referenceOrder = OptionValue["ReferenceOrder"];
+  If[! IntegerQ[primaryOrder] || primaryOrder < 1 ||
+     ! IntegerQ[referenceOrder] || referenceOrder <= primaryOrder,
+    Return[Failure["EngineOrdersInvalid", <|
+      "primaryOrder" -> primaryOrder, "referenceOrder" -> referenceOrder,
+      "MessageTemplate" ->
+        "PrimaryOrder 必须是正整数，且 ReferenceOrder 必须是更大的整数（认证双链要求参考阶数高于主阶数）；请调整两个阶数后重试。 \
+PrimaryOrder must be a positive integer and ReferenceOrder a strictly larger one, as the certified double chain requires a higher reference order; adjust the two orders and try again."|>]]
+  ];
+  targetError = OptionValue["TargetRelativeError"];
+  If[! StringQ[targetError],
+    Return[Failure["EngineTargetRelativeErrorString", <|"value" -> targetError,
+      "MessageTemplate" ->
+        "TargetRelativeError 必须是引擎可直接解析的十进制文本（如 \"1e-30\"），当前值不是字符串；请把目标相对误差写成字符串后重试。 \
+TargetRelativeError must be decimal text the engine can parse directly, such as \"1e-30\", and the given value is not a string; write the target relative error as a string and try again."|>]]
+  ];
+  enginePath = flintNDEResolveEngine[OptionValue["Engine"]];
+  If[Head[enginePath] === Failure, Return[enginePath]];
+  libraryPath = flintNDEResolveEngineLibraryPath[OptionValue["EngineLibraryPath"]];
+  If[Head[libraryPath] === Failure, Return[libraryPath]];
+  If[! FileExistsQ[enginePath],
+    Return[Failure["EngineExecutableMissing", <|
+      "path" -> enginePath,
+      "MessageTemplate" ->
+        "未找到 FlintNDE 引擎可执行文件；请先在版本目录的 engine/ 内用 make 构建 flintnde_engine，或用 Engine 选项指向已构建的可执行文件后重试。 \
+The FlintNDE engine executable was not found; build flintnde_engine with make inside engine/ of the version directory first, or point the Engine option at a built executable, and try again."|>]]
+  ];
+  optionValues = <|
+    "WorkingPrecisionDigits" -> workingDigits,
+    "PrimaryOrder" -> primaryOrder,
+    "ReferenceOrder" -> referenceOrder,
+    "TargetRelativeError" -> targetError,
+    MessageLanguage -> language
+  |>;
+  requests = MapIndexed[
+    flintNDEEngineJobRequest[#1, optionValues, First[#2]] &,
+    jobs
+  ];
+  failure = FirstCase[requests, _Failure, None];
+  If[failure =!= None, Return[failure]];
+  request = <|
+    "schema" -> "madstree_flintnde_ep_batch_v1",
+    "parallelTaskCount" -> parallelCount,
+    "messageLanguage" -> language,
+    "tasks" -> MapThread[
+      <|"ep" -> #1["ep"], "request" -> #2|> &, {jobs, requests}]
+  |>;
+  Print[If[language === "CN",
+    "FlintNDE 引擎：不同 ep 任务的缺省并行数为 12；本次请求 " <>
+      ToString[parallelCount] <> "，实际并行数为 " <>
+      ToString[Min[parallelCount, Length[jobs]]] <>
+      "，留数内核 " <> kernel <> "。任务完成后自动续交队列。",
+    "FlintNDE engine: default ep-task parallelism is 12; requested " <>
+      ToString[parallelCount] <> ", effective " <>
+      ToString[Min[parallelCount, Length[jobs]]] <>
+      ", residue kernel " <> kernel <>
+      ". Queued jobs start automatically as workers finish."
+  ]];
+  result = flintNDEInvokeEngine[
+    request, enginePath, libraryPath, parallelCount, kernel,
+    OptionValue["WorkDirectory"]
+  ];
+  If[! AssociationQ[result], Return[result]];
+  digits = workingDigits;
+  decodedResults = MapThread[
+    Function[{item, job},
+      Module[{task},
+        task = Lookup[item, "result", None];
+        If[AssociationQ[task] && task["status"] === "success",
+          Join[item, <|
+            "ep" -> job["ep"],
+            "result" -> flintNDEDecodeEngineResult[task, digits]
+          |>],
+          Join[item, <|"ep" -> job["ep"]|>]
+        ]
+      ]
+    ],
+    {Lookup[result, "results", {}], jobs}
+  ];
+  Join[result, <|"results" -> decodedResults|>]
+];
+
+
+FlintNDEEngineEvaluateEpBatch[job_Association, opts : OptionsPattern[]] :=
+  FlintNDEEngineEvaluateEpBatch[{job}, opts];
+
+
+FlintNDEEngineEvaluateEpBatch[___] := Failure[
+  "InvalidEngineEpBatchArguments",
+  <|"usage" -> "FlintNDEEngineEvaluateEpBatch[{job1,...}]",
+    "MessageTemplate" ->
+      "FlintNDEEngineEvaluateEpBatch 收到的参数不符合调用形态，它需要一个 ep 任务列表（单个任务也可直接给关联本身）；请按 FlintNDEEngineEvaluateEpBatch[{job1,...}] 传入任务列表后重试。 \
+FlintNDEEngineEvaluateEpBatch received arguments that do not match its calling form, which needs a list of ep jobs (a single job may also be given as the association itself); call it as FlintNDEEngineEvaluateEpBatch[{job1,...}] with a job list and try again."|>
 ];
 
 

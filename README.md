@@ -7,7 +7,7 @@ spacetime: **MadStree**, **dSIBP** and **FlintNDE**.
 | --- | --- | --- |
 | [dSIBP](dSIBP/) | Wolfram Language | Topology-driven generation of dS IBP relations, parameter-derivative seeds, sector metadata and backend-neutral reduction input for graphs with any number of loops, any topology and mixed massive/massless propagators. |
 | [MadStree](MadStree/) | Wolfram Language | Assembly of the dS tree and time-only formula: master integrals, recurrence metadata, the analytic `dlog`-form differential equation, and high-precision evaluation of the resulting boundary-value problem. |
-| [FlintNDE](FlintNDE/) | Python, with a Wolfram Language front end | Arbitrary-precision numerical transport of first-order matrix differential equations `Y'(x) = A(x) Y(x)`, plus reconstruction of half-analytic Laurent/power series in a regulator. |
+| [FlintNDE](FlintNDE/) | Python, with a Wolfram Language front end and an optional C++ engine | Arbitrary-precision numerical transport of first-order matrix differential equations `Y'(x) = A(x) Y(x)`, plus reconstruction of half-analytic Laurent/power series in a regulator. An optional C++/FLINT engine runs the fixed-regulator batch contract with bit-identical outputs. |
 
 ## How the packages fit together
 
@@ -33,7 +33,7 @@ graphs, master-integral ordering or normalization; turning a physics problem int
 dSIBP-Packages/
   MadStree/     Kernel/, Backend/, Vendor/FlintNDE/, Examples/, Documentation/
   dSIBP/        Kernel/, Examples/, Documentation/
-  FlintNDE/     flintnde/, Mathematica/, Kernel/, examples/, config/, Documentation/
+  FlintNDE/     flintnde/, Mathematica/, Kernel/, engine/, examples/, config/, Documentation/
 ```
 
 Each package is self-contained and is loaded from its own directory; nothing is read through a
@@ -54,6 +54,10 @@ shared parent path.
   MadStree launches the Python back end as a child process from `MadStree/Backend/` against
   its bundled `Vendor/FlintNDE`, so `python -m pip install` is optional for MadStree users, but
   a working `python-flint` in the interpreter is not.
+- The FlintNDE C++ engine is optional and not needed for any Python or Wolfram entry point.
+  Building it requires an MSYS2 UCRT64 toolchain (`g++`, `make`) and the FLINT 3.x development
+  library; on Windows the `libflint` runtime must be reachable through PATH or the
+  `"EngineLibraryPath"` option. See `FlintNDE/README.md` for the build and usage.
 - External IBP reduction (Kira) is not part of any package. dSIBP emits reduction input and
   reads results back; the solver itself runs outside this repository.
 
@@ -85,7 +89,8 @@ name then resolves to whichever package was loaded last. Write `MadStree`Paralle
 load MadStree last) when you pass an option to a MadStree entry point.
 
 Each package prints a citation reminder on its first successful load; this release is `1.0` for
-all three, and `dSIBP`$dSIBPVersion` and `FlintNDE`$FlintNDEVersion` report it at run time.
+dSIBP and MadStree and `1.01` for FlintNDE, and `dSIBP`$dSIBPVersion` and
+`FlintNDE`$FlintNDEVersion` report it at run time.
 Source and documentation are UTF-8, and every internal `Get` passes the encoding explicitly, so
 no extra option is needed when loading a package.
 

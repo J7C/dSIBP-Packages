@@ -29,7 +29,9 @@ multiprocess execution over independent `ep` values.
 
 FlintNDE is a general single-variable ODE solver. It has no notion of graphs, master integrals or
 physical normalization; building `A(x)` and the starting vector is the caller's job. MadStree is
-that job's reference caller and ships its own snapshot of this package.
+that job's reference caller and ships its own snapshot of this package. An optional C++/FLINT
+engine (see below) accelerates the fixed-regulator file-protocol contract with outputs
+bit-identical to the Python side.
 
 ## Install and requirements
 
@@ -50,9 +52,12 @@ FlintNDE/
   FlintNDE.m           Wolfram loader
   Kernel/init.m
   Mathematica/         Wolfram front end
+  engine/              optional C++/FLINT engine (Makefile + src; you build it)
   examples/            eight runnable cases
   config/              configuration file used by the QNM example
   Documentation/       the paper (.tex and .pdf)
+  CHANGELOG-cn.md      what changed in this release (Chinese)
+  CHANGELOG-en.md      what changed in this release (English)
 ```
 
 ## Use from Python
@@ -183,7 +188,52 @@ interface appends only a `bridge/` segment there. The bridge launches Python thr
 list `RunProcess` — no shell string, no quoting helper, no redirection, no retry fallback — and
 keeps the real failure boundaries apart: `RuntimePathTooLong`, `RuntimeInputWriteFailed`,
 `PythonFlintUnavailable`, `BridgeLaunchFailed`, `BridgeOutputMissing`. `MessageLanguage` selects
-`"EN"` (default) or `"CN"` runtime messages.
+`"EN"` (default) or `"CN"` runtime messages. `FlintNDEEngineEvaluateEpBatch`, described next, is
+the direct-to-engine variant that skips the Python bridge entirely.
+
+## The C++ engine
+
+`engine/` holds an optional C++/FLINT executable that accelerates the fixed-regulator
+evaluate/batch file-protocol contract with outputs bit-identical to the Python side. Build it in
+an MSYS2 UCRT64 shell:
+
+```bash
+cd engine && make      # produces build/flintnde_engine.exe
+```
+
+```text
+flintnde_engine INPUT.json OUTPUT.json [--workers N] [--flint-threads N] [--residues auto|sparse|dense]
+```
+
+The engine implements the prefix certified dual-chain transport only (prefix = prefix reuse:
+both chains share one precision and differ only in order, so the first primaryOrder+1
+coefficients of the reference series are exactly the primary series), over user-point sequences
+with `pathPlanning=false` and `singularityMode="avoid"`. Batch jobs run on a single-process
+`std::thread` pool with per-task streaming parsing; `--workers` falls back to the request's
+`parallelTaskCount`. `--residues` selects the residue kernel — `auto` picks the sparse
+skip-multiply kernel when the nonzero density is at most 0.25 — and all three kernels produce
+bit-identical outputs. The `madstree_flintnde_ep_series_control_v1` schema is recognized and
+refused with status `seriesControlNotImplemented`; series control stays on the Python/Wolfram
+route. On Windows the `libflint` runtime must be reachable through PATH or through the
+`"EngineLibraryPath"` option.
+
+From Wolfram, `FlintNDEEngineEvaluateEpBatch[jobs, opts]` serializes fixed-`ep` jobs and hands
+them to the engine directly:
+
+```wl
+system = FlintNDEPartialFractionSystem[
+  {{{0, 0}, {0, 0}}}, {{{1, 0}, {0, 2}}, {{0, 1}, {1, 0}}}, {-1, 3}];
+job = <|"ep" -> 1/100, "system" -> system, "start" -> 0,
+  "points" -> {1/10, 1/5, 3/10}, "initialVector" -> {1, I}|>;
+out = FlintNDEEngineEvaluateEpBatch[job,
+  "WorkingPrecisionDigits" -> 30, "PrimaryOrder" -> 20, "ReferenceOrder" -> 26,
+  "TargetRelativeError" -> "1e-12", ResidueKernel -> "auto"];
+out["results"][[1]]["finalValues"]
+```
+
+`system` must be a `FlintNDEPartialFractionSystem` with zero polynomial part, every scalar an
+exact rational, `start` a real exact rational; a pole at zero cannot be encoded and is refused
+fail-closed (`EngineZeroPoleUnrepresentable`).
 
 ## Current limits
 
