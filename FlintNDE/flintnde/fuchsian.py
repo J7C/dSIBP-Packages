@@ -206,17 +206,6 @@ class MoserBalanceTransformation:
         q = projector.to_acb()
         scale = local_point if inverse else 1 / local_point
         return identity - q + q * scale
-
-    def apply_to_system(self, system: RationalMatrixSystem) -> RationalMatrixSystem:
-        """按记录顺序施加全部 projector balances。"""
-
-        if system.dimension != self.dimension:
-            raise ValueError("Moser balance system dimension mismatch")
-        transformed = system
-        for projector in self.projectors:
-            transformed = _apply_projector_balance(transformed, self.center, projector)
-        return transformed
-
     def restore_system(self, reduced: RationalMatrixSystem) -> RationalMatrixSystem:
         """从最终降阶系统精确恢复原系统，用于独立 round-trip 认证。"""
 
@@ -224,17 +213,6 @@ class MoserBalanceTransformation:
         for projector in reversed(self.projectors):
             restored = _restore_projector_balance(restored, self.center, projector)
         return restored
-
-    def to_reduced(self, local_point: acb, value: acb_mat) -> acb_mat:
-        """计算 ``J=T_m^-1 ... T_1^-1 I``。"""
-
-        if local_point.contains(0):
-            raise ZeroDivisionError("Moser balance cannot be evaluated at its center")
-        result = acb_mat(value)
-        for projector in self.projectors:
-            result = self._evaluate_factor(local_point, projector, True) * result
-        return result
-
     def to_original(self, local_point: acb, value: acb_mat) -> acb_mat:
         """计算 ``I=T_1 ... T_m J``。"""
 
@@ -332,13 +310,6 @@ class FuchsianReductionResult:
     transformation: MoserBalanceTransformation
     reason: str
     pole_order_history: tuple[int, ...] = ()
-
-    @property
-    def succeeded(self) -> bool:
-        """返回变换后是否已经至多为 simple pole。"""
-
-        return self.status in {"already_fuchsian", "reduced_to_fuchsian"}
-
     def to_json(self) -> dict[str, Any]:
         """序列化路线、逐步 pole 阶和失败原因。"""
 

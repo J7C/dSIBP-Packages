@@ -58,12 +58,6 @@ class GaussianRational:
         """无损送入当前工作精度的 Acb ball。"""
 
         return acb(self.real, self.imag)
-
-    def conjugate(self) -> GaussianRational:
-        """返回复共轭。"""
-
-        return GaussianRational(self.real, -self.imag)
-
     def sqrt_exact(self) -> GaussianRational:
         """若平方根仍在 ``Q(i)`` 中则返回，否则 fail closed。"""
 

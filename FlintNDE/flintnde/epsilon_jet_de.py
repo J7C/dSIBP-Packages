@@ -4,7 +4,8 @@
 本模块在固定物理 QNM 数值点保持三条频率严格满足 EC，只把 horizon regulator
 实现为作用点平移 ``a2 -> a2-epsilon``。普通点使用截断 epsilon jet 与 FLINT Acb
 递推 ``dI/dk=A(k,epsilon)I``；奇点接口保留联合
-``epsilon^q k^n log(k)^r`` 局部展开，供完整 scalar 装配后提取有限部。
+``epsilon^q k^n log(k)^r`` 局部展开，供完整 scalar 装配后经
+``finite_part_matrix`` 提取有限部。
 
 通用 regulator jet、路径输运与局部基由同一 FlintNDE 包的 regular-point 模块提供；
 本模块只把这些中性接口映射为 epsilon 语义，不改变任何物理频率 iw_i。"""
@@ -241,35 +242,6 @@ class FlintLocalEpsilonPreinverseSystem:
                     xm_constant + xm_linear * iw0 + 2 * iw0 * iw0
                 )
         return blocks
-
-    def _inverse_biseries_generic(
-        self,
-        block: list[list[acb_mat]],
-        k_taylor_order: int,
-    ) -> list[list[acb_mat]]:
-        """在截断双级数环中递推矩阵逆，仅供独立回归检查。"""
-
-        inverse = self._zero_biseries(k_taylor_order)
-        identity8 = acb_mat(8, 8)
-        for index in range(8):
-            identity8[index, index] = acb(1)
-        inverse[0][0] = block[0][0].solve(identity8)
-        for k_degree in range(k_taylor_order):
-            for epsilon_power in range(self.epsilon_order + 1):
-                if k_degree == 0 and epsilon_power == 0:
-                    continue
-                total = acb_mat(8, 8)
-                for left_k in range(k_degree + 1):
-                    for left_epsilon in range(epsilon_power + 1):
-                        if left_k == 0 and left_epsilon == 0:
-                            continue
-                        total += (
-                            block[left_epsilon][left_k]
-                            * inverse[epsilon_power - left_epsilon][k_degree - left_k]
-                        )
-                inverse[epsilon_power][k_degree] = -(inverse[0][0] * total)
-        return inverse
-
     def _inverse_preinverse000_biseries(
         self,
         block: list[list[acb_mat]],
@@ -685,94 +657,3 @@ def _epsilon_payload_for_jet_backend(payload: dict[str, Any]) -> dict[str, Any]:
     converted_payload["regulator_order"] = int(payload["epsilon_order"])
     converted_payload["regulator_coefficients"] = records
     return converted_payload
-
-
-def solve_epsilon_k0_finite_parts(
-    metadata: dict[str, Any],
-    rational_payload: dict[str, Any],
-    path: list[acb],
-    sample_positions: Sequence[int],
-    *,
-    epsilon_order: int,
-    k_taylor_order: int,
-    watson_taylor_order: int,
-    k0_series_order: int,
-    it0: int,
-    it1: int,
-    a_x_zero: int,
-) -> EpsilonK0MatchResult:
-    """输运 ``I_0..I_P``，并在三个近零常点匹配 ``k=0`` power-log 基。
-
-    第一个 sample 用于求齐次常数，第二个独立重求常数并检查有限部稳定性，其余
-    sample 只验证局部级数。payload 必须至少覆盖请求的 ``epsilon_order``；任何身份、
-    维数或阶数不一致都直接阻断。
-    """
-
-    if len(sample_positions) < 3:
-        raise ValueError("k0 matching requires at least three sample positions")
-    if any(position < 0 or position >= len(path) for position in sample_positions):
-        raise ValueError("k0 sample position is outside the transport path")
-    for key, expected in (
-        ("dimension", 16),
-        ("it0", it0),
-        ("it1", it1),
-        ("a_x_zero", a_x_zero),
-    ):
-        if int(rational_payload[key]) != expected:
-            raise ValueError(
-                f"the rational payload field '{key}' holds "
-                f"{rational_payload[key]!r}, but this basis entry requires "
-                f"{expected!r}; correct that field in the payload"
-            )
-    if int(rational_payload["epsilon_order"]) < epsilon_order:
-        raise ValueError("rational payload does not cover the requested epsilon order")
-
-    regular = solve_epsilon_regular_path(
-        metadata,
-        path,
-        epsilon_order=epsilon_order,
-        k_taylor_order=k_taylor_order,
-        watson_taylor_order=watson_taylor_order,
-        it0=it0,
-        it1=it1,
-        a_x_zero=a_x_zero,
-    )
-    rational_system = FlintEpsilonRationalSystem.from_payload(
-        _epsilon_payload_for_jet_backend(rational_payload)
-    )
-    local_basis, local_seconds = build_epsilon_k0_nilpotent_local_basis(
-        rational_system,
-        solution_regulator_order=epsilon_order,
-        series_order=k0_series_order,
-    )
-    sample_vectors = [
-        _stack_epsilon_vectors(regular.snapshots[position])
-        for position in sample_positions
-    ]
-    # 局部拟合统一走预计算向量接口；完整 scalar 的有限部仍由上层统一提取。
-    fit = fit_epsilon_k0_local_basis(
-        local_basis,
-        [path[position] for position in sample_positions],
-        [regular.snapshots[position] for position in sample_positions],
-    )
-    maximum_error = max(
-        [
-            *(arb_midpoint_float(error) for error in local_basis.compatibility_residuals),
-            *(arb_midpoint_float(error) for error in fit.validation_errors),
-            *(arb_midpoint_float(error) for error in fit.stability_errors),
-        ],
-        default=0.0,
-    )
-    if not maximum_error < 1.0:
-        raise ArithmeticError(f"epsilon k0 matching is numerically unstable: {maximum_error}")
-    return EpsilonK0MatchResult(
-        regular_transport=regular,
-        local_basis=local_basis,
-        constants=fit.constants,
-        stability_constants=fit.stability_constants,
-        finite_part_vectors=fit.finite_part_vectors,
-        validation_errors=fit.validation_errors,
-        stability_errors=fit.stability_errors,
-        local_basis_seconds=local_seconds,
-        fit_seconds=fit.fit_seconds,
-    )

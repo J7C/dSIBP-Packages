@@ -290,8 +290,8 @@ parameter list is in Table~\ref{tab:regulator-api} of Sec.~\ref{subsec:public-in
 \section{Installation and dependencies}
 \label{sec:installation}
 
-The runtime requirements are only Python~$\geq3.10$ and
-\texttt{python-flint>=0.6}.  After publication, install from the package index with
+The runtime requirements are Python~$\geq3.10$, \texttt{python-flint>=0.6}, and
+\texttt{sympy>=1.12}.  After publication, install from the package index with
 \begin{verbatim}
 python -m pip install FlintNDE
 \end{verbatim}
@@ -313,7 +313,7 @@ MadStree, AMFlow, or any other paper.  A file-protocol adapter may set
 list in response metadata; the notice must never be mixed into machine-readable stdout.
 
 The source tree also provides a standard Wolfram Language package.  Add the directory that
-contains \texttt{FlintNDE.m} to \texttt{\$Path}, then evaluate
+contains \texttt{FlintNDE.wl} to \texttt{\$Path}, then evaluate
 \begin{verbatim}
 Needs["FlintNDE`"];
 system = FlintNDERationalSystem[{{1/(x-1)}}, x];
@@ -322,7 +322,8 @@ plan = FlintNDEPlanPath[system, 0, {1/2},
 result = FlintNDEExecutePath[system, {1}, plan,
   "WorkingPrecisionDigits" -> 100];
 \end{verbatim}
-The planning default is \texttt{"SingularityMode" -> "Avoid"}; explicit
+The symbol \texttt{\$FlintNDEVersion} returns the loaded package version string.  The
+planning default is \texttt{"SingularityMode" -> "Avoid"}; explicit
 \texttt{"SingularityJump"} mode carries the branch warning.  These are the only accepted
 mode values.  Messages use English by default and
 \texttt{MessageLanguage -> "CN"} selects Chinese.
@@ -365,6 +366,16 @@ automatically as workers finish.  The Python counterparts are
 \texttt{run\_ep\_tasks(..., parallel\_task\_count=12)} and the same
 \texttt{parallel\_task\_count} option of \texttt{reconstruct\_series\_solution}.  This outer
 process count is independent of python-flint's in-process \texttt{ctx.threads} setting.
+
+The current version directory additionally contains the standalone C$^{++}$ engine under
+\texttt{engine/}, built with \texttt{make} in the MSYS2 UCRT64 environment against the FLINT
+3.x development libraries; no prebuilt binary is distributed.  The executable is invoked as
+\begin{verbatim}
+flintnde_engine INPUT.json OUTPUT.json [--workers N]
+                [--flint-threads N] [--residues auto|sparse|dense]
+\end{verbatim}
+Its contract and the Wolfram direct entry are described in
+Sec.~\ref{subsec:engine}.
 
 The complete input syntax and every optional parameter are listed in
 Sec.~\ref{subsec:public-interface}.
@@ -654,10 +665,12 @@ continue to increase the bit count by the same formula.  Segment projection, mat
 rotation factors, and winding/monodromy geometry are constructed at the current Arb
 precision rather than in binary64.  Serialized plans record
 \texttt{planning\_precision\_digits}; Acb coordinates are stored as Arb midpoint--radius--
-exponent records.  Execution at a higher working precision than planning is rejected and
-requires replanning, because serialization cannot recover discarded information.  Increasing
+exponent records.  Through the Wolfram bridge, execution at a higher working precision than
+planning is rejected and requires replanning, because serialization cannot recover discarded
+information; the direct Python restore-and-execute entry runs at the current global
+precision.  Increasing
 only the number of output digits does not change the working precision.
-The Python import and all three Wolfram entry points default to 200 decimal digits, which gives
+The Python import and all four Wolfram entry points default to 200 decimal digits, which gives
 697 bits including the guard bits.
 
 \small
@@ -1203,14 +1216,15 @@ The automatic production plan uses the AMFlow 2.0 formula after the transparent 
 $2L\to P$ and $L/2\to P/4$:
 \begin{align}
  N_{\mathrm fit}&=
- \max\!\left(\left\lceil\frac52K+P\right\rceil,K+1\right),\\
+ \max\!\left(\left\lceil\frac52K+P\right\rceil,K+1+\texttt{fit\_extra\_order}\right),\\
  \alpha_\eps&=\frac P4+\frac{g}{K+1},
  &\eps_0&\simeq10^{-\alpha_\eps},\\
  p_0&=\max\left(\left\lceil(N_{\mathrm fit}+P)\alpha_\eps\right\rceil,30\right),
  &p_{\mathrm work}&=\left\lceil2(1+p_{\mathrm extra})p_0\right\rceil.
   \label{eq:ndes-series-reconstruction-default}
 \end{align}
-All $N_{\mathrm fit}$ production samples are used in a square interpolation from
+With the default \texttt{fit\_extra\_order}=2 the second branch is $K+3$.  All
+$N_{\mathrm fit}$ production samples are used in a square interpolation from
 $n_{\min}$ through the internal power
 $n_{\min}+N_{\mathrm fit}-1$; only coefficients through the requested power $m$ are returned.
 Thus the powers above $m$ absorb truncation effects exactly as in the AMFlow construction;
@@ -1582,6 +1596,61 @@ pole order, classification, exact reduced-denominator factor, and zero-based wit
 entries. \\
 \texttt{SingularityInventory} & Stores all finite records, the infinity record, system name,
 variable name, and a JSON serializer. \\
+\texttt{plan\_transport\_path} & Parameters are \texttt{system}, \texttt{start}, and an
+ordered \texttt{points} list; keyword-only \texttt{radius\_fraction=0.60},
+\texttt{singularity\_mode="avoid"}, \texttt{singularity\_jump\_threshold=0.5},
+\texttt{match\_fraction=0.6}, \texttt{max\_singularity\_jumps=16}, and
+\texttt{message\_language="EN"}.  The default \texttt{avoid} mode inserts no singularity
+node and raises \texttt{SingularPathError} when a pole lies on the polyline; the explicit
+\texttt{singularity\_jump} mode admits one intermediate user point exactly on a simple pole,
+removes it from the ordinary node chain, and requires collinear crossing segments.  Near
+singularities \texttt{radius\_fraction} is capped and the effective value is reported.  The
+return value is a \texttt{PlannedPath}. \\
+\texttt{direct\_user\_point\_path} & Parameters are \texttt{system}, \texttt{start}, and
+\texttt{points}; keyword-only \texttt{message\_language="EN"}.  The user points become the
+transport nodes verbatim; nothing is inserted or deleted.  It runs only the pole-safety scan
+and fails closed when the polyline crosses a pole or an endpoint sits on one. \\
+\texttt{transport\_planned\_path} & Parameters are \texttt{system}, an Acb
+\texttt{initial\_vector} column, and a \texttt{PlannedPath}; keyword-only \texttt{order},
+\texttt{sample\_count=None}, \texttt{radius\_fraction=0.60},
+\texttt{target\_relative\_error=None}, and \texttt{collect\_patches=False}.  Singularity-jump
+segments use the cached local basis of their pole, ordinary segments use the Taylor
+recurrence, and in-step user points are evaluated by Horner substitution.  It returns
+snapshots, segment reports, elapsed seconds, and a summary of in-step sample results. \\
+\texttt{transport\_planned\_}\newline\texttt{path\_refined} & Same inputs plus
+\texttt{primary\_order}, \texttt{reference\_order}, optional
+\texttt{reference\_initial\_vector=None}, and \texttt{certification\_mode="certified"}.
+Multi-segment plans and plans containing singularity jumps upgrade an \texttt{embedded}
+request to independent \texttt{certified} dual chains.  User-visible nodes and dense values
+come from the primary chain; the reference chain only verifies accuracy. \\
+\texttt{plan\_singular\_}\newline\texttt{target\_match} & Parameters are an exact
+\texttt{RationalMatrixSystem}, an ordinary \texttt{initial\_point}, and the singular
+\texttt{target\_point}; keyword-only \texttt{radius\_fraction="1/4"}.  It reuses the current
+point when it already lies inside the conservative local disk and otherwise inserts a hidden
+ordinary match point along the incoming direction.  It only plans; both chains must first be
+transported to the common match point. \\
+\texttt{evaluate\_singular\_}\newline\texttt{target} & Parameters are an exact system, an
+ordinary \texttt{initial\_point} on the same branch, the transported \texttt{initial\_vector},
+and the singular \texttt{target\_point}; keyword-only \texttt{order=48},
+\texttt{target\_relative\_error=1e-25}, and \texttt{sample\_exponents=(8,12,16,20,24)}.  It
+evaluates through the certified local power--log basis without numerical detours: finite
+components return the last local sample, while true-pole or zero-order log-divergent
+components return the text \texttt{Infinity}.  The \texttt{SingularTargetResult} reports
+per-component classifications together with sample magnitudes, exponents, and the local
+basis order. \\
+\texttt{planned\_path\_to\_json}; \texttt{planned\_path\_from\_json} & Serialization with
+keyword-only \texttt{digits=80} (minimum 20) and restoration of a \texttt{PlannedPath}.  The
+executor validates the record against the current system's poles and must not re-run the
+planner; when \texttt{system} is supplied, pole indices and coordinates must match. \\
+\texttt{adaptive\_path\_to\_}\newline\texttt{json};
+\texttt{adaptive\_path\_from\_}\newline\texttt{json} & The same two-stage contract for
+\texttt{AdaptivePath}: nodes and local-basis bridges are stored with \texttt{digits=80};
+restoration requires the same \texttt{RationalMatrixSystem} and revalidates the singularity
+inventory instead of replanning. \\
+Failure classes & \texttt{SingularPathError} reports a pole on a planned polyline or an
+unsupported singular route; \texttt{SingularityJumpError} reports local-basis construction
+or crossing failures in jump mode; \texttt{AdaptivePathSingularityError} reports internal
+singularities that adaptive construction cannot route. \\
 \bottomrule
 \end{longtable}
 \normalsize
@@ -1624,6 +1693,12 @@ Interface or parameter & Meaning and constraints \\
 \texttt{guard\_bits=32}.  It sets the process-wide FLINT context to
 $\lceil\texttt{decimal\_digits}\log_2 10\rceil+\texttt{guard\_bits}$ bits and returns that bit
 count.  Decimal digits must be positive and guard bits nonnegative. \\
+\texttt{DEFAULT\_WORKING\_}\newline\texttt{PRECISION\_DIGITS};
+\texttt{DEFAULT\_PARALLEL\_}\newline\texttt{TASK\_COUNT};
+\texttt{FLINTNDE\_CITATION\_}\newline\texttt{NOTICE} & Module constants: the first is the
+import-time default precision, the second the default worker bound of the batch and
+reconstruction entries, and the third the citation reminder printed once per process at
+import. \\
 \texttt{AnalyticMatrixSystem} & Constructor parameters are \texttt{matrix\_function},
 \texttt{dimension}, \texttt{singularities=()}, and \texttt{name}.  The callback
 \texttt{matrix\_function(z)} returns the coefficient matrix; \texttt{dimension} is its
@@ -1633,6 +1708,12 @@ square size; \texttt{singularities} supplies Acb locations for radius control; a
 \texttt{nearest\_singularity\_distance} & Its \texttt{point} parameter is an Acb value.  It
 returns the minimum declared distance and raises an error when no singularities were
 supplied. \\
+\texttt{PartialFractionSystem} & Constructor fields are the constant matrix
+\texttt{constant}, parallel tuples \texttt{residues} and \texttt{poles}, and optional
+\texttt{polynomial\_coefficients=()}; it represents
+$A(z)=P(z)+\sum_j R_j/(z-p_j)$ with $P$ stored degree by degree.  Finite poles must be
+simple and distinct; an explicitly constructed system owns this precondition.  Read-only
+properties are \texttt{dimension}, \texttt{singularities}, and \texttt{polynomial\_degree}. \\
 \texttt{taylor\_matrix\_coefficients} & Parameters are \texttt{center}, \texttt{order},
 keyword-only \texttt{radius}, and \texttt{sample\_count=None}.  It reconstructs
 $A_0,\ldots,A_{\texttt{order}-1}$.  \texttt{radius} is nonzero and must lie in
@@ -1916,11 +1997,12 @@ its private evaluator constructor argument is not a user option. \\
 
 \subsubsection{Power-series-solution reconstruction}
 
-The public entry is the single high-level command shown in
-Sec.~\ref{sec:regulator-reconstruction}.  It reuses the basic NDE transport internally and
-does not expose a separate sampling-plan class or a separate fitting command.
-The minimal call supplies only the differential equation, boundary, path, and desired highest
-regulator power; the leading power and all numerical controls are automatic unless overridden.
+The public entries are the single high-level command shown in
+Sec.~\ref{sec:regulator-reconstruction} and the low-level \texttt{fit\_sampled\_series} for
+externally collected samples; the sampling loop itself is not a separate public class.
+The minimal high-level call supplies only the differential equation, boundary, path, and
+desired highest regulator power; the leading power and all numerical controls are automatic
+unless overridden.
 
 \small
 \begin{longtable}{L{0.36\textwidth}L{0.58\textwidth}}
@@ -2024,12 +2106,65 @@ the JSON filename. \\
 \texttt{SeriesReconstructionResult} & Provides \texttt{powers}, coefficient column vectors,
 production and validation points/values, effective parameters, diagnostics,
 \texttt{coefficient(power)}, and \texttt{evaluate(ep)}. \\
+\texttt{fit\_sampled\_series} & Low-level fit entry for externally collected samples.
+Keyword-only parameters are \texttt{sample\_points} and \texttt{sample\_values}, optional
+\texttt{regularization\_points=None}, required \texttt{maximum\_power},
+\texttt{leading\_power=0}, optional \texttt{validation\_points()},
+\texttt{validation\_values()}, \texttt{validation\_regularization\_points=None},
+\texttt{validation\_tolerance=None}, and \texttt{series\_parameter="ep"}.  By default the
+sample points are the interpolation variables; with explicit regularization points the
+former remain sample labels and the latter enter the Vandermonde system, which reconstructs
+lateral series on either side of a real singularity from paired $\pm\delta$ labels.  Scalar
+samples are promoted to one-column vectors, all production points enter one square solve
+without least squares or pseudoinverses, and residual violations fail closed.  The entry
+does not change the global FLINT precision; the caller configures it and generates the
+samples at that precision. \\
 Failure classes & \texttt{ValueError} rejects a missing or inconsistent leading-power
 certificate. \texttt{SeriesValidationError} rejects an unresolved NDE refinement,
 interpolation, or independent-sample residual. \\
 \bottomrule
 \end{longtable}
 \normalsize
+
+\subsubsection{The standalone \texorpdfstring{$C^{++}$}{C++} engine}
+\label{subsec:engine}
+
+The engine consumes the same serialized contracts as the Wolfram batch entry.  A single
+transport uses the schema \texttt{madstree\_flintnde\_evaluate\_v1}, a fixed-regulator batch
+uses \texttt{madstree\_flintnde\_ep\_batch\_v1}, and the series-control schema
+\texttt{madstree\_flintnde\_ep\_series\_control\_v1} is recognized and structurally rejected
+with status \texttt{seriesControlNotImplemented}; regulator series control stays on the
+Python and Wolfram routes.  Matrix entries are \texttt{\{alpha, beta, residue\}} dlog letters
+with exact rational strings for \texttt{alpha} and \texttt{beta}; decimal strings are
+rejected.  A letter with \texttt{beta=0} is skipped, \texttt{alpha=0} is rejected, and
+residues at equal poles are merged.  Batch files are parsed streaming: only the header is
+read up front, each worker parses and discards its own tasks, and \texttt{-{}-workers}
+defaults to the batch field \texttt{parallelTaskCount}.
+
+Transport keeps the prefix mode only.  Because the primary and reference chains share
+precision and differ only in order, the first \texttt{primaryOrder}$+1$ coefficients of every
+reference-chain series equal the primary series, so one ragged recursion per step produces
+both chains; the output is bit-for-bit identical to two independent chains, and the
+relative-difference certification and \texttt{targetRelativeErrorMet} still execute.  The
+residue kernel is selected by \texttt{-{}-residues}: \texttt{auto} chooses the sparse kernel
+when the residue density is at most $0.25$ and the dense kernel otherwise.  The three
+kernels agree bit for bit; the \texttt{flintndeEngine} metadata records the requested and
+effective kernel per request and per segment.
+
+The Wolfram direct entry
+\texttt{FlintNDE}\allowbreak\texttt{Engine}\allowbreak\texttt{Evaluate}\allowbreak\texttt{EpBatch}
+bypasses the Python bridge.  Its \texttt{system} accepts only polynomial-free
+\texttt{PartialFractionSystem} values; a pole at zero cannot be encoded and returns
+\texttt{EngineZeroPoleUnrepresentable}, inexact scalars return \texttt{EngineInexactScalar},
+and a non-real \texttt{start} returns \texttt{EngineRealStartRequired}.
+\texttt{WorkingPrecisionDigits} defaults to 200 with a minimum of 20,
+\texttt{ReferenceOrder} must exceed \texttt{PrimaryOrder}, and \texttt{ParallelTaskCount}
+defaults to 12 with the effective count capped by the number of tasks.  The default
+\texttt{Engine} executable is the \texttt{engine/build/} binary of the version root; on
+Windows \texttt{EngineLibraryPath} points to the directory of \texttt{libflint.dll}.  The
+engine executes only \texttt{pathPlanning=false}, \texttt{singularityMode="avoid"}
+user-point sequences; singularity jumps, Frobenius and exponential boundaries, and save
+points remain on the general Python and Wolfram routes.
 
 \subsection{Connection matrices and boundary subspaces}
 
@@ -2049,12 +2184,13 @@ problems.
 
 \section{Software status and outlook}
 
-The development release depends only on python-flint>=0.6 and contains the general Cauchy--DFT
+The development release depends only on python-flint>=0.6 and sympy>=1.12 and contains the general Cauchy--DFT
 ordinary-point backend, exact or precision-threshold-gated power--log bases, exact
 $\{a,b,C\}$ singular boundary initialization, exact Lee--Moser projector balances,
 certified decoupled exponential sectors, start-only simple-spectrum formal asymptotics with
-fixed-order five-term diagnostics, regulator reconstruction with user overrides, unit tests,
-and the
+fixed-order five-term diagnostics, regulator reconstruction with user overrides, the
+standalone C$^{++}$ engine of Sec.~\ref{subsec:engine} with its Wolfram direct entry,
+unit tests, and the
 two-dimensional boundary example.  A 16-dimensional complex-exact test has also exercised
 the general \texttt{Rational}\allowbreak\texttt{Matrix}\allowbreak\texttt{System} over
 $\mathbb Q(i)(k)$: it

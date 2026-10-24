@@ -4,13 +4,12 @@
 输入系统必须已经写成
 ``Y'(k)=(C+Sum_p R_p/(k-p))Y(k)``，并完成物理参数与 convention 数值代入；
 模块完成 Watson 边界、普通点 Taylor 输运、exact-manifest-gated 的 ``k=0``
-generalized Frobenius 匹配和 finite part。数值矩阵只使用 FLINT AcbMat；SymPy
+generalized Frobenius 匹配。数值矩阵只使用 FLINT AcbMat；SymPy
 仅解析 exact InputForm 和控制严格根/共振标签，不参与数值矩阵运算。
 
 公开接口：``FlintPoleResidueSystem.from_payload`` 读取系统，
-``build_positive_real_fractional_path`` 生成固定 ``step/R`` 的正实轴路径，
-``transport_path`` 完成指定阶数的逐段输运，``solve_k0_finite_part`` 读取 exact
-log manifest 后提取 ``k=0`` finite part。
+``build_positive_real_path_through_targets`` 生成正实轴目标点路径，
+``transport_path`` 完成指定阶数的逐段输运。
 """
 
 from __future__ import annotations
@@ -854,36 +853,6 @@ def watson_boundary_terms(
             ]
         )
     return all_terms
-
-
-def watson_boundary_pair(
-    system_payload: dict[str, Any],
-    numeric_point: dict[str, Any],
-    *,
-    k_start: acb,
-    primary_order: int,
-    reference_order: int,
-    it0: int,
-    it1: int,
-) -> tuple[acb_mat, acb_mat, arb, float]:
-    """一次构造主阶/参考阶边界向量并返回相对差和耗时。"""
-
-    if not 0 <= primary_order < reference_order:
-        raise ValueError("boundary primary/reference orders are invalid")
-    clock = time.perf_counter()
-    terms = watson_boundary_terms(
-        system_payload,
-        numeric_point,
-        k_start=k_start,
-        order=reference_order,
-        it0=it0,
-        it1=it1,
-    )
-    primary = column_vector([sum(row[: primary_order + 1], acb(0)) for row in terms])
-    reference = column_vector([sum(row, acb(0)) for row in terms])
-    return primary, reference, relative_difference_inf(primary, reference), time.perf_counter() - clock
-
-
 def _constant_acb_series(value: acb, order: int) -> acb_series:
     """把 Acb 常数提升为指定截断阶数的 regulator 级数。"""
 
@@ -1085,47 +1054,6 @@ def transport_path_refined(
         reports,
         time.perf_counter() - total_clock,
     )
-
-
-def build_positive_real_fractional_path(
-    poles: list[acb],
-    first_point: acb,
-    *,
-    segment_count: int,
-    step_fraction: fmpq,
-) -> tuple[list[acb], list[FractionalPathSegment]]:
-    """每段沿正实轴前进当前最近 pole 距离的固定比例。"""
-
-    if segment_count <= 0:
-        raise ValueError("segment count must be positive")
-    fraction = arb(step_fraction)
-    if not 0 < arb_midpoint_float(fraction) < 1:
-        raise ValueError("step fraction must lie strictly between zero and one")
-    if first_point.real.contains(0) or not first_point.imag.contains(0):
-        raise ValueError("first point must be positive and real")
-    points = [acb(first_point)]
-    segments: list[FractionalPathSegment] = []
-    for index in range(1, segment_count + 1):
-        start = points[-1]
-        nearest_pole = min(poles, key=lambda pole: arb_midpoint_float(abs(start - pole)))
-        radius = abs(start - nearest_pole)
-        step = radius * fraction
-        target = start - acb(step)
-        segments.append(
-            FractionalPathSegment(
-                index=index,
-                start=start,
-                target=target,
-                nearest_pole=nearest_pole,
-                radius=radius,
-                step=step,
-                step_over_radius=step / radius,
-            )
-        )
-        points.append(target)
-    return points, segments
-
-
 def build_positive_real_path_through_targets(
     poles: list[acb],
     first_point: acb,
@@ -1242,165 +1170,6 @@ def _midpoint_line_clearance(start: acb, target: acb, pole: acb) -> float:
     ).imag * direction.imag) / abs(direction) ** 2
     position = min(1.0, max(0.0, position))
     return abs(singularity - (left + position * direction))
-
-
-def build_real_path_through_targets_with_detours(
-    poles: list[acb],
-    first_point: acb,
-    targets: list[acb],
-    *,
-    step_fraction: fmpq,
-    real_axis_pole_policy: str,
-    detour_side: str,
-    detour_clearance_fraction: fmpq,
-    maximum_segment_count: int,
-) -> tuple[
-    list[acb],
-    list[FractionalPathSegment],
-    list[int],
-    list[dict[str, Any]],
-]:
-    """命中递减正实目标点，并对路径上的非零实 pole 作指定半平面绕行。
-
-    无交叉 pole 时复用正实轴路径构造器；存在交叉 pole 时加入指定半平面绕行。
-    当前物理 prescription 使用 ``lower``，即从右向左按 ``k-i0`` 连续延拓。
-    """
-
-    fraction = arb(step_fraction)
-    clearance_fraction = arb(detour_clearance_fraction)
-    if not 0 < arb_midpoint_float(fraction) < 1:
-        raise ValueError("step fraction must lie strictly between zero and one")
-    if not 0 < arb_midpoint_float(clearance_fraction) < 0.5:
-        raise ValueError("detour clearance fraction must lie between zero and one half")
-    if maximum_segment_count <= 0:
-        raise ValueError("MaximumSegmentCount must be positive")
-    if real_axis_pole_policy != "detour":
-        raise ValueError("RealAxisPolePolicy must be 'detour'")
-    if detour_side not in {"lower", "upper"}:
-        raise ValueError("DetourSide must be 'lower' or 'upper'")
-    if first_point.real.contains(0) or not first_point.imag.is_zero():
-        raise ValueError("first point must be positive and real")
-
-    previous = arb_midpoint_float(first_point.real)
-    for target in targets:
-        current = arb_midpoint_float(target.real)
-        if not target.imag.is_zero() or current <= 0 or current >= previous:
-            raise ValueError("required targets must be positive real and decrease strictly")
-        previous = current
-
-    real_poles = sorted(
-        (
-            pole
-            for pole in poles
-            if pole.imag.is_zero()
-            and not pole.real.contains(0)
-            and arb_midpoint_float(pole.real) > 0
-        ),
-        key=lambda pole: arb_midpoint_float(pole.real),
-        reverse=True,
-    )
-    lowest_target = arb_midpoint_float(targets[-1].real)
-    first_real = arb_midpoint_float(first_point.real)
-    crossed_poles = [
-        pole
-        for pole in real_poles
-        if lowest_target < arb_midpoint_float(pole.real) < first_real
-    ]
-    if not crossed_poles:
-        path, segments, target_positions = build_positive_real_path_through_targets(
-            poles, first_point, targets, step_fraction=step_fraction
-        )
-        if len(segments) > maximum_segment_count:
-            raise RuntimeError("transport path exceeded MaximumSegmentCount")
-        return path, segments, target_positions, []
-
-    anchors = [acb(first_point), *[acb(target) for target in targets]]
-    for pole in crossed_poles:
-        if any(abs(pole - anchor).contains(0) for anchor in anchors):
-            raise ValueError("a transport endpoint coincides with a nonzero real pole")
-
-    points = [acb(first_point)]
-    segments: list[FractionalPathSegment] = []
-    target_positions: list[int] = []
-    detours: list[dict[str, Any]] = []
-    remaining_poles = list(crossed_poles)
-    current_real = first_real
-    side_sign = -1 if detour_side == "lower" else 1
-
-    for target in targets:
-        target_real = arb_midpoint_float(target.real)
-        pending = [
-            pole
-            for pole in remaining_poles
-            if target_real < arb_midpoint_float(pole.real) < current_real
-        ]
-        for pole in pending:
-            separation_candidates = [
-                abs(pole - other)
-                for other in [*poles, *anchors]
-                if not abs(pole - other).contains(0)
-            ]
-            if not separation_candidates:
-                raise ValueError("cannot determine a safe real-pole detour clearance")
-            clearance_limit = min(
-                separation_candidates, key=arb_midpoint_float
-            )
-            clearance = clearance_limit * clearance_fraction
-            imaginary_offset = clearance if side_sign > 0 else -clearance
-            waypoints = [
-                acb(pole.real + clearance),
-                acb(pole.real + clearance, imaginary_offset),
-                acb(pole.real - clearance, imaginary_offset),
-                acb(pole.real - clearance),
-            ]
-            for waypoint in waypoints:
-                scale = max(
-                    1.0,
-                    abs(complex(
-                        arb_midpoint_float(waypoint.real),
-                        arb_midpoint_float(waypoint.imag),
-                    )),
-                )
-                minimum_clearance = min(
-                    _midpoint_line_clearance(points[-1], waypoint, candidate)
-                    for candidate in poles
-                )
-                if minimum_clearance <= 1.0e-14 * scale:
-                    raise ValueError("a proposed detour segment intersects another DE pole")
-                _append_fractional_line_segment(
-                    points,
-                    segments,
-                    poles,
-                    waypoint,
-                    step_fraction=fraction,
-                    maximum_segment_count=maximum_segment_count,
-                )
-            detours.append(
-                {
-                    "pole": acb_record(pole),
-                    "side": detour_side,
-                    "clearance": arb_record(clearance),
-                    "waypoints": [acb_record(waypoint) for waypoint in waypoints],
-                }
-            )
-            remaining_poles.remove(pole)
-            current_real = arb_midpoint_float(waypoints[-1].real)
-        _append_fractional_line_segment(
-            points,
-            segments,
-            poles,
-            target,
-            step_fraction=fraction,
-            maximum_segment_count=maximum_segment_count,
-        )
-        target_positions.append(len(points) - 1)
-        current_real = target_real
-
-    if remaining_poles:
-        raise RuntimeError("real-axis pole routing left an unhandled crossed pole")
-    return points, segments, target_positions, detours
-
-
 def _exact_matrix_to_acb(records: list[list[Any]]) -> acb_mat:
     """把 exact 二维记录转换为 Acb 稠密矩阵。"""
 
@@ -1815,54 +1584,3 @@ def _solve_diagonalizable_k0(
         "endpoint_minimum_accuracy_digits": minimum_vector_accuracy_digits(endpoint),
         "elapsed_seconds": time.perf_counter() - clock,
     }, leading_log_coefficients
-
-
-def solve_k0_finite_part(
-    system: FlintPoleResidueSystem,
-    manifest: dict[str, Any],
-    sample_points: list[acb],
-    sample_vectors: list[acb_mat],
-    *,
-    series_order: int,
-    fit_index_analytic_leading: int,
-    fit_index_leading_log: int,
-    stability_index_analytic_leading: int,
-    stability_index_leading_log: int,
-    validation_indices_1based: list[int],
-) -> tuple[acb_mat, dict[str, Any], list[K0LeadingLogCoefficient]]:
-    """提取 ``k=0`` finite part，并返回实际 ``k^0 log(k)^q`` 审计向量。"""
-
-    if manifest.get("status") != "passed" or manifest.get("request_id") != system.request_id:
-        raise ValueError(
-            f"request {system.request_id}: the supplied k=0 manifest either "
-            f"belongs to a different request or did not pass validation; "
-            f"regenerate it for this request before extracting the finite part"
-        )
-    route = manifest.get("route")
-    if route == "single_root_jordan_exact_gate":
-        return _solve_single_root_jordan_k0(
-            system,
-            manifest,
-            sample_points,
-            sample_vectors,
-            series_order=series_order,
-            fit_index_1based=fit_index_leading_log,
-            stability_index_1based=stability_index_leading_log,
-            validation_indices_1based=validation_indices_1based,
-        )
-    if route == "diagonalizable_real_roots_exact_gate":
-        return _solve_diagonalizable_k0(
-            system,
-            manifest,
-            sample_points,
-            sample_vectors,
-            series_order=series_order,
-            fit_index_1based=fit_index_analytic_leading,
-            stability_index_1based=stability_index_analytic_leading,
-            validation_indices_1based=validation_indices_1based,
-        )
-    raise ValueError(
-        f"request {system.request_id}: the k=0 manifest declares route '{route}', "
-        f"which this solver does not recognize; regenerate the manifest with a "
-        f"supported route (a single Jordan root or diagonalizable real roots)"
-    )

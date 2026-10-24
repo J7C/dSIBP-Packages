@@ -53,7 +53,7 @@ FlintNDE/
   Kernel/init.m
   Mathematica/         Wolfram front end
   engine/              optional C++/FLINT engine (Makefile + src; you build it)
-  examples/            eight runnable cases
+  examples/            nine runnable cases
   config/              configuration file used by the QNM example
   Documentation/       the paper (.tex and .pdf)
   CHANGELOG-cn.md      what changed in this release (Chinese)
@@ -262,13 +262,14 @@ interval cannot prove the bound.
 
 ## Examples
 
-`examples/` keeps eight runnable cases; each one resolves the package through a path variable at
+`examples/` keeps nine runnable cases; each one resolves the package through a path variable at
 the top of the file.
 
 | Example | Shows |
 | --- | --- |
 | `qnm_2x2.py` | An exact 2x2 first-order system in a unified `u`: two runs start from `{a, b, C}` boundaries at the horizon and at infinity, transport to a common matching point, and check the components that must vanish on the other side; a third block evaluates the full radial profile (721 tortoise-uniform points, one planned transport, shared-coefficient buckets) at 1e-10 relative accuracy. |
 | `regular_singular_save.py` | Transport from an `{a, b, C}` start at a scalar regular singular point to an ordinary point, saving both boundaries. |
+| `resonance_log_boundary.py` | A resonance log without a Jordan block: indicial roots differing by an integer trigger the `x^1 log x` term; two `{a, b, C}` records select the pure-power and the resonant branch, checked against the closed form. |
 | `exponential_boundary_save.py` | A strictly decoupled exponential singularity: transport from a `{phi, a, b, C}` start, save that boundary, read it back in. |
 | `exponential_polynomial_boundary.py` | A diagonal system with a third-order pole (an essential singularity): two `{phi, a, b, C}` records, one per decoupled sector, each carrying a two-term negative-power exponential-polynomial phase, checked against the closed form at the endpoint. |
 | `ep_series_reconstruction.py` | Adaptive reconstruction of the `1/ep` and finite parts from a `leading_power = -1` certificate, with a redundant candidate pool, independent validation points, order growth on failure, and an open complex-angle range variant. |

@@ -5,7 +5,7 @@
 程序包源码，也不读取项目外其它代码包。发布用户应先安装 `FlintNDE`，随后在任意调用
 目录直接 `import flintnde`；路径段只服务于尚未安装的仓库内示例。
 
-当前保留八个典型示例：
+当前保留九个典型示例：
 
 - `qnm_2x2.py`：统一 `u` 的 exact 2x2 一阶系统。分别从字面量 horizon `1` 和
   infinity `"inf"` 的 `{a,b,C}` 边界出发，输运到公共匹配点并检查另一端的禁戒分量；
@@ -15,6 +15,10 @@
   32 点），双链端点差 1.5e-17，与独立规划 horizon 链在 `x=4` 一致到 5.2e-32；样本曲线
   写入 `transport/qnm_2x2_curve_samples.json`。
 - `regular_singular_save.py`：标量正则奇点，从 `{a,b,C}` 起点输运到普通点，并保存可复用奇点边界和普通终点。
+- `resonance_log_boundary.py`：共振对数最小例。`A = [[0,0],[1,1/x]]`，留数
+  `R = diag(0,1)` 无 Jordan 块，indicial 根 `{0,1}` 整数差 1 且谱投影相容性不满足，
+  log 首现于 Taylor 阶 `n=1`。两条 `{a,b,C}` 记录分别输运纯幂支 `[0,x]` 与共振支
+  `[1, x log x]` 到普通点 `x=2`，与闭式比较（共振支阶 48/64 下相对差 3.5e-29）。
 - `exponential_boundary_save.py`：严格解耦的指数型奇点，从 `{phi,a,b,C}` 起点输运，保存并重新读入同一边界。
 - `exponential_polynomial_boundary.py`：三阶极点（本性奇点）的双 sector 对角系统，两条
   `{phi,a,b,C}` 记录各含两项负幂的指数多项式相位；闭式解在终点为 `(e^{1/4}, e^{-11/6})`，
@@ -38,6 +42,7 @@ python qnm_2x2.py
 # 或显式选择 convention
 python qnm_2x2.py --config ../config/qnm_u_unified_it0_3_it1_minus1.json
 python regular_singular_save.py
+python resonance_log_boundary.py
 python exponential_boundary_save.py
 python exponential_polynomial_boundary.py
 python ep_parallel.py
@@ -52,7 +57,7 @@ wolframscript -file ep_parallel_mathematica.wl
 `results/qnm_2x2/configuration/output_layout.json`。两条路径均由调用脚本传入
 `__file__` 后通过 package 公共接口生成，不依赖启动时的工作目录。
 `it0/it1` 只从实际 config 读取并写回 summary。无穷远自动使用 start-only
-`formal_exponential_asymptotic`；最近指数根差和缺省四倍最小项阶数规则自动生成首匹配点，
+`formal_exponential_asymptotic`；最近指数根差和缺省三倍最小项阶数规则自动生成首匹配点，
 结果固定保留指定 N 阶并记录后五阶/前五阶矢量块比、五阶相对 refinement 和辅助最小项信息。
 块比不小于 1 时 warning 但仍保存结果；自动点和附近点另与独立二阶标量递推交叉验证。
 
