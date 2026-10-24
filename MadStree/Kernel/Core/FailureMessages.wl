@@ -119,8 +119,7 @@ msFailureDefaultText[tag_String] := Switch[tag,
       "The automatic infinity boundary could not be certified for this point. Review the listed boundary component or chart and choose a nonsingular, supported parameter point",
       "当前点的自动无穷远边界未能通过认证。请检查列出的边界分量或坐标图，并选择非奇异且受支持的参数点"
     },
-  "SingularBoundaryAnchor" | "DirectPathCrossesSingularity" |
-  "SingularPathOnUserPolyline",
+  "SingularBoundaryAnchor" | "SingularPathOnUserPolyline",
     {
       "The requested boundary anchor or path lies on a differential-equation singularity. Change the point sequence or enable the documented singularity route before retrying",
       "请求的边界锚点或路径落在微分方程奇点上。请修改点列，或启用手册说明的奇点路线后重试"
@@ -178,11 +177,6 @@ msFailureDefaultText[tag_String] := Switch[tag,
     {
       "The regulator reconstruction did not produce a usable numerical result. Check the failed sample or worker configuration, then retry with valid nonzero points",
       "正规化重建未得到可用的数值结果。请检查失败的采样点或工作进程配置，并使用有效的非零点重试"
-    },
-  "ModuleLoadFailed" | "ModuleContractMissing" | "module" | "symbol",
-    {
-      "MadStree did not load all required modules. Reinstall the complete current version and load the package again",
-      "MadStree 未能加载全部必需模块。请重新安装完整的当前版本，然后再次加载程序包"
     },
   "BadStateBits",
     {

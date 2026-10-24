@@ -277,7 +277,8 @@ reduction = MSReduce[
 energy letter 取倒数。若未来同一个 slot 出现多个不能由同一局部变换对角化的组分，这条快速
 路径必须 fail closed。
 
-FlintNDE 数值后端作为与独立包同步的副本放在版本目录内，缺省位置只在一个相对路径变量中定义：
+FlintNDE 数值后端作为版本内嵌副本放在版本目录内，不跟随独立包的后续版本；缺省位置只在
+一个相对路径变量中定义：
 
 ```wl
 MSFlintNDEConfiguration[]
@@ -389,9 +390,8 @@ Example 06 自适应检查为 `17/17`，使用 4 个生产点、2 个独立验�
   覆盖单顶点、pure massless、massive Full 和 mixed 三顶点，并统一使用当前 generic boundary producer。
 - FlintNDE 保留 exact Lee--Moser、高阶 pole 与奇点折跃能力，并增加按节点覆盖桶的 fast multipoint evaluation 和公开严格用户节点入口。未认证 high-pole、需要 ramification、代数扩域或一般 Stokes connection 的内部点与终点继续 fail closed。
 
-当前 fresh 回归包括 core `61/61`、公式 artifact `24/24`、点序列/规划 `29/29`、
-normalized/bare integral 定义 `21/21`、二维
+当前 fresh 回归包括 core `54/54`、公式 artifact `23/23`、点序列/规划 `29/29`、
+normalized/bare integral 定义 `20/20`、二维
 900 点复平面分组 `8/8`、
 单顶点 NDE `13/13`、runtime/export `10/10`、辅助外腿 `6/6` 及 Examples 01--07 `7/7`；
-19 个 Wolfram 开发脚本、Python adapter `17/17` 和 Vendor FlintNDE `181/181` 均通过。
-独立 Validation-04 与 Validation-07 分别 fresh 通过 `26/26`、`21/21`。
+23 个 Wolfram 开发脚本、Python adapter `17/17` 和 Vendor FlintNDE `193/193` 均通过。

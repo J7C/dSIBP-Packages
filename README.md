@@ -14,7 +14,7 @@ spacetime: **MadStree**, **dSIBP** and **FlintNDE**.
 The dependency direction is fixed: **MadStree → FlintNDE**.
 
 MadStree turns a graph into an analytic `dlog` differential equation and an exact starting
-vector, then hands both to FlintNDE, which does the numerics. MadStree ships its own snapshot
+vector, then hands both to FlintNDE, which does the numerics. MadStree ships its own bundled copy
 of FlintNDE under `MadStree/Vendor/FlintNDE`, so it works without a separate installation of
 the Python package.
 

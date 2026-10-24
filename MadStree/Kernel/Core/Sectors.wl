@@ -368,10 +368,6 @@ msSectorIdentityCertificate[sectors_List, masters_List, rootLines_List] := Modul
 msGammaCanonicalForm[value_] := Expand[Together[value]];
 
 
-(* 只接受可以精确证明的整数结论；含 generic regulator 的符号表达式保持未判定。 *)
-msProvablyIntegerQ[value_] := IntegerQ[msGammaCanonicalForm[value]];
-
-
 msProvablyNonPositiveIntegerQ[value_] := With[
   {canonical = msGammaCanonicalForm[value]},
   IntegerQ[canonical] && TrueQ[canonical <= 0]

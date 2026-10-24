@@ -278,7 +278,8 @@ If the top-to-sub `R^(1)` lands on a subsector with a nonzero shift, `MSDLogDE` 
 
 The formula layer never constructs a generic large matrix inverse. The fixed `sigma2` of the two-dimensional state at one vertex of a massive propagator uses the paper's `2x2` transform and its explicit inverse, while the fixed `sigma1` of the quotient slot shared by a whole massless Full propagator uses the self-inverse Hadamard; an all-sector matrix is only the Kronecker product of these local matrices. `M1` takes reciprocals of diagonal entries in the state-bit basis and `M0` takes reciprocals letter by letter in the corresponding local tensor basis. If a future slot contains multiple components that cannot be diagonalized by the same local transform, this fast path must fail closed.
 
-The FlintNDE numerical backend ships as a synchronized copy inside this version directory; its default location is defined in a single relative-path variable:
+The FlintNDE numerical backend ships as a bundled copy inside this version directory, independent
+of later standalone releases; its default location is defined in a single relative-path variable:
 
 ```wl
 MSFlintNDEConfiguration[]
@@ -380,9 +381,8 @@ listed here, together with the source of the reference data in each case.
   three-vertex systems through the current generic boundary producer.
 - FlintNDE retains exact Lee--Moser, high-pole, and singularity-jump capabilities, and adds node-bucket fast multipoint evaluation plus the public strict user-node route. Uncertified high poles and internal/final points requiring ramification, algebraic extensions, or general Stokes connections continue to fail closed.
 
-The current fresh regression includes core `61/61`, formula artifacts `24/24`,
-point-sequence/planning `29/29`, normalized/bare integral definitions `21/21`, 900-point
+The current fresh regression includes core `54/54`, formula artifacts `23/23`,
+point-sequence/planning `29/29`, normalized/bare integral definitions `20/20`, 900-point
 complex-plane grouping `8/8`, single-vertex NDE `13/13`, runtime/export `10/10`, auxiliary
-external-leg energy `6/6`, and Examples 01--07 `7/7`. All 19 Wolfram development scripts, the
-Python adapter `17/17`, and the vendored FlintNDE `181/181` passed. Independent Validation-04
-and Validation-07 passed fresh at `26/26` and `21/21`, respectively.
+external-leg energy `6/6`, and Examples 01--07 `7/7`. All 23 Wolfram development scripts, the
+Python adapter `17/17`, and the vendored FlintNDE `193/193` passed.
