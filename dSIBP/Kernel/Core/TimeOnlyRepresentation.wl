@@ -214,10 +214,3 @@ dsTimeOnlyOldIntegralLeakQ020[value_List] := AnyTrue[
    dsTimeOnlyOldIntegralLeakQ020
    ];
 dsTimeOnlyOldIntegralLeakQ020[value_] := ! FreeQ[value, J[_List, _List, _List]];
-
-
-dsTimeOnlyPublicIntegralQ020[int_, data_Association] := Module[{internal},
-   If[! MatchQ[int, J[_String, _List, _List]], Return[False]];
-   internal = dsTimeOnlyPublicIntegralToInternal020[int, data];
-   MatchQ[internal, J[_List, _List, {}]]
-   ];

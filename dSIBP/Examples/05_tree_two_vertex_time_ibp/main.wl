@@ -146,7 +146,7 @@ summary = <|
 
 Print[InputForm[summary]];
 If[! And[
-    ToString[summary["version"]] === currentVersion,
+    ToString[summary["version"]] === runtimeVersionToken,
     summary["initStatus"] === "initialized",
     summary["seedRepresentation"] === "J[sectorKey,timeShifts,stateBits]",
     summary["selectedSeedRoute"] === "directPureTime",

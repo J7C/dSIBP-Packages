@@ -155,13 +155,6 @@ dsTreeContactTargetIntegral[
    ];
 
 
-dsTreeLineZeroPoint[topo_Association, e_Integer] := If[
-   MemberQ[Lookup[topo, "sectorShrunkLines", {}], e] || Lookup[topo["lines"][[e]], "state", "full"] === "shrunk",
-   lineBSZeroPoint[topo, e],
-   lineBZeroPoint[topo, e]
-   ];
-
-
 dsDirectTreeContactCoefficient[
    int_J,
    targetInt_J,
@@ -301,84 +294,4 @@ dsDirectTreeSeedRecord[
       "coefficientConvention" -> "direct tree physical powers from M1/M0 and compiled WT"
       |>
    |>
-   ];
-
-
-(* ::Chapter:: *)
-(*Pure-time backend-neutral linearData*)
-
-dsPureTimeTaggedIntegral[term_Association] := dsTreeToken[
-   Lookup[term, "sectorKey", Missing["SectorKeyRequired"]],
-   Lookup[term, "integral", Missing["TreeIntegral"]]
-   ];
-
-
-dsPureTimeLinearEquation[record_Association, integralIndex_Association] := Module[
-   {terms, rules},
-   terms = Lookup[Lookup[record, "treeLinearData", <||>], "terms", {}];
-   rules = Merge[
-     Rule[
-        integralIndex[dsPureTimeTaggedIntegral[#]],
-        Lookup[#, "coefficient", 0]
-        ] & /@ terms,
-     Total
-     ];
-   <|
-    "source" -> "directPureTime",
-    "generator" -> Lookup[record, "generator", Missing["generator"]],
-     "sectorKey" -> Lookup[record, "sectorKey", Missing["SectorKeyRequired"]],
-    "referenceTreeIntegral" -> Lookup[record, "treeIntegral", Missing["TreeIntegral"]],
-    "coefficientRules" -> Normal[rules],
-    "constantTerm" -> 0,
-    "nonlinearTerms" -> {},
-    "linearQ" -> True
-    |>
-   ];
-
-
-makePureTimeLinearSystemData[batch_Association, context_Association] /; dsContextQ[context] := Module[
-   {records, terms, tokens, integralIndex, linearEquations, publicIntegrals, coefficientDiagnostics},
-   If[Lookup[batch, "status", "missing"] =!= "generated" ||
-     Lookup[batch, "representation", None] =!= "J[vertexPacks]",
-    Return[<|"status" -> "notGenerated", "reason" -> "notPureTimeSeedBatch"|>]
-    ];
-   records = Lookup[batch, "seedRecords", {}];
-   terms = Flatten[Lookup[Lookup[records, "treeLinearData", <||>], "terms", {}], 1];
-   If[AnyTrue[terms, ! StringQ[Lookup[#, "sectorKey", None]] || ! MatchQ[Lookup[#, "integral", None], J[_List]] &],
-    Return[<|"status" -> "notReady", "reason" -> "invalidSectorTaggedTreeTerms"|>]
-    ];
-   tokens = DeleteDuplicates[dsPureTimeTaggedIntegral /@ terms];
-   integralIndex = makeIntegralIndex[tokens];
-   linearEquations = dsPureTimeLinearEquation[#, integralIndex] & /@ records;
-   publicIntegrals = Map[
-     <|"id" -> integralIndex[#], "sectorKey" -> #[[1]], "integral" -> #[[2]]|> &,
-     tokens
-     ];
-   coefficientDiagnostics = linearCoefficientDiagnostics[linearEquations];
-   <|
-    "status" -> "generated",
-    "caseName" -> Lookup[batch, "caseName", context["topology", "name"]],
-    "ibpMode" -> "timeOnly",
-    "representation" -> "sectorTaggedJ[vertexPacks]",
-    "topology" -> context["topology"],
-    "integralCount" -> Length[tokens],
-    "equationCount" -> Length[linearEquations],
-    "integralList" -> tokens,
-    "publicIntegralList" -> publicIntegrals,
-    "integralRules" -> Normal[integralIndex],
-    "sectorMetadataList" -> Lookup[batch, "sectorMetadataList", {}],
-    "topologyValidationReport" -> context["validationReport"],
-    "seedCoverageReport" -> <|
-      "passQ" -> True,
-      "mode" -> "timeOnly",
-      "completeTimeGenerationQ" -> True,
-      "completeMomentumGenerationQ" -> False
-      |>,
-    "linearEquations" -> linearEquations,
-    "linearQ" -> And @@ Lookup[linearEquations, "linearQ", False],
-    "nonlinearEquationCount" -> Count[Lookup[linearEquations, "linearQ", False], False],
-    "numericCoefficientSystemQ" -> coefficientDiagnostics["numericCoefficientSystemQ"],
-    "coefficientVariables" -> coefficientDiagnostics["coefficientVariables"],
-    "sourceSeedBatch" -> KeyDrop[batch, {"equations", "seedRecords"}]
-    |>
    ];

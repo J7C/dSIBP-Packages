@@ -315,7 +315,7 @@ summary = <|
 
 Print[InputForm[summary]];
 If[! And[
-    ToString[summary["version"]] === currentVersion,
+    ToString[summary["version"]] === runtimeVersionToken,
     summary["initStatus"] === "initialized",
     summary["graphLoopCount"] === 1,
     summary["loopExternalMomenta"] === {k1 + k2},

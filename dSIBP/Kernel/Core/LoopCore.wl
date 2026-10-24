@@ -17,17 +17,7 @@
 (* ::Chapter:: *)
 (*环境与通用工具*)
 
-(* 本章只解析脚本目录并定义小工具函数。加载 package 不改变用户当前工作目录；输出路径由调用者显式决定。 *)
-
-baseDir = If[StringQ[$InputFileName] && $InputFileName =!= "",
-   DirectoryName[$InputFileName],
-   If[TrueQ[$Notebooks],
-    With[{nd = Quiet[NotebookDirectory[]]},
-     If[StringQ[nd] && nd =!= $Failed, nd, Directory[]]
-     ],
-    Directory[]
-    ]
-   ];
+(* 本章只定义小工具函数。加载 package 不改变用户当前工作目录；输出路径由调用者显式决定。 *)
 
 
 (* 只做结构零判断；解析化简应放到单独的小规模 specialized check 中。 *)
@@ -553,7 +543,6 @@ completeLineMetadata[line_, vertexSignAssoc_] := Module[
 parseTopology::missingkeys = "case 缺少必需字段：`1`。";
 parseTopology::badinput = "case 输入 preflight 失败：`1`。";
 parseTopology::badfunction = "massive line 的函数系统编译失败：`1`。";
-parseTopology::badsectorkey = "sectorKey 与当前 ibpMode 不一致：`1`。";
 
 
 parseTopology[case_Association] := Module[
@@ -839,12 +828,6 @@ lineIntegerPowerIndex[topo_Association, J[_, linePacks_, _], e_Integer] := If[
    ];
 
 
-linePackNPosition[topo_Association, e_Integer, endpointSlot_Integer] := Module[
-   {positions = linePackNPositions[topo["lines"][[e]], actualLinePackType[topo, e, makeLinePack[topo["lines"][[e]]]]]},
-   If[1 <= endpointSlot <= Length[positions], positions[[endpointSlot]], Missing["NoEndpointState"]]
-   ];
-
-
 makeLinePack[line_Association] := Module[{id = line["id"], indexedQ = lineIndexedPowerQ[line]},
    Switch[line["packType"],
     "massiveFull", If[indexedQ, {b[id], n[id, 1], n[id, 2]}, {n[id, 1], n[id, 2]}],
@@ -1013,9 +996,6 @@ sectorMetadataKey[metadata_Association] := Lookup[
     Lookup[metadata, "ibpMode", "full"]
     ]
    ];
-
-
-sectorMetadataLinePackLengths[metadata_Association] := Length /@ Lookup[Lookup[metadata, "lineSlots", {}], "packTemplate", {}];
 
 
 parsedTopologyQ[spec_Association] := TrueQ[KeyExistsQ[spec, "lines"] && KeyExistsQ[spec, "nL"]];
@@ -1544,11 +1524,6 @@ forbiddenNData[topo_Association, expr_] := DeleteCases[
 containsForbiddenNQ[topo_Association, expr_] := Length[forbiddenNData[topo, expr]] > 0;
 
 
-assertNoForbiddenN::badn = "表达式仍含 forbidden n 指标：`1`。";
-assertNoForbiddenN[expr_, topo_Association] := Module[{bad = forbiddenNData[topo, expr]},
-   If[bad === {}, expr, Message[assertNoForbiddenN::badn, bad]; $Failed]
-   ];
-
 (* ::Chapter:: *)
 (*用户输入的积分族对称性*)
 
@@ -1909,9 +1884,6 @@ linearMomentumExpressionData[expr_, basis_List] := Module[
    ];
 
 
-linearMomentumExpressionQ[expr_, basis_List] := TrueQ[linearMomentumExpressionData[expr, basis]["linearQ"]];
-
-
 lineMomentumLinearityIssues[topo_Association] := Module[
    {basis = Lookup[topo, "momentumDecompositionBasis",
       Join[topo["loopMomenta"], topo["effectiveLoopExternalMomenta"], Lookup[topo, "independentExternalMomenta", {}]]]},
@@ -2052,15 +2024,6 @@ scalarProductRuleCacheKey[topo_Association] := With[
     },
    HoldComplete[nL, nK, nE, loopMomenta, effectiveLoopExternalMomenta, lineMomenta, ispExprs, resolvedLoopKinematicRules]
    ];
-
-
-clearScalarProductRuleCache[] := ($scalarProductRuleCache = <||>; Null);
-
-
-scalarProductRuleCacheReport[] := <|
-   "entryCount" -> Length[$scalarProductRuleCache],
-   "hashes" -> Keys[$scalarProductRuleCache]
-   |>;
 
 
 (* 小规模线性规则核心：直接作为 ISP 给出的标量积会被保留，不强行改写成 rho。
@@ -2323,9 +2286,6 @@ makeIBPGenerators[topo_Association] := Module[
      ];
    Join[timeGenerators, loopGenerators, externalGenerators]
    ];
-
-
-expectedMomentumGeneratorCount[topo_Association] := topo["nL"] (topo["nL"] + topo["nK"]);
 
 
 (* ::Chapter:: *)
@@ -2929,44 +2889,6 @@ lineShrinkBShift[line_Association] := If[
    ];
 
 
-shrinkLineIntegral[topo_Association, J[aList_, linePacks_, ispList_], e_Integer, bShift_: Automatic, aShift_: Automatic] := Module[
-   {line = topo["lines"][[e]], uSlot, vSlot, oldActive, newRepMap, newActive, newAList, newLinePacks = linePacks,
-     mergedRep, oldSlotsForNewRep, slotValues, effectiveBShift, effectiveAShift, powerCoefficient},
-   effectiveBShift = If[bShift === Automatic, lineShrinkBShift[line], bShift];
-    effectiveAShift = If[
-      aShift === Automatic,
-      If[Lookup[line, "massType", "massive"] === "massless", 0, effectiveBShift],
-      aShift
-      ];
-   uSlot = vertexASlot[topo, line["endpoints"][[1]]];
-   vSlot = vertexASlot[topo, line["endpoints"][[2]]];
-   If[Head[uSlot] === Missing || Head[vSlot] === Missing, Return[$Failed]];
-   oldActive = activeAVertexIds[topo];
-   newRepMap = vertexRepresentativeMap[topo["vertexIds"], Join[
-      ({#, vertexRepresentative[topo, #]} & /@ topo["vertexIds"]),
-      {line["endpoints"]}
-      ]];
-   newActive = DeleteDuplicates[Lookup[newRepMap, topo["vertexIds"]]];
-   mergedRep = Lookup[newRepMap, line["endpoints"][[1]]];
-   newAList = Table[
-     oldSlotsForNewRep = Flatten[Position[Lookup[newRepMap, oldActive], newActive[[i]]]];
-     slotValues = aList[[oldSlotsForNewRep]];
-     If[newActive[[i]] === mergedRep,
-       If[uSlot === vSlot, 2 aList[[uSlot]], Total[slotValues]] - effectiveAShift,
-       Total[slotValues]
-       ],
-     {i, Length[newActive]}
-     ];
-   powerCoefficient = If[lineIndexedPowerQ[line], 1, fixedLineMomentumMagnitude[topo, e]^(-effectiveBShift)];
-   newLinePacks[[e]] = If[
-     lineIndexedPowerQ[line],
-     {lineIntegerPowerIndex[topo, J[aList, linePacks, ispList], e] + effectiveBShift},
-     {}
-     ];
-   powerCoefficient J[newAList, newLinePacks, ispList]
-   ];
-
-
 shrinkLinesIntegral[
    topo_Association,
    J[aList_, linePacks_, ispList_],
@@ -3089,20 +3011,6 @@ timeThetaBoundaryShrinkTerms[topo_Association, int : J[aList_, linePacks_, ispLi
      {bundle, bundles}
      ]]
    ];
-
-
-seedUnsupportedPendingFeatures[topo_Association] := DeleteDuplicates@Join[
-    unsupportedSeedFeaturesForTopology[topo]
-    ];
-
-
-momentumIBPPendingFeatures[topo_Association] := seedUnsupportedPendingFeatures[topo];
-
-
-timeIBPPendingFeatures[topo_Association] := DeleteDuplicates@Join[
-    seedUnsupportedPendingFeatures[topo],
-    If[thetaFullLineIndices[topo] =!= {}, {"shrinkSectorSeedGeneration"}, {}]
-    ];
 
 
 timeGeneratorLabel[gen_Association] := {gen["type"], gen["vertex"]};
@@ -3482,13 +3390,6 @@ applyIndependentVariableDerivativeSeed[topo_Association, int_J, var_, opts : Opt
 independentVariableDerivativeVariables[topo_Association] := DeleteDuplicates@Join[
    externalInvariantVariables[topo],
    Complement[externalLegEnergyVariables[topo], externalInvariantVariables[topo]]
-   ];
-
-
-independentVariableDerivativeKind[topo_Association, var_] := If[
-   MemberQ[externalInvariantVariables[topo], var],
-   "externalInvariant",
-   "externalLegEnergy"
    ];
 
 
@@ -4311,12 +4212,6 @@ writeSeedBatchMMA[batch_Association, OptionsPattern[]] := Module[
    ];
 
 
-readSeedBatchMMA[file_String] := If[FileExistsQ[file],
-   Get[file],
-   <|"status" -> "notRead", "reason" -> "fileNotFound", "file" -> file|>
-   ];
-
-
 (* ::Chapter:: *)
 (*Kira user-defined system 导出*)
 
@@ -4823,13 +4718,6 @@ kiraGaussianPhaseRationalize[linearEquations_List, integralCount_Integer] := Mod
 kiraPureRationalCoefficientSystemQ[linearEquations_List] := Module[{coefficients},
    coefficients = Last /@ Flatten[kiraNonzeroCoefficientRules[# ["coefficientRules"]] & /@ linearEquations];
    coefficients =!= {} && And @@ (kiraExactRationalQ /@ coefficients)
-   ];
-
-
-kiraNumericCoefficientSystemQ[linearEquations_List] := Module[
-   {coefficients},
-   coefficients = Last /@ Flatten[kiraNonzeroCoefficientRules[#["coefficientRules"]] & /@ linearEquations];
-   coefficients =!= {} && And @@ (TrueQ[NumericQ[#]] & /@ coefficients)
    ];
 
 
@@ -5749,7 +5637,6 @@ dSIBPPublicAPI::badshape = "表达式中的 J 与 topology context 不兼容：`
 dSIBPPublicAPI::badstate = "IBP 公开算子要求所有 full-line 离散态已显式取 0/1：`1`。";
 dSIBPPublicAPI::badgen = "找不到请求的 IBP 生成元：`1`。";
 dSIBPPublicAPI::badvar = "变量 `1` 不在当前 topology 初始化的外部独立变量列表 `2` 中。";
-dSIBPPublicAPI::ambiguousvar = "变量 `1` 属于过完备动力学坐标；在 family 定义中补充约束并重选独立变量前，ds 已禁用。";
 dSIBPPublicAPI::noinverse = "当前动力学规则没有唯一的用户坐标到基础标量积反向映射；rep2innerform 已拒绝。审计：`1`。";
 dSIBPPublicAPI::nonlinear = "ds 只接受 J 的线性组合；检测到非线性或非多项式 J 依赖：`1`。";
 dSIBPPublicAPI::derivativefailed = "变量 `1` 的积分导数生成失败。";
@@ -6077,19 +5964,6 @@ integrandBuildingBlock[line_Association, pack_List, momentumMagnitude_] := Modul
    ];
 
 
-integrandLineFactor[topo_Association, int_J, e_Integer] := Module[
-   {line = topo["lines"][[e]], pack = int[[2, e]], packType, momentumMagnitude, denominator},
-   packType = actualLinePackType[topo, e, pack];
-   momentumMagnitude = lineMomentumMagnitude[topo, e];
-   denominator = momentumMagnitude^(-linePowerIndex[topo, int, e]);
-   If[
-    packType === "shrunk",
-    denominator,
-    denominator integrandBuildingBlock[Join[line, <|"packType" -> packType|>], pack, momentumMagnitude]
-    ]
-   ];
-
-
 integrandISPFactor[topo_Association, int_J] := Times @@ Table[
    Lookup[topo["ispData"][[j]], "name", rho[j]]^int[[3, j]],
    {j, Length[topo["ispData"]]}
@@ -6113,7 +5987,6 @@ integralKind[_] := $Failed;
 
 
 makeTreeFamilyData::badinput = "tree family 输入无效：`1`。";
-treeIntegralShape::badshape = "tree J 的 pack 形状与 family 不一致：`1`。";
 
 
 treeSignedExternalLegEnergy[vertex_Association] :=
@@ -6296,30 +6169,6 @@ treeAplusMatrix[vertex_Association, shift_: 0] := Module[{m0t, inv},
    If[inv === $Failed, $Failed,
     -treeTpInverse[vertex] . inv . treeTp[vertex] . treeM1[vertex, vertex["nu0"] + shift + 1]
     ]
-   ];
-
-
-makeTreeRecurrenceData[data_Association] := Module[{vertices, records},
-   vertices = data["vertices"];
-   records = Map[
-     Function[vertex,
-      <|
-       "vertex" -> vertex["id"],
-       "states" -> treeBinaryStates[vertex["p"]],
-       "M1" -> treeM1[vertex, vertex["nu0"]],
-       "M0" -> treeM0[vertex],
-       "M0Tilde" -> treeM0Tilde[vertex],
-       "Aminus" -> treeAminusMatrix[vertex, 0],
-       "Aplus" -> treeAplusMatrix[vertex, 0],
-       "singularLoci" -> Join[
-         Thread[Diagonal[treeM1[vertex, vertex["nu0"]]] != 0],
-         Thread[Diagonal[treeM0Tilde[vertex]] != 0]
-         ]
-       |>
-      ],
-     vertices
-     ];
-   <|"status" -> If[FreeQ[records, $Failed], "ready", "singular"], "vertices" -> records|>
    ];
 
 
@@ -6673,14 +6522,6 @@ projectLoopTimeEquationToTree[expr_, topoSpec_Association, referenceInt_: Automa
    ];
 
 
-treeContactSourceIntegrals[expr_] := Module[{integrals, maxVertices},
-   integrals = DeleteDuplicates[Cases[expr, int : J[_List] :> int, Infinity]];
-   If[integrals === {}, Return[{}]];
-   maxVertices = Max[Length[First[#]] & /@ integrals];
-   Select[integrals, Length[First[#]] < maxVertices &]
-   ];
-
-
 DSTreeSeeds[vertex_, int : J[_, _, _], topoSpec_Association] := Module[
    {topo, loopSeed, treeSeed, contactAudit, shrinkConsumptionTrace, allLoopIntegrals, shrunkByTerm, projectedReference},
    topo = normalizeTopologySpec[topoSpec];
@@ -6799,16 +6640,6 @@ makeTreeTimeReductionRules[records_List, data_Association] := Module[
    ];
 
 
-attachTreeTimeReductionRules[data_Association, ruleData_Association] /;
-   KeyExistsQ[data, "vertices"] && ! KeyExistsQ[data, "families"] := Join[
-   data,
-   <|
-    "timeReductionRules" -> KeyTake[ruleData, {"minus", "plus"}],
-    "requiresSourceRules" -> TrueQ[ruleData["sourceQ"]]
-    |>
-   ];
-
-
 makeTreeFamilyDataFromTopology[topoSpec_Association] := Module[
    {topo, active, repMap, vertices, originalClass, signs, legs},
    topo = normalizeTopologySpec[topoSpec];
@@ -6871,13 +6702,6 @@ makeTreeSectorFamilies[topoSpec_Association] := Module[{topo, subsets, sectorTop
     "sectorOrder" -> Lookup[families, "sector"],
     "topFamily" -> First[families]
     |>
-   ];
-
-
-attachTreeTimeReductionRules[context_Association, ruleData_Association] /; KeyExistsQ[context, "families"] := Module[
-   {families = context["families"]},
-   families[[1]] = attachTreeTimeReductionRules[First[families], ruleData];
-   Join[context, <|"families" -> families, "topFamily" -> First[families]|>]
    ];
 
 

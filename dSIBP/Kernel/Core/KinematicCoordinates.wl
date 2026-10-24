@@ -89,27 +89,6 @@ externalLegMagnitudeCandidateMomenta[topo_Association] := Module[
    ];
 
 
-externalLegGramPairs[basis_List] := Flatten[
-   Table[{i, j}, {i, Length[basis]}, {j, i, Length[basis]}],
-   1
-   ];
-
-
-momentumSquaredGramVector[momentum_, basis_List] := Module[{coefficients, pairs},
-   coefficients = Coefficient[Expand[momentum], #] & /@ basis;
-   pairs = externalLegGramPairs[basis];
-   Map[
-    Function[pair,
-     If[pair[[1]] === pair[[2]],
-      coefficients[[pair[[1]]]]^2,
-      2 coefficients[[pair[[1]]]] coefficients[[pair[[2]]]]
-      ]
-     ],
-    pairs
-    ]
-   ];
-
-
 (* 实际出现集合先在完整声明向量 Gram 空间中展开；完整 loop Gram 已经在基中，
    其余模长平方仅在增加秩时获得新的 sEe。未入基项保留线性 binding。 *)
 externalLegMagnitudeBasisAnalysis[topo_Association] := Module[
@@ -1043,13 +1022,6 @@ independentVariableDerivativeVariables[topo_Association] := Module[
       allKinematicVariables
       ];
    DeleteDuplicates@Join[selectedVariables, independentScalars]
-   ];
-
-
-independentVariableDerivativeKind[topo_Association, variable_] := If[
-   MemberQ[Lookup[Lookup[topo, "kinematicCoordinateAudit", <||>], "selectedUserVariables", {}], variable],
-   "kinematicCoordinate",
-   "externalLegEnergy"
    ];
 
 

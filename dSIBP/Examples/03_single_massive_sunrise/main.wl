@@ -138,7 +138,7 @@ summary = <|
 
 Print[summary];
 If[! And[
-    ToString[dSIBP`$dSIBPVersion] === currentVersion,
+    ToString[dSIBP`$dSIBPVersion] === runtimeVersionToken,
     summary["initStatus"] === "initialized",
     summary["kinematicStatus"] === "complete",
     summary["graphLoopCount"] === 2,

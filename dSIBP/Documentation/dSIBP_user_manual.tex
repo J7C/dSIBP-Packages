@@ -96,7 +96,7 @@ Needs["dSIBP`"];
 给定下文的 \texttt{case} 后，最短的可执行调用链是
 \begin{verbatim}
 context = DSInit[case];
-templateData = DSSeeds[context,GenerateShrinkSectors->True];
+templateData = DSSeeds[context];
 allSeeds = DSAllSeeds[templateData];
 seeds = DSGenerateIBP[allSeeds,{0,0}];
 linearData = DSLinear[seeds,context];
@@ -1122,7 +1122,9 @@ linearData = DSLinear[ibpData, context,
 缺省 \texttt{DSKiraExport} 与 formal \texttt{DSKiraPlan} 必须拒绝。seed 或裸模板不能直接交给
 serializer；必须先得到成功的 backend-neutral \texttt{linearData}。
 
-缺省 \texttt{AuditLevel->"standard"} 只消费同源 sealed producer 的状态、计数、摘要和 digest 字段，不重算模板/关系内容 hash，也不重复 canonical、parity、coverage 或 tree residual 扫描。需要开发、独立检验或发布证书时显式使用 \texttt{AuditLevel->"full"}。这不会放宽用户输入、未推导公式、递推终止、外部 artifact 身份或 reduction/DE closure 边界。
+\texttt{DSGenerateIBP}、\allowbreak\texttt{DSLinear} 与 tree 侧的
+\texttt{DSTreeNaiveIBP}、\allowbreak\texttt{DSTreeNaiveDE}、\allowbreak\texttt{DSTreeDLogDE} 共享
+\texttt{AuditLevel}。缺省 \texttt{AuditLevel->"standard"} 只消费同源 sealed producer 的状态、计数、摘要和 digest 字段，不重算模板/关系内容 hash，也不重复 canonical、parity、coverage 或 tree residual 扫描。需要开发、独立检验或发布证书时显式使用 \texttt{AuditLevel->"full"}。这不会放宽用户输入、未推导公式、递推终止、外部 artifact 身份或 reduction/DE closure 边界。
 
 \subsection{Kira 两阶段计划}
 
@@ -1453,16 +1455,25 @@ de  = DSTreeNaiveDE[ibp, {K1,K2,k12}];
 \appendix
 \section{公开函数汇总}
 
+两个选项由多个命令共享，表中不再逐行重复：\texttt{ProgressReporting}（缺省
+\texttt{Automatic}）控制控制台进度输出，由 \texttt{DSInit}、\allowbreak\texttt{DSSeeds}、\allowbreak
+\texttt{DSGenerateIBP}、\allowbreak\texttt{DSLinear}、\allowbreak\texttt{DSKiraPlan}、\allowbreak\texttt{DSKiraExport}、\allowbreak
+\texttt{DSKiraImport}、\allowbreak\texttt{DSDE}、\allowbreak\texttt{DSScaleCheck}、\allowbreak\texttt{DSRedefineParameters}、\allowbreak
+\texttt{DSTreeNaiveIBP} 与 \texttt{DSTreeNaiveDE} 接受；\texttt{AuditLevel}（缺省
+\texttt{"standard"}）设置自审计深度，由 \texttt{DSGenerateIBP}、\allowbreak\texttt{DSLinear}、\allowbreak
+\texttt{DSTreeNaiveIBP}、\allowbreak\texttt{DSTreeNaiveDE} 与 \texttt{DSTreeDLogDE} 接受。第三列只列
+各命令专用的 option 与 spec 键及缺省；它们的语义和完整用法随对应命令在正文各节介绍。
+
 \begingroup
 \scriptsize
 \renewcommand{\arraystretch}{0.98}
 \begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.23\textwidth}>{\raggedright\arraybackslash}p{0.42\textwidth}>{\raggedright\arraybackslash}p{0.29\textwidth}@{}}
 \toprule
-函数 & 用途 & 主要 option/缺省 \\
+函数 & 用途 & 专用 option/spec 键与缺省 \\
 \midrule
 \endfirsthead
 \toprule
-函数 & 用途 & 主要 option/缺省 \\
+函数 & 用途 & 专用 option/spec 键与缺省 \\
 \midrule
 \endhead
 \midrule
@@ -1470,31 +1481,31 @@ de  = DSTreeNaiveDE[ibp, {K1,K2,k12}];
 \endfoot
 \bottomrule
 \endlastfoot
-\texttt{DSKinematics} & 提议或审计结构/routing、双动量列表、动力学变量规则、秩、零空间与可逆性 & rules=Automatic（缺省提案） \\
-\texttt{DSInit} & 解析 family、注册 context、生成 topology/sector/convention metadata & KinematicRules=Automatic；写初始化文件=False；写导数算符=False；覆盖=False \\
+\texttt{DSKinematics} & 提议或审计结构/routing、双动量列表、动力学变量规则、秩、零空间与可逆性 & 第二参数 rules 缺省 \texttt{Automatic}（缺省出提案） \\
+\texttt{DSInit} & 解析 family、注册 context、生成 topology/sector/convention metadata & \texttt{KinematicRules} = Automatic；\allowbreak\texttt{GenerateDerivativeMetadata} = False；\allowbreak\texttt{WriteInitializationFiles} = False；\allowbreak\texttt{InitializationDirectory} = Automatic；\allowbreak\texttt{OverwriteInitialization} = False；\allowbreak\texttt{RegisterAsCurrent} = True \\
 \texttt{DSInfo} & 返回当前初始化摘要与 readiness & 无 \\
 \texttt{DSParameterNotation} & 返回缺省/当前根号 notation 与用户变量 & context=当前已注册 context \\
-\texttt{DSRedefineParameters} & 用完整新规则重新初始化参数坐标 & 进度=Automatic \\
+\texttt{DSRedefineParameters} & 用完整新规则重新初始化参数坐标 & 无专用 option \\
 \texttt{DSMessagesOn}, \texttt{DSMessagesOff}, \texttt{DSMessagesQ} & 分别开启、关闭或查询非致命提醒；fatal error 始终保留 & 无 \\
 \texttt{DSPublicAPI} & 返回公开函数分组、清单与高层缺省 options & 无 \\
-\texttt{DSSeeds} & massive 完整枚举四态、masslessFull 枚举 $00/10$ quotient representatives，并生成连续指标保持 general 的一维模板 \texttt{allSeeds} 与推荐分组；所有模式返回统一三参数 \texttt{J} & 生成 shrink sector=True；进度=Automatic \\
+\texttt{DSSeeds} & massive 完整枚举四态、masslessFull 枚举 $00/10$ quotient representatives，并生成连续指标保持 general 的一维模板 \texttt{allSeeds} 与推荐分组；所有模式返回统一三参数 \texttt{J} & 无专用 option \\
 \texttt{DSAllSeeds} & 从 seedData 或最近一次成功调用读取扁平模板列表 & 无 \\
 \texttt{DSSeedGroups}, \texttt{DSSeedGroupMetadata} & 读取缺省嵌套 seed 分组及其同序来源 metadata；也可读取最近一次成功结果 & 无 \\
 \texttt{DSMetaSeedRange} & 按用户 seeds 外层结构初始化逐组 shift metadata；flat 为一组，nested 按顶层分组；再次调用覆盖旧状态 & 声明指标多报或少报只 warning，按实际变量继续 \\
-\texttt{DSGenerateIBP} & 从统一或逐指标最终关系包络反推逐组 seed 点域，先筛 parity 再撒点；返回目标包络、逐组范围、空组、方程记录和 canonical 证书 & 无数量上限；进度=Automatic \\
-\texttt{DSLinear} & seed 转后端中立 \texttt{linearData}，其 \texttt{integralList} 是唯一后端顺序 & 系数规则=Automatic；Kira ordering=Automatic \\
+\texttt{DSGenerateIBP} & 从统一或逐指标最终关系包络反推逐组 seed 点域，先筛 parity 再撒点；返回目标包络、逐组范围、空组、方程记录和 canonical 证书 & 无专用 option \\
+\texttt{DSLinear} & seed 转后端中立 \texttt{linearData}，其 \texttt{integralList} 是唯一后端顺序 & \texttt{LinearSystemMode} = \texttt{"symbolic"}；\allowbreak\texttt{CoefficientRules} = Automatic；\allowbreak\texttt{KiraOrdering} = Automatic \\
 \texttt{DSReorderIntegrals} & 在 basis/backend 前显式同步重排积分表、映射与方程 ID & order 为现有 \texttt{J} 或 ID 列表 \\
-\texttt{DSUserMI} & 从有序 \texttt{J}/齐次线性组合构造可逆 support 坐标、公开 \texttt{userMI} token 与导数闭包 & spec 给名称、active 位置、导数变量和 scaling 次数 \\
-\texttt{DSKiraPlan} & 按既定顺序生成预约化 candidates，或 formal userMI derivative closure/minimal targets & stage 必填；numericStage=symbolic；进度=Automatic \\
-\texttt{DSKiraExport} & 从 \texttt{linearData} 写 Kira 基础输入与映射 & 输出目录=None；active basis=None；job options=Automatic \\
-\texttt{DSKiraImport} & 读回完整 Kira reduction/master 输出 & 缺省为 \texttt{results/Tuserweight/} family 文件；其它文件显式指定；进度=Automatic \\
-\texttt{DSDE} & 用 \texttt{ds} 与 reduction 构造同序 DE，并检查所有导数积分已约回 master & 变量=初始化全部；输出目录=None \\
-\texttt{DSScaleCheck} & 检查 top/residual Euler scaling & 关系=Custom；变量/权重/次数=Automatic \\
-\texttt{DSTreeSeeds} & 生成 direct pure-time/tree sector rules；loop 投影只作交叉验证 & sector=all；保留 source=True \\
-\texttt{repIterative} & tree 积分迭代到指定 $a_e$ 终点；严格下降/循环/奇异性门禁保证数学终止 & 终点=全零；无步数上限 \\
-\texttt{DSTreeNaiveIBP} & 联立投影后的 tree time-IBP 并解一步升幂对象 & masters=直接 dlog 同序列表；进度=Automatic \\
-\texttt{DSTreeNaiveDE} & 用 naive tree IBP 构造同序 normalized-master DE & 变量=顶点与 massive-leg energies；进度=Automatic \\
-\texttt{DSTreeDLogDE} & 生成 tree dlog connection、letters 和同序 masters & 无 \\
+\texttt{DSUserMI} & 从有序 \texttt{J}/齐次线性组合构造可逆 support 坐标、公开 \texttt{userMI} token 与导数闭包 & spec 键：\texttt{names} （缺省 active1、active2…）；\allowbreak\texttt{activeIndices} （缺省全部位置）；\allowbreak\texttt{derivativeVariables} = Automatic；\allowbreak\texttt{scalingDegrees} = Automatic \\
+\texttt{DSKiraPlan} & 按既定顺序生成预约化 candidates，或 formal userMI derivative closure/minimal targets & spec 键：\texttt{stage} 必填；\allowbreak\texttt{preferredIntegrals} = \{\}；\allowbreak\texttt{candidateIntegrals} （preReduction 阶段缺省全部积分）；\allowbreak\texttt{activeBasis} （formal 阶段缺省 \texttt{Automatic}）；\allowbreak\texttt{numericStage} = \texttt{"symbolic"}；\allowbreak\texttt{coefficientRules} = \{\}；\allowbreak\texttt{outputDirectory} = None；\allowbreak\texttt{jobOptions} = Automatic \\
+\texttt{DSKiraExport} & 从 \texttt{linearData} 写 Kira 基础输入与映射 & \texttt{OutputDirectory} = None；\allowbreak\texttt{KiraTargetIntegrals} = Automatic；\allowbreak\texttt{KiraCoefficientRules} = \{\}；\allowbreak\texttt{KiraJobOptions} = Automatic；\allowbreak\texttt{KiraActiveBasis} = None；\allowbreak\texttt{KiraRequireCompleteSystem} = True；\allowbreak\texttt{KiraNumericStage} = \texttt{"symbolic"} \\
+\texttt{DSKiraImport} & 读回完整 Kira reduction/master 输出 & \texttt{KiraReductionFile}、\allowbreak\texttt{KiraMasterFile} = Automatic （缺省 \texttt{results/Tuserweight/} 的 family 输出，其它路径显式给出）；\allowbreak\texttt{KiraCompletionFile} = Automatic；\allowbreak\texttt{KiraCompletionPatterns} = Automatic \\
+\texttt{DSDE} & 用 \texttt{ds} 与 reduction 构造同序 DE，并检查所有导数积分已约回 master & 变量参数缺省为全部初始化变量；\allowbreak\texttt{OutputDirectory} = None \\
+\texttt{DSScaleCheck} & 检查 top/residual Euler scaling & \texttt{ScalingRelation} = \texttt{"Custom"}；\allowbreak\texttt{ScalingVariables}、\allowbreak\texttt{ScalingWeights}、\allowbreak\texttt{ScalingDegrees} = Automatic；\\allowbreak spec 键 \texttt{relation}、\allowbreak\texttt{variables}、\allowbreak\texttt{weights}、\allowbreak\texttt{degrees} 与之等价 \\
+\texttt{DSTreeSeeds} & 生成 direct pure-time/tree sector rules；loop 投影只作交叉验证 & 无专用 option （整体调用遍历全部 time 生成元顶点，亦可单顶点调用） \\
+\texttt{repIterative} & tree 积分迭代到指定 $a_e$ 终点；严格下降/循环/奇异性门禁保证数学终止 & end 参数缺省 \texttt{Automatic} （各顶点零时间幂）；\allowbreak无步数上限 option \\
+\texttt{DSTreeNaiveIBP} & 联立投影后的 tree time-IBP 并解一步升幂对象 & masters 参数缺省为 \texttt{DSTreeDLogDE} 同序 master 列表 \\
+\texttt{DSTreeNaiveDE} & 用 naive tree IBP 构造同序 normalized-master DE & variables 参数缺省为顶点能量与 massive-leg 模长；\\allowbreak masters 参数缺省同 \texttt{DSTreeNaiveIBP}；\allowbreak亦可直接接收其返回值 \\
+\texttt{DSTreeDLogDE} & 生成 tree dlog connection、letters 和同序 masters & 无专用 option \\
 \texttt{dtau} & 指定顶点的 time-IBP & 显式 topology 或当前 context \\
 \texttt{dqq}/\texttt{dqk} & 指定 loop generator 的 momentum-IBP & 显式 topology 或当前 context \\
 \texttt{ds} & 对带动力学系数的 $J$ 线性组合求总导数 & 变量必须是初始化外部名字 \\

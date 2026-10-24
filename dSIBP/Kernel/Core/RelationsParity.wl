@@ -322,63 +322,6 @@ thetaBoundaryAtomicTerms[
 (* ::Chapter:: *)
 (*Fixed-line shrink 与 normalized coefficient*)
 
-fixedLineShrinkResidualPower018[
-   topo_Association,
-   e_Integer,
-   integerShift_,
-   zeroPointShift_
-   ] := Module[{rootRules, id, sourceZero, targetZero},
-   rootRules = Lookup[topo, "rootZeroPointRules", topo["zeroPointRules"]];
-   id = topo["lines"][[e, "id"]];
-   sourceZero = zeroPointRuleValue018[rootRules, b0[id], 0];
-   targetZero = lineTargetShrinkZeroPoint018[topo, e];
-   Expand[integerShift + zeroPointShift - (targetZero - sourceZero)]
-   ];
-
-
-shrinkLineIntegral[
-   topo_Association, int : J[aList_, linePacks_, ispList_], e_Integer,
-   bShift_: Automatic, aShift_: Automatic
-   ] := Module[
-   {line = topo["lines"][[e]], uSlot, vSlot, oldActive, newRepMap, newActive,
-    newAList, newLinePacks = linePacks, mergedRep, oldSlotsForNewRep, slotValues,
-    effectiveBShift, effectiveAShift, effectiveZeroPointShift, powerCoefficient},
-   effectiveBShift = If[bShift === Automatic, lineShrinkBShift[line], bShift];
-   effectiveZeroPointShift = lineShrinkZeroPointShift[line];
-   effectiveAShift = If[aShift === Automatic,
-     If[Lookup[line, "massType", "massive"] === "massless", 0, effectiveBShift],
-     aShift
-     ];
-   uSlot = vertexASlot[topo, line["endpoints"][[1]]];
-   vSlot = vertexASlot[topo, line["endpoints"][[2]]];
-   If[Head[uSlot] === Missing || Head[vSlot] === Missing, Return[$Failed]];
-   oldActive = activeAVertexIds[topo];
-   newRepMap = vertexRepresentativeMap[topo["vertexIds"], Join[
-      ({#, vertexRepresentative[topo, #]} & /@ topo["vertexIds"]),
-      {line["endpoints"]}
-      ]];
-   newActive = DeleteDuplicates[Lookup[newRepMap, topo["vertexIds"]]];
-   mergedRep = Lookup[newRepMap, line["endpoints"][[1]]];
-   newAList = Table[
-     oldSlotsForNewRep = Flatten[Position[Lookup[newRepMap, oldActive], newActive[[i]]]];
-     slotValues = aList[[oldSlotsForNewRep]];
-     If[newActive[[i]] === mergedRep, Total[slotValues] - effectiveAShift, Total[slotValues]],
-     {i, Length[newActive]}
-     ];
-   powerCoefficient = If[
-     lineIndexedPowerQ[line],
-     1,
-     fixedLineMomentumMagnitude[topo, e]^(-effectiveBShift - effectiveZeroPointShift)
-     ];
-   newLinePacks[[e]] = If[
-     lineIndexedPowerQ[line],
-     {lineIntegerPowerIndex[topo, int, e] + effectiveBShift},
-     {fixedLineSentinel018[]}
-     ];
-   powerCoefficient J[newAList, newLinePacks, ispList]
-   ];
-
-
 shrinkLinesIntegral[
    topo_Association,
    int : J[aList_, linePacks_, ispList_],

@@ -14,99 +14,6 @@ treeTaggedIntegral[sectorKey_, integral_J, coefficient_: 1] := <|
 
 dsExpandedTerms[expr_] := If[Head[Expand[expr]] === Plus, List @@ Expand[expr], {Expand[expr]}];
 
-dsLoopTermTreeTag[term_, topo_Association, referenceInt_J] := Module[
-   {loopIntegrals, loopIntegral, loopCoefficient, targetTopology, referenceTopology, projected, treeIntegrals,
-    treeIntegral, projectionCoefficient, targetVertices, referenceVertices, targetAInteger, referenceAInteger,
-    targetAZeroPoint, referenceAZeroPoint, targetAPhysical, referenceAPhysical, targetBInteger,
-    referenceBInteger, targetBZeroPoint, referenceBZeroPoint, targetBPhysical, referenceBPhysical,
-     deltaTimePower, deltaLinePowers, explicitMomentumMagnitudePowers, lineMomentumMagnitudes, auditedProjectionCoefficient},
-   loopIntegrals = DeleteDuplicates[Cases[term, J[_, _, _], {0, Infinity}]];
-   If[Length[loopIntegrals] =!= 1, Return[$Failed]];
-   loopIntegral = First[loopIntegrals];
-   loopCoefficient = term /. loopIntegral -> 1;
-   targetTopology = loopTreeTargetTopology[loopIntegral, topo];
-   referenceTopology = loopTreeTargetTopology[referenceInt, topo];
-   projected = projectLoopIntegralToTree[loopIntegral, topo, referenceInt];
-   If[MemberQ[{targetTopology, referenceTopology, projected}, $Failed], Return[$Failed]];
-   treeIntegrals = DeleteDuplicates[Cases[projected, J[_List], {0, Infinity}]];
-   If[Length[treeIntegrals] =!= 1, Return[$Failed]];
-   treeIntegral = First[treeIntegrals];
-   projectionCoefficient = projected /. treeIntegral -> 1;
-   targetVertices = activeAVertexIds[targetTopology];
-   referenceVertices = activeAVertexIds[referenceTopology];
-   targetAInteger = First[loopIntegral];
-   referenceAInteger = First[referenceInt];
-   targetAZeroPoint = vertexZeroPoint[targetTopology, #] & /@ targetVertices;
-   referenceAZeroPoint = vertexZeroPoint[referenceTopology, #] & /@ referenceVertices;
-   targetAPhysical = MapThread[Plus, {targetAInteger, targetAZeroPoint}];
-   referenceAPhysical = MapThread[Plus, {referenceAInteger, referenceAZeroPoint}];
-   targetBInteger = Table[lineIntegerPowerIndex[targetTopology, loopIntegral, e], {e, targetTopology["nE"]}];
-   referenceBInteger = Table[lineIntegerPowerIndex[referenceTopology, referenceInt, e], {e, referenceTopology["nE"]}];
-   targetBZeroPoint = Table[
-     If[actualLinePackType[targetTopology, e, loopIntegral[[2, e]]] === "shrunk",
-      lineBSZeroPoint[targetTopology, e],
-      lineBZeroPoint[targetTopology, e]
-      ],
-     {e, targetTopology["nE"]}
-     ];
-   referenceBZeroPoint = Table[
-     If[actualLinePackType[referenceTopology, e, referenceInt[[2, e]]] === "shrunk",
-      lineBSZeroPoint[referenceTopology, e],
-      lineBZeroPoint[referenceTopology, e]
-      ],
-     {e, referenceTopology["nE"]}
-     ];
-   targetBPhysical = MapThread[Plus, {targetBInteger, targetBZeroPoint}];
-   referenceBPhysical = MapThread[Plus, {referenceBInteger, referenceBZeroPoint}];
-   deltaTimePower = Expand[Total[targetAPhysical] - Total[referenceAPhysical]];
-   deltaLinePowers = MapThread[Expand[#1 - #2] &, {targetBPhysical, referenceBPhysical}];
-   explicitMomentumMagnitudePowers = -deltaLinePowers;
-   lineMomentumMagnitudes = Table[
-     lineMomentumMagnitude[targetTopology, e],
-     {e, targetTopology["nE"]}
-     ];
-   (* 两侧积分都使用 (-tau)^A；deltaTimePower 只作幂次审计，不产生重复的 (-1)^DeltaA。 *)
-   auditedProjectionCoefficient = Times @@ MapThread[Power, {lineMomentumMagnitudes, explicitMomentumMagnitudePowers}];
-   <|
-    "sectorKey" -> sectorKeyFromShrunkLines[targetTopology, Lookup[targetTopology, "sectorShrunkLines", {}]],
-    "integral" -> treeIntegral,
-    "coefficient" -> Expand[loopCoefficient projectionCoefficient],
-    "sourceLoopIntegral" -> loopIntegral,
-    "projectionCoefficient" -> projectionCoefficient,
-    "physicalPowerAudit" -> <|
-      "target" -> <|
-        "sectorKey" -> sectorKeyFromShrunkLines[targetTopology, Lookup[targetTopology, "sectorShrunkLines", {}]],
-        "aInteger" -> targetAInteger,
-        "aZeroPoint" -> targetAZeroPoint,
-        "aPhysical" -> targetAPhysical,
-        "bInteger" -> targetBInteger,
-        "bZeroPoint" -> targetBZeroPoint,
-        "bPhysical" -> targetBPhysical,
-        "treeNu0" -> targetAZeroPoint
-        |>,
-      "reference" -> <|
-        "sectorKey" -> sectorKeyFromShrunkLines[referenceTopology, Lookup[referenceTopology, "sectorShrunkLines", {}]],
-        "aInteger" -> referenceAInteger,
-        "aZeroPoint" -> referenceAZeroPoint,
-        "aPhysical" -> referenceAPhysical,
-        "bInteger" -> referenceBInteger,
-        "bZeroPoint" -> referenceBZeroPoint,
-        "bPhysical" -> referenceBPhysical
-        |>,
-      "deltaTimePower" -> deltaTimePower,
-      "deltaLineIntegerPowers" -> MapThread[Expand[#1 - #2] &, {targetBInteger, referenceBInteger}],
-      "deltaLineZeroPointPowers" -> MapThread[Expand[#1 - #2] &, {targetBZeroPoint, referenceBZeroPoint}],
-      "deltaLinePhysicalPowers" -> deltaLinePowers,
-      "explicitMomentumMagnitudePowers" -> explicitMomentumMagnitudePowers,
-      "lineMomentumMagnitudes" -> lineMomentumMagnitudes,
-      "auditedProjectionCoefficient" -> auditedProjectionCoefficient,
-      "projectionCoefficientMatchesAudit" -> TrueQ[projectionCoefficient === auditedProjectionCoefficient],
-      "zeroPointRules" -> targetTopology["zeroPointRules"],
-      "unsafePowerExpand" -> False
-      |>
-    |>
-   ];
-
 dsCombineTreeTaggedTerms[terms_List] := Map[
    Function[group,
     Module[{optionalKeys, optionalData},
@@ -133,26 +40,6 @@ dsCombineTreeTaggedTerms[terms_List] := Map[
      ]
     ],
    GatherBy[terms, {Lookup[#, "sectorKey"], Lookup[#, "integral"]} &]
-   ];
-
-dsTreeLinearData[record_Association, topo_Association, referenceInt_J] := Module[{taggedTerms, combined},
-   taggedTerms = dsLoopTermTreeTag[#, topo, referenceInt] & /@ dsExpandedTerms[record["loopSeed"]];
-   If[MemberQ[taggedTerms, $Failed], Return[<|"status" -> "failed", "reason" -> "treeTagProjectionFailed"|>]];
-   combined = dsCombineTreeTaggedTerms[taggedTerms];
-   <|
-    "status" -> "generated",
-    "terms" -> combined,
-    "termCount" -> Length[combined],
-    "sectorKeys" -> DeleteDuplicates[Lookup[combined, "sectorKey"]],
-    "expression" -> Total[(Lookup[#, "coefficient"] Lookup[#, "integral"]) & /@ combined],
-    "referenceLoopIntegral" -> referenceInt,
-    "coefficientConvention" -> "complete physical powers: a+a0 and b+b0 or bS+bS0"
-    |>
-   ];
-
-dsEnrichTreeSeedRecord[record_Association, topo_Association, referenceInt_J] := Join[
-   record,
-   <|"treeLinearData" -> dsTreeLinearData[record, topo, referenceInt]|>
    ];
 
 
@@ -259,27 +146,6 @@ dsMakeTreeTaggedTimeReductionRules[records_List, data_Association] := Module[
     "sourceQ" -> sourceQ,
     "groupCount" -> Length[grouped]
     |>
-   ];
-
-
-dsTreeSeedRecordFromSector[vertex_, int : J[_, _, _], family_Association] := Module[
-   {sectorTopology = family["topology"], rootTopology, loopSeed, treeSeed, treeIntegral, record},
-   rootTopology = Lookup[family, "rootTopology", sectorTopology];
-   loopSeed = dtau[vertex, int, sectorTopology];
-   If[loopSeed === $Failed, Return[$Failed]];
-   treeSeed = projectLoopTimeEquationToTree[loopSeed, rootTopology, int];
-   treeIntegral = projectLoopIntegralToTree[int, rootTopology, int];
-   If[MemberQ[{treeSeed, treeIntegral}, $Failed], Return[$Failed]];
-   record = <|
-     "status" -> "generated",
-     "generator" -> dtau[vertex],
-     "loopSeed" -> loopSeed,
-     "treeSeed" -> treeSeed,
-     "treeIntegral" -> treeIntegral,
-     "referenceA" -> First[int],
-     "sectorKey" -> family["sector"]
-     |>;
-   dsEnrichTreeSeedRecord[record, rootTopology, int]
    ];
 
 

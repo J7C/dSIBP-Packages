@@ -13,7 +13,6 @@ Options[DSKiraImport] = {
 
 DSKiraImport::badpath = "Kira workspace 路径不存在或不是目录：`1`。";
 DSKiraImport::missing = "Kira 结果缺少必需文件：`1`。";
-DSKiraImport::incomplete = "Kira 完成日志没有成功标记：`1`。";
 DSKiraImport::mismatch = "Kira 结果与当前 export/context 不一致：`1`。";
 DSKiraImport::invalid = "Kira reduction 数据未通过完整性检查：`1`。";
 

@@ -6,7 +6,8 @@ Purpose: Single load entry for every example in this directory. It resolves the 
    source tree that sits next to Examples/, loads it through the standard Needs entry, and
    exposes the identity values that each example self-checks against.
 Interface: Get this file with an explicit UTF-8 encoding, then use the public dSIBP
-   context. The caller receives currentVersion, currentPackagePath and currentManualPath.
+   context. The caller receives currentVersion, runtimeVersionToken, currentPackagePath
+   and currentManualPath.
 ***)
 
 
@@ -30,6 +31,11 @@ PrependTo[$Path, packageDeliveryDirectory];
 Needs["dSIBP`"];
 
 currentVersion = ToString[dSIBP`$dSIBPVersion];
+
+(* The released tree ships no VERSION_INDEX.md registry, so the runtime version string
+   itself is the baseline every example self-checks against. *)
+runtimeVersionToken = currentVersion;
+
 currentPackagePath = FileNameJoin[{packageDeliveryDirectory, "dSIBP.m"}];
 currentManualPath = FileNameJoin[{packageDeliveryDirectory, "Documentation", "dSIBP_user_manual.pdf"}];
 Print["dSIBP ", currentVersion, " loaded from ", packageDeliveryDirectory];

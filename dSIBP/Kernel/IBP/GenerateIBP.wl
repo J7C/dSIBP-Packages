@@ -164,10 +164,6 @@ dsLoopSeedTemplateData[context_Association, seedData_Association] := Module[
    ];
 
 
-makeAllSeedTemplateData[context_Association, seedData_Association] :=
-   dsLoopSeedTemplateData[context, seedData];
-
-
 dsSeedTemplateHashPayload[records_List] := KeyDrop[
     #,
     {"templateHash", "templateSetHash", "templateOrdinal", "templateCount", "contextInputHash", "caseName"}
@@ -274,21 +270,6 @@ dsInternalCoordinatePresentQ018[expr_] := ! FreeQ[
 
 dsSeedTemplateEquation[entry_Association] := Lookup[entry, "equation", Lookup[entry, "treeSeed", Missing["NoEquation"]]];
 dsSeedTemplateEquation[entry_] := entry;
-
-
-dsContinuousIndicesFromIntegral[J[aList_, linePacks_, ispList_]] := DeleteDuplicates@Join[
-    Quiet@Check[Variables[Flatten[{aList}]], Cases[aList, _a, Infinity]],
-    DeleteDuplicates[Cases[linePacks, _b | _bS, Infinity]],
-    Quiet@Check[Variables[Flatten[{ispList}]], Flatten[{ispList}]]
-    ];
-dsSeedTemplateContinuousIndices[entries_List] := Module[{declared, inferred},
-   declared = DeleteDuplicates@Flatten[Lookup[Select[entries, AssociationQ], "continuousIndices", {}], Infinity];
-   inferred = DeleteDuplicates@Flatten[
-      dsContinuousIndicesFromIntegral /@ DeleteDuplicates[Cases[dsSeedTemplateEquation /@ entries, _J, Infinity]],
-      Infinity
-      ];
-   DeleteDuplicates@Join[declared, inferred]
-   ];
 
 
 dsSeedTemplateSymbolicN[entries_List] := DeleteDuplicates[Cases[dsSeedTemplateEquation /@ entries, _n, Infinity]];
@@ -422,9 +403,6 @@ DSMetaSeedRange[seeds_, declaredIndices_List] := Module[
        ]
       ]
      ];
-dsContinuousIndicesFromIntegral[J[_String, timeShifts_List, _List]] := DeleteDuplicates[
-    Quiet@Check[Variables[Flatten[{timeShifts}]], Cases[timeShifts, _a, Infinity]]
-    ];
    If[entries === {} || badEntries =!= {},
     Message[DSMetaSeedRange::badseeds];
     dsErrorPrint["无法初始化 seed shift metadata。 Failed to initialize seed-shift metadata."];

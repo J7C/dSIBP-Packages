@@ -296,27 +296,6 @@ dsTreeLineMomentumMagnitudeDerivative[int_J, variable_, family_Association] := M
    ];
 
 
-(* loop 投影只保留为单向 oracle，不参与生产 DE。 *)
-dsTreePhaseDerivativeProjectionOracle[loopIntegral_J, variable_, family_Association, rootTopology_Association] := Module[
-   {internalVariable, loopDerivative, projectedData, expression},
-   internalVariable = scalarProductInputToInternal[variable, family["topology"]];
-   loopDerivative = directExternalLegEnergyVariableDerivativeSeed[family["topology"], loopIntegral, internalVariable];
-   If[TrueQ[Expand[loopDerivative] === 0],
-    Return[<|"status" -> "generated", "loopDerivative" -> 0,
-      "projectedData" -> <|"status" -> "generated", "terms" -> {}, "termCount" -> 0|>,
-      "internalExpression" -> 0|>]
-    ];
-   projectedData = dsTreeLinearData[<|"loopSeed" -> loopDerivative|>, rootTopology, loopIntegral];
-   If[Lookup[projectedData, "status", "failed"] =!= "generated",
-    Return[<|"status" -> "failed", "reason" -> "phaseDerivativeProjectionFailed",
-      "loopDerivative" -> loopDerivative, "projectedData" -> projectedData|>]
-    ];
-   expression = scalarProductInternalToUser[dsTreeTokenExpression[projectedData], rootTopology];
-   <|"status" -> "generated", "loopDerivative" -> loopDerivative,
-    "projectedData" -> projectedData, "internalExpression" -> expression|>
-   ];
-
-
 dsTreePhaseDerivativeDirect[int_J, variable_, family_Association, rootTopology_Association] := Module[
    {packs = First[int], terms, publicEnergy, derivative, shiftedPacks, shiftedIntegral},
    terms = Table[

@@ -69,15 +69,6 @@ treeVertexDLogData[vertex_Association] := Module[
    ];
 
 
-dsTreeBlockDiagonal[matrices_List] := Module[{dimensions = Length /@ matrices},
-   If[matrices === {}, Return[{}]];
-   ArrayFlatten@Table[
-     If[i === j, matrices[[i]], ConstantArray[0, {dimensions[[i]], dimensions[[j]]}]],
-     {i, Length[matrices]}, {j, Length[matrices]}
-     ]
-   ];
-
-
 dsTreeMasterSectorOffsets[blocks_List] := Module[{counts, starts, ends},
    counts = Lookup[blocks, "masterCount"];
    starts = 1 + Most[Accumulate[Prepend[counts, 0]]];

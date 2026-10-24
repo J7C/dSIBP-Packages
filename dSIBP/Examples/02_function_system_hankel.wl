@@ -66,7 +66,7 @@ summary = <|
 
 Print[summary];
 If[! And[
-    ToString[dSIBP`$dSIBPVersion] === currentVersion,
+    ToString[dSIBP`$dSIBPVersion] === runtimeVersionToken,
     summary["initStatus"] === "initialized",
     summary["seedStatus"] === "generated",
     TrueQ[summary["functionSystemInputPreserved"]]

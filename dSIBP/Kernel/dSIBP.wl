@@ -84,11 +84,9 @@ ProgressReporting::usage = "ProgressReporting 控制单次高层调用的阶段�
 KinematicRules::usage = "KinematicRules 是 DSInit 的可选动力学变量替换规则；缺省 Automatic 使用 input 中的 kinematicRules，若仍未给出则采用 DSKinematics 的缺省提案。";
 
 PrecomputeShrinkSectorMetadata::usage = "PrecomputeShrinkSectorMetadata 控制底层是否预枚举 contact-reachable sector metadata。";
-GenerateShrinkSectors::usage = "GenerateShrinkSectors 控制 canonical seed 是否生成 contact-reachable shrink sectors；高层完整工作流缺省 True。";
 KiraOrdering::usage = "KiraOrdering 指定 backend-neutral linearData 的 Kira 排序约定。";
 CoefficientRules::usage = "CoefficientRules 指定 linearData 层的小规模系数替换规则；DE 工作流不得直接或间接消去微分变量。";
 LinearSystemMode::usage = "LinearSystemMode 选择 DSLinear 的 \"symbolic\" 或 \"numeric\" 模式。";
-ExportKira::usage = "ExportKira 是底层组合工作流的导出开关；DSKiraExport 本身不运行 Kira。";
 OutputDirectory::usage = "OutputDirectory 指定 serializer 输出目录；None 表示只返回内存数据。";
 KiraCoefficientRules::usage = "KiraCoefficientRules 指定 Kira 导出前的系数规则；配置 KiraActiveBasis 时规则不得触及其 derivativeVariables。";
 KiraTargetIntegrals::usage = "KiraTargetIntegrals 指定 Kira job 的目标积分。";

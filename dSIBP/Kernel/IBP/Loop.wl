@@ -35,26 +35,6 @@ dsLoopSeedExpressionToPublicCoordinates[expr_, topo_Association] := publicProtec
    ];
 
 
-dsPublicLoopSeedEntry[entry_Association, topo_Association] := If[
-   KeyExistsQ[entry, "equation"],
-   Join[entry, <|
-     "equation" -> dsLoopSeedExpressionToPublicCoordinates[entry["equation"], topo]
-     |>],
-   entry
-   ];
-
-
-dsPublicLoopSeedBatch[seedData_Association, topo_Association] := If[
-   Lookup[seedData, "status", "missing"] === "generated",
-   Join[seedData, <|
-     "equations" -> (dsPublicLoopSeedEntry[#, topo] & /@ Lookup[seedData, "equations", {}]),
-     "allSeeds" -> (dsPublicLoopSeedEntry[#, topo] & /@ Lookup[seedData, "allSeeds", {}]),
-     "coordinateRepresentation" -> "user"
-     |>],
-   seedData
-   ];
-
-
 (* 公开 seed 只有 J[aList,linePacks,ispList]。论文 vertex basis 仍可由 tree
    公式模块内部构造，但不得再决定 DSSeeds/DSLinear 的公开积分形状。 *)
 

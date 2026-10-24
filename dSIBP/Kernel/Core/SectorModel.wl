@@ -138,9 +138,6 @@ makeBaseIntegral[topo_Association] := Module[
    ];
 
 
-dsTimeOnlyNeedsLinePackStateQ[_Association] := True;
-
-
 (* ::Chapter:: *)
 (*Sector pattern 与唯一解析*)
 
