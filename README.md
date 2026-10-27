@@ -104,8 +104,8 @@ User manuals and formula references are compiled PDFs next to their editable `.t
   material.
 - `MadStree/Documentation/tree_formula_en_full.pdf` — the MadStree handbook in English;
   `tree_formula.pdf` is the same handbook in Chinese.
-- `FlintNDE/Documentation/FlintNDE.pdf` — the FlintNDE paper: the numerical method, the public
-  interface and its documented limits; `FlintNDE-cn.pdf` is the Chinese edition.
+- `FlintNDE/Documentation/FlintNDE_manual-en.pdf` — the FlintNDE paper: the numerical method,
+  the public interface and its documented limits; `FlintNDE_manual-cn.pdf` is the Chinese edition.
 
 ## Examples
 
