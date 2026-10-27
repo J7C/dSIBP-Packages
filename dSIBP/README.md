@@ -95,11 +95,12 @@ to `None`.
 
 ## Documentation
 
-`Documentation/dSIBP_user_manual.pdf` is the bilingual user manual: the Chinese “用户手册”
-and the independently written English “dSIBP Handbook” cover conventions, the public interface,
-and example workflows. The editable `dSIBP_user_manual.tex` sits next to it along with the
-`jheppub` class files it needs; compile it from inside `Documentation/`. No author, affiliation,
-email, or acknowledgement block is included.
+`Documentation/` ships the user manual in two standalone editions: the Chinese
+`dSIBP_manual-cn.pdf` (“用户手册”) and the independently written English
+`dSIBP_manual-en.pdf` (“dSIBP Handbook”). Both cover conventions, the public interface, and
+example workflows. The editable `dSIBP_manual-cn.tex` and `dSIBP_manual-en.tex` sit next to
+them along with the `jheppub` class files; compile each from inside `Documentation/`. No
+author, affiliation, email, or acknowledgement block is included.
 
 dSIBP is independent of MadStree and FlintNDE. The time-only `J` representation it publishes is
 the same one MadStree reads and writes through `MSToDSIBPJ` and `MSFromDSIBPJ`.

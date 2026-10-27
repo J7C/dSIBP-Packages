@@ -288,4 +288,6 @@ wolframscript -file examples/mathematica_interface_example.wl
 
 `Documentation/FlintNDE.pdf` is the package paper: the numerical method, the exact input
 protocol, the local-basis scheduling, the public interface and the limits above, with the
-worked numerical checks. `FlintNDE.tex` and `references.bib` next to it are the sources.
+worked numerical checks. `FlintNDE-cn.pdf` is the same document in Chinese.
+`FlintNDE.tex`, `FlintNDE-cn.tex` and `references.bib` next to them are the sources; the
+English edition is built with pdfLaTeX and the Chinese one with XeLaTeX.

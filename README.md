@@ -98,12 +98,14 @@ no extra option is needed when loading a package.
 
 User manuals and formula references are compiled PDFs next to their editable `.tex` sources:
 
-- `dSIBP/Documentation/dSIBP_user_manual.pdf` — the dSIBP user manual: conventions, the public
-  interface and a worked walk-through of every example (Chinese).
+- `dSIBP/Documentation/dSIBP_manual-cn.pdf` — the Chinese dSIBP manual: conventions, the public
+  interface and a worked walk-through of every example.
+- `dSIBP/Documentation/dSIBP_manual-en.pdf` — the English “dSIBP Handbook” covering the same
+  material.
 - `MadStree/Documentation/tree_formula_en_full.pdf` — the MadStree handbook in English;
   `tree_formula.pdf` is the same handbook in Chinese.
 - `FlintNDE/Documentation/FlintNDE.pdf` — the FlintNDE paper: the numerical method, the public
-  interface and its documented limits.
+  interface and its documented limits; `FlintNDE-cn.pdf` is the Chinese edition.
 
 ## Examples
 

@@ -1,0 +1,444 @@
+﻿\documentclass[a4paper,11pt]{article}
+% !TeX program = pdflatex
+\pdfoutput=1
+\pdfminorversion=7
+\usepackage[utf8]{inputenc}
+\usepackage{jheppub}
+
+\usepackage{amsmath,amssymb,latexsym}
+\usepackage{braket}
+\usepackage{bm}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{cancel}
+\usepackage[svgnames]{xcolor}
+\usepackage{hepunits}
+\usepackage{mathtools}
+\usepackage{graphicx}
+\usepackage[most]{tcolorbox}
+\usepackage{caption}
+\usepackage{tikz}
+\usetikzlibrary{calc}
+\def\ie{\begin{equation}\begin{aligned}}
+\def\fe{\end{aligned}\end{equation}}
+\newtcolorbox{proofbox}{
+  enhanced, breakable, colback=gray!8, colframe=black,
+  boxrule=0.8pt, arc=0pt, outer arc=0pt,
+  left=8pt, right=8pt, top=8pt, bottom=8pt,
+  before skip=10pt, after skip=10pt
+}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+\setlength{\emergencystretch}{3em}
+\makeatletter
+\def\verbatim@font{\normalfont\ttfamily\small}
+\makeatother
+
+\title{dSIBP Handbook}
+
+\begin{document}
+\sloppy
+\setcounter{tocdepth}{1}
+\maketitle
+
+\section{Scope and quick start}
+
+dSIBP is a topology-driven Wolfram Language package for de Sitter Feynman integrals.
+It constructs time and loop-momentum IBP seeds, parameter-derivative operators, sector
+metadata, backend-neutral \texttt{linearData}, and Kira input files. It does not perform
+reduction internally. External reducers such as Kira or Rational Tracer remain separate
+steps controlled by the user.
+
+The package supports arbitrary loop numbers and topologies, mixed massive and massless
+propagators, exact contact-sector construction, EOM and symmetry canonicalization,
+user-defined master bases, and differential-equation and scaling checks. The public
+topology schema is deliberately strict: package metadata is derived from the input
+graph rather than inferred from symbol names.
+
+A standard session loads the package, initializes a family, generates symbolic seeds,
+expands continuous indices, and constructs linear data:
+\begin{verbatim}
+packageDir = FileNameJoin[{Directory[],"dSIBP"}];
+If[!MemberQ[$Path,packageDir],AppendTo[$Path,packageDir]];
+Needs["dSIBP`"];
+
+context = DSInit[case];
+seedData = DSSeeds[context];
+allSeeds = DSAllSeeds[seedData];
+ibpData = DSGenerateIBP[allSeeds,{-1,1}];
+linearData = DSLinear[ibpData,context];
+\end{verbatim}
+The package can be installed at any path; loading requires only the standard module tree and does not depend on the directory depth.
+Use \texttt{DSKiraPlan} and \texttt{DSKiraExport} when Kira input is required, run Kira
+outside the package, and use \texttt{DSKiraImport}, \texttt{DSDE}, and
+\texttt{DSScaleCheck} only after complete external results are available.
+
+The bundled examples cover six complementary workflows:
+\begin{itemize}
+  \item \texttt{01\_mixed\_bubble\_workflow.wl}: basic initialization, generation,
+  linearization, integral ordering, and planning;
+  \item \texttt{02\_function\_system\_hankel.wl}: Hankel and related function-system input;
+  \item \texttt{03\_single\_massive\_sunrise}: general two-loop seeds and parameter operators,
+  without sampled relations or reduction;
+  \item \texttt{04\_pure\_massive\_bubble\_closed\_loop}: a 19-master Kira/DE/reference/scaling
+  closed loop;
+  \item \texttt{05\_tree\_two\_vertex\_time\_ibp}: direct pure-time/tree relations and
+  naive versus dlog differential equations;
+  \item \texttt{06\_mix\_bubble\_tree}: mixed cycle/bridge propagators, custom coordinates,
+  contact sectors, and an 81-master reference summary.
+\end{itemize}
+
+\section{A complete mixed bubble-tree example}
+
+A useful nontrivial input contains a massive cycle propagator and a massless cycle
+propagator between $v_1$ and $v_2$, followed by a massless fixed bridge from $v_2$ to $v_3$.
+Only the two cycle propagators carry loop-integral parity constraints. The bridge has no
+continuous loop-power slot and is excluded from parity.
+
+Momentum declarations serve two distinct roles. \texttt{loopExternalMomenta} specifies
+independent directions entering the loop, while \texttt{independentExternalMomenta}
+specifies the magnitudes of momenta that remain outside it. The package constructs the
+required Gram coordinates and checks whether these declarations are complete, overcomplete,
+or undercomplete. It never infers a role from a symbol's name.
+
+Initialization returns the parsed topology, contact-reachable sectors, canonical packs,
+zero points, normalization data, and capability reports. A typical high-level sequence is
+\begin{verbatim}
+context = DSInit[caseInput];
+seedData = DSSeeds[context];
+allSeeds = DSAllSeeds[seedData];
+generated = DSGenerateIBP[allSeeds,
+  {a[v1],-1,3},{a[v2],-1,3},{b[1],-2,3},{b[2],-2,3}];
+linearData = DSLinear[generated,context];
+\end{verbatim}
+The same example also demonstrates custom coordinates through
+\texttt{DSRedefineParameters}, fixed-bridge magnitudes, sector contact maps, and exact
+round trips between user and internal scalar products.
+
+\section{From SK rules to integral families}
+
+\subsection{Vertices and external phases}
+
+Each vertex is an association containing \texttt{id}, \texttt{vertexType}, and
+\texttt{externalLegEnergy}. The vertex type fixes the sign of the external phase, and the
+energy is the independent phase variable. The parser normalizes these signs once; all
+subsequent time derivatives and contact rules use the same convention.
+
+\subsection{Propagator types}
+
+The propagator classes are massive full, massless full, massive cross, and massless
+cross or fixed lines. Massive full lines have a two-theta contact system and a Hankel-type
+function space, while massless full lines use a two-vertex quotient representation. Cross
+lines have no ordinary two-theta shrink channel. Fixed tree lines carry external magnitudes
+but no continuous loop-integral power.
+
+A standard line uses \texttt{id}, \texttt{endpoints}, \texttt{momentum}, and
+\texttt{massType}. Massive lines additionally require \texttt{nu}. A custom massive
+function system may be supplied through \texttt{functionSystem}; no physical type is
+inferred from a mass parameter alone.
+
+\subsection{Contact-reachable sectors}
+
+The root topology determines loop number, cycle/bridge roles, and propagator schemas.
+Contact operations only shrink lines, merge vertex representatives, and update zero points
+and normalization. They do not create a new unrelated family or silently reduce the
+structural loop number.
+
+Massive contact terms are compiled from the Wronskian system. Simultaneous contacts merge
+a vertex only once, while integer shifts from all selected lines are accumulated. Uncut
+propagators are canonicalized in the target sector. Every reachable sector retains the
+metadata required by seeds, derivatives, and serializers.
+
+\section{Integral representations}
+
+In full mode the public integral head is
+\begin{verbatim}
+J[aList,linePacks,ispList]
+\end{verbatim}
+The first slot contains compact vertex-time powers. Each full-line pack has the form
+$\{b_e,n_{e,1},n_{e,2}\}$, where $b_e$ is a continuous denominator power and the two
+entries are discrete building-block states. A shrunk line uses the corresponding compact
+$bS$ representation. ISP powers are collected in the third slot and are measured from zero.
+Positive ISP powers are numerators; explicitly requested negative powers are also allowed.
+
+In \texttt{ibpMode->"timeOnly"}, the public representation is instead
+\begin{verbatim}
+J[sectorKey,timeShifts,stateBits]
+\end{verbatim}
+Here \texttt{sectorKey} is a fixed-width string of full/shrunk bits in root-line order.
+The other two slots contain compact time shifts and the sector-local discrete-state registry.
+The two schemas are intentionally distinct; no adapter silently rewrites full-loop Kira
+artifacts into the time-only representation.
+
+\section{Massive function systems, derivatives, and EOM}
+
+A massive building block is described by a $2\times2$ first-order system. Its derivative
+matrix and Wronskian determine, respectively, derivative shifts and contact-shrink shifts.
+These two data channels are not interchangeable.
+
+After a generator acts, any Hankel state of second order or higher is immediately reduced
+by the equation of motion. This happens before linear-system construction, so no symbolic
+$n\geq2$ state is passed to a backend. Contact shifts use the compiled Laurent coefficients
+and preserve the associated zero-point and prefactor changes.
+
+Parameter derivatives act on both the integral and its explicit coefficients. The package
+also accounts for sector normalization, so a derivative of $J_s=N_s I_s$ includes the
+$D(\log N_s)$ term and, across a contact, the appropriate $N_s/N_t$ ratio.
+
+\section{Massless quotients and time IBP}
+
+Massless full propagators retain an ordered two-vertex three-slot pack. Regular and delta
+terms are handled in that same representation, including contact shrink and coincident
+cancellation. Several full lines joining one vertex pair are treated by a common-theta
+construction rather than by independently duplicated contact rules.
+
+An odd subset of lines in a shared bundle determines the contact transition. Its coefficient
+and target-sector mapping are evaluated once, and duplicate transitions are removed by source,
+target, and selected-line identity. Massless fixed lines do not acquire a fictitious loop
+parity constraint.
+
+The direct pure-time/tree path uses the same physical contact data but presents them in a
+sector-tagged public representation. Formula-based tree reduction is available only for
+massive-only quotients whose derivation has been certified. In all other cases, the package
+returns a structured \texttt{PendingRederivation} result.
+
+\section{Topology, scalar products, ISP, and symmetry}
+
+The required topology input includes \texttt{vertices}, \texttt{lines},
+\texttt{loopMomenta}, \texttt{loopExternalMomenta}, and
+\texttt{independentExternalMomenta}. ISP definitions are required when the propagators do
+not span all independent scalar products. Every ISP must be closed under the selected loop
+momentum generators.
+
+The package distinguishes loop-external directions from loop-free magnitudes. Default loop
+coordinates are $\texttt{ssij}=\sqrt{\texttt{sp}[k_i,k_j]}$, with the derivative convention
+\begin{equation}
+ \frac{\partial}{\partial\texttt{ssij}}
+ =2\,\texttt{ssij}\frac{\partial}{\partial\texttt{sp}[k_i,k_j]}.
+ \label{handbookRootDerivative}
+\end{equation}
+Custom coordinates are introduced through \texttt{KinematicRules} or
+\texttt{DSRedefineParameters}. Undercomplete declarations stop initialization;
+overcomplete declarations may permit symbolic seed generation but disable unique
+derivatives and backend export.
+
+Symmetry rules are applied as directed replacements. Users must choose one canonical
+representative for each equivalence class and provide oriented rules only. The symmetry of
+\texttt{sp} itself does not imply a graph symmetry: masses, energies, and momentum routing
+must also match.
+
+\section{IBP generators and atomic operations}
+
+Time generators differentiate with respect to conformal times. Momentum generators include
+loop scalings and the independent external directions required by the declared loop basis.
+The complete set is constructed before any index sampling.
+
+The public atomic operations include \texttt{dtau}, \texttt{dqq}, \texttt{dqk}, and
+\texttt{ds}. The first three generate time and momentum IBP relations, while \texttt{ds}
+is the total parameter derivative used by the differential-equation workflow. Conversion
+helpers \texttt{rep2innerform} and \texttt{rep2outform} translate between user and internal
+coordinates without changing integral indices. \texttt{rep2Integrand} exposes an inert
+integrand for inspection; it does not integrate or generate a relation.
+
+\section{Seeds and continuous-index envelopes}
+
+\subsection{Symbolic templates and shift metadata}
+
+\texttt{DSSeeds} enumerates the independent discrete templates before continuous sampling.
+Massive vertices use the four $0/1$ states; massless quotients use their proved canonical
+representatives. EOM, symmetry, and sector canonicalization are applied while continuous
+indices remain symbolic.
+
+\texttt{DSAllSeeds} returns the flat template list, while \texttt{DSSeedGroups} and
+\texttt{DSSeedGroupMetadata} expose the recommended grouping. \texttt{DSMetaSeedRange}
+records the affine shift set of every continuous index. A flat input is treated as one
+group; each top-level element of a nested input is treated as a separate group.
+
+A uniform target envelope is written as
+\begin{verbatim}
+ibp = DSGenerateIBP[allSeeds,{L,U}];
+\end{verbatim}
+A detailed envelope assigns an interval to every root index. For an index with shift set
+$\Delta$, the corresponding seed interval is the intersection of all inverse images:
+\begin{equation}
+ x\in[L-\min\Delta,\;U-\max\Delta].
+ \label{handbookSeedInverse}
+\end{equation}
+For ISP indices, the lower endpoint is also bounded below by the user target lower endpoint.
+Empty inverse ranges are reported explicitly and disable the relevant completeness claim.
+
+\subsection{Seed-envelope cutting}
+
+\texttt{SeedEnvelopeCut} filters the inferred seed points before parity filtering and
+template substitution. The following calls disable cutting, use the default, and provide
+custom parameters:
+\begin{verbatim}
+ibp0 = DSGenerateIBP[allSeeds,{-1,1},SeedEnvelopeCut->None];
+ibp1 = DSGenerateIBP[allSeeds,{-1,1},SeedEnvelopeCut->Automatic];
+ibp2 = DSGenerateIBP[allSeeds,{-1,1},SeedEnvelopeCut->{10,4,5,4}];
+\end{verbatim}
+Let $C_+$ be the sum of positive continuous slots, $C_-$ the absolute sum of negative
+slots, and $T=C_++C_-$. For $C_+\geq C_-$, acceptance requires $T\leq Ex_1$ and
+$C_-\leq Ex_2$; otherwise it requires $T\leq Ex_3$ and $C_+\leq Ex_4$. The default for a
+group of $N$ continuous slots is $\{N+3,4,4,4\}$. Every item of an explicit four-tuple may
+be an integer or \texttt{Automatic}, in which case only that default item is substituted.
+
+The returned \texttt{seedEnvelopeCut} metadata records the resolved parameters, accepted
+and skipped point counts, and groups emptied by the cut. \texttt{None} restores the uncut
+point domain.
+
+\subsection{Canonical-support cutting}
+
+\texttt{TotalPowerLimit} is an independent filter on canonical equation support:
+\begin{verbatim}
+ibp3 = DSGenerateIBP[allSeeds,{-1,1},TotalPowerLimit->7];
+ibp4 = DSGenerateIBP[allSeeds,{-1,1},
+  SeedEnvelopeCut->{10,4,5,4},TotalPowerLimit->7];
+\end{verbatim}
+For an integer $m$, the package first combines equal integrals and removes zero coefficients.
+It then retains an equation only if every canonical integral in its actual support lies in
+the per-slot target box and has continuous-index absolute sum at most $m$. The default
+\texttt{None} disables this filter. The two cut options can be used independently or together.
+
+The full-mode fast path decomposes Association-based sealed templates into integral
+skeletons, integer shifts, and coefficient pieces, then memoizes canonical results by raw
+integral. Raw expression lists and failed templates use the original symbolic path. This
+changes performance, not the meaning of either cut option.
+
+These options do not prove closure for an arbitrary target or basis.
+\texttt{completeSystemQ} describes generation completeness within the selected envelope
+and cutting policy. A new target, basis, or cut setting still requires an external
+reduction check that every requested target reduces to the requested masters.
+
+\section{Linear data and the Kira workflow}
+
+\texttt{DSLinear} converts generated relations into backend-neutral \texttt{linearData}.
+Its \texttt{integralList} is the authoritative backend order, and equations are deduplicated
+by their mathematical coefficients, constant terms, and nonlinear terms rather than by
+their provenance. \texttt{DSReorderIntegrals} explicitly changes that order before basis
+or backend construction. \texttt{DSUserMI} attaches a reversible ordered basis of single
+integrals or homogeneous linear combinations and constructs analytic derivative targets.
+
+A formal Kira workflow has two stages: optional pre-reduction for basis exploration and a
+formal stage using the active basis and its minimal derivative closure. \texttt{DSKiraPlan}
+constructs the plan, and \texttt{DSKiraExport} serializes equations, maps, jobs, and manifest
+information without running Kira.
+
+For a massive bubble, \texttt{numericStage->"postDerivative"} substitutes the declared
+parameter rules only after the analytic derivatives have been constructed; it does not
+necessarily make the reduction purely numerical. In the bundled example, \texttt{dim},
+\texttt{nu}, \texttt{etaNu}, and \texttt{analyticRegulator} take exact rational values,
+but the kinematic variables remain symbolic during reconstruction. Kira therefore
+reconstructs in \texttt{dsc2} and \texttt{ip0}, and the resulting DE matrices remain
+symbolic in \texttt{ss11} and $P_0$. Comparison with the analytic reference at a fixed
+numerical point is a separate final check.
+
+After external reduction, \texttt{DSKiraImport} checks manifest identity, target coverage,
+master order, and RHS closure. \texttt{DSDE} constructs matrices and sources in the active
+basis, and \texttt{DSScaleCheck} checks the applicable symbolic, fixed-section, or exact-point
+scaling certificate. A global residual master outside the requested target closure is not
+by itself a failure; acceptance is based on the requested targets and their RHS.
+
+\section{Initialization, messages, and inspection}
+
+\texttt{DSInit} validates topology, ISP closure, kinematics, and sector metadata.
+\texttt{DSInfo} returns initialization summaries. \texttt{DSKinematics} and
+\texttt{DSParameterNotation} expose coordinate proposals and current notation, while
+\texttt{DSRedefineParameters} performs a complete reinitialization under new rules.
+
+\texttt{DSMessagesOn}, \texttt{DSMessagesOff}, and \texttt{DSMessagesQ} control optional
+information and warnings. Fatal errors remain visible. \texttt{AuditLevel} controls whether
+cached producer certificates are reused or full development audits are recomputed.
+\texttt{DSPublicAPI} returns the public function groups and the high-level options actually
+present in the loaded package.
+
+\section{Pure massive bubble closed loop}
+
+The bundled two-vertex massive bubble uses the $--$ branch, even parity on both cycle
+propagators, and equal vertex energies. Its target envelope is $a_v\in[0,3]$ and
+$b_e\in[-3,5]$, covering the 19-element basis and all derivative support. The example uses
+\texttt{SeedEnvelopeCut->Automatic} and \texttt{TotalPowerLimit->None}.
+
+A fresh run generates 20228 IBP relations before linearization, followed by 2442 canonical
+relations, 2460 formal equations, and 1317 source integrals. Kira reduces all 300 requested
+targets, leaving none unreduced. The active basis has 19 masters; five additional global
+masters do not appear on the right-hand sides of the requested reductions. Import,
+$19\times19$ differential equations, and scaling pass 23 checks. The physical $P_0$,
+backend \texttt{ip0}, and physical $k_s$ matrices each agree with the frozen analytic
+reference in all 361 entries.
+
+The example requires an external workspace selected by \texttt{DSIBP\_KIRA\_WORKSPACE}; it must lie outside the package's Git repository (or, when the package is not inside a Git repository, outside the delivery directory), and the script refuses a workspace inside it.
+The package writes inputs but does not start Kira. After Kira finishes,
+\texttt{post\_kira\_check.wl} reads the existing results without regenerating inputs.
+Repository files retain only lightweight input and result summaries, not databases,
+reduction tables, caches, or runtime logs.
+
+\section{Tree vertex families}
+
+The direct tree workflow exposes \texttt{DSTreeSeeds}, \texttt{repIterative},
+\texttt{DSTreeNaiveIBP}, \texttt{DSTreeNaiveDE}, and \texttt{DSTreeDLogDE}. It constructs
+sector-tagged relations, ordered masters, normalized differential equations, and scaling
+checks from the same contact and normalization metadata.
+
+\texttt{DSTreeNaiveIBP} solves one-step raising relations in a specified basis.
+\texttt{DSTreeNaiveDE} uses that reduction to construct the naive connection, while
+\texttt{DSTreeDLogDE} constructs the block-structured dlog connection. For massless full
+quotients, formula-based reduction is available only after the required identities have
+been rederived.
+
+\section{Common errors and current boundaries}
+
+Malformed topology, missing momentum directions, incomplete ISP closure, unknown or
+repeated range indices, symbolic discrete indices, and invalid cut specifications are
+reported as structured failures. Empty seed ranges are not silently ignored. Backend export
+also rejects unresolved internal coordinates, unsupported complex conventions, stale
+manifests, and incomplete reduction artifacts.
+
+dSIBP does not run reduction internally. It does not infer physical symmetry from symbol
+names, and it does not turn a finite-envelope completeness claim into a proof for arbitrary
+targets. Formula-based tree reduction remains limited to the certified massive-only
+quotient cases. Reference summaries record their evidence baseline and are not silently
+reused as proof for a different generation policy.
+
+\section{Public API summary}
+
+\small
+\begin{longtable}{@{}p{0.46\textwidth}p{0.46\textwidth}@{}}
+\toprule
+\textbf{Function group} & \textbf{Purpose} \\
+\midrule
+\texttt{DSInit}, \texttt{DSInfo}, \texttt{DSKinematics},
+\texttt{DSParameterNotation}, \texttt{DSRedefineParameters}
+& Initialization, topology and coordinate inspection, and redefinition. \\
+\texttt{DSSeeds}, \texttt{DSAllSeeds}, \texttt{DSSeedGroups},
+\texttt{DSSeedGroupMetadata}, \texttt{DSMetaSeedRange}
+& Symbolic discrete templates, grouping, and shift metadata. \\
+\texttt{DSGenerateIBP}
+& Continuous expansion with \texttt{SeedEnvelopeCut} and \texttt{TotalPowerLimit}. \\
+\texttt{DSLinear}, \texttt{DSReorderIntegrals}, \texttt{DSUserMI}
+& Backend-neutral equations, authoritative order, and active bases. \\
+\texttt{DSKiraPlan}, \texttt{DSKiraExport}, \texttt{DSKiraImport}
+& Kira planning, serialization, and verified result import. \\
+\texttt{DSDE}, \texttt{DSScaleCheck}
+& Differential equations and scaling certificates. \\
+\texttt{DSTreeSeeds}, \texttt{repIterative}, \texttt{DSTreeNaiveIBP},
+\texttt{DSTreeNaiveDE}, \texttt{DSTreeDLogDE}
+& Direct pure-time/tree generation and reduction. \\
+\texttt{dtau}, \texttt{dqq}, \texttt{dqk}, \texttt{ds}
+& Atomic time, momentum, and parameter derivatives. \\
+\texttt{rep2innerform}, \texttt{rep2outform}, \texttt{rep2Integrand},
+\texttt{symmetry}, \texttt{repSymmetry0}
+& Coordinate conversion, inert integrands, and symmetry access. \\
+\texttt{DSMessagesOn}, \texttt{DSMessagesOff}, \texttt{DSMessagesQ},
+\texttt{DSPublicAPI}
+& Message control and public-interface inspection. \\
+\bottomrule
+\end{longtable}
+\normalsize
+
+The exact options of a function are those returned by \texttt{Options[function]}.
+\texttt{DSGenerateIBP} exposes \texttt{SeedEnvelopeCut} (default \texttt{Automatic})
+and \texttt{TotalPowerLimit} (default \texttt{None}), together with the shared audit
+and progress options.
+
+\end{document}

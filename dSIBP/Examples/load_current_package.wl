@@ -37,5 +37,5 @@ currentVersion = ToString[dSIBP`$dSIBPVersion];
 runtimeVersionToken = currentVersion;
 
 currentPackagePath = FileNameJoin[{packageDeliveryDirectory, "dSIBP.m"}];
-currentManualPath = FileNameJoin[{packageDeliveryDirectory, "Documentation", "dSIBP_user_manual.pdf"}];
+currentManualPath = FileNameJoin[{packageDeliveryDirectory, "Documentation", "dSIBP_manual-cn.pdf"}];
 Print["dSIBP ", currentVersion, " loaded from ", packageDeliveryDirectory];
