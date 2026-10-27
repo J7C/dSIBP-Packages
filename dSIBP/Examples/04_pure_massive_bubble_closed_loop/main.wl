@@ -1,6 +1,6 @@
 (* ::Package:: *)
 (* pure massive bubble：固定 -- branch/parity，从 topology 到 formal Kira 输入。
-   package 只生成和序列化关系，不启动 reduction；Kira 工作树必须位于仓库外。 *)
+   package 只生成和序列化关系，不启动 reduction；Kira 工作树必须位于包所在 Git 仓库或交付目录之外。 *)
 
 (* ::Chapter:: *)
 (*标准 package 加载*)
@@ -15,15 +15,23 @@ bundledResultSummary = Get[FileNameJoin[{exampleDir, "kira_result_summary.wl"}]]
 
 externalWorkspaceRoot = Environment["DSIBP_KIRA_WORKSPACE"];
 If[! StringQ[externalWorkspaceRoot] || StringTrim[externalWorkspaceRoot] === "",
-  Print["Set DSIBP_KIRA_WORKSPACE to a directory outside this repository before running this example."];
+  Print["请先用 DSIBP_KIRA_WORKSPACE 指定仓库外的 Kira 工作目录，再运行本例。"];
   Exit[2]
 ];
 externalWorkspaceRoot = ExpandFileName[externalWorkspaceRoot];
-repositoryRoot = ExpandFileName@FileNameJoin[{exampleDir, "..", "..", ".."}];
+(* 包可放在任意位置：以上层最近的 .git 为仓库根；找不到 Git 仓库时以交付目录为界。 *)
+workspaceGuardCandidates = Select[
+   NestList[DirectoryName, exampleDir, 8],
+   FileExistsQ[FileNameJoin[{#, ".git"}]] &
+   ];
+workspaceGuardRoot = If[workspaceGuardCandidates === {},
+   ExpandFileName@FileNameJoin[{exampleDir, "..", ".."}],
+   First[workspaceGuardCandidates]
+   ];
 If[
-  externalWorkspaceRoot === repositoryRoot ||
-    StringStartsQ[externalWorkspaceRoot, repositoryRoot <> $PathnameSeparator],
-  Print["The Kira workspace must live outside the current Git repository; change DSIBP_KIRA_WORKSPACE."];
+  externalWorkspaceRoot === workspaceGuardRoot ||
+    StringStartsQ[externalWorkspaceRoot, workspaceGuardRoot <> $PathnameSeparator],
+  Print["Kira 工作目录必须位于包所在 Git 仓库或交付目录之外；请修改 DSIBP_KIRA_WORKSPACE。"];
   Exit[2]
 ];
 exampleWorkspace = FileNameJoin[{externalWorkspaceRoot, "pure_massive_bubble"}];

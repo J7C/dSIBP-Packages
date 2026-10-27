@@ -253,7 +253,10 @@ DSGenerateIBP::coverage = "精细范围没有精确覆盖模板指标：`1`。 D
 DSGenerateIBP::discrete = "n_i 是已在模板阶段遍历的离散指标，不得再次撒点：`1`。 n_i are discrete indices already enumerated in the template stage and must not be sampled again: `1`.";
 DSGenerateIBP::symbolicn = "模板仍含符号 n_i，说明离散态/EOM 阶段未完成：`1`。 Symbolic n_i remain in the templates, so discrete-state enumeration or EOM canonicalization is incomplete: `1`.";
 DSGenerateIBP::integrity = "seed 模板完整性检查失败：`1`。 Seed-template integrity validation failed: `1`.";
-Options[DSGenerateIBP] = {AuditLevel -> "standard", ProgressReporting -> Automatic};
+DSGenerateIBP::badpower = "TotalPowerLimit 必须是 None 或整数，收到 `1`。 TotalPowerLimit must be None or an integer, received `1`.";
+DSGenerateIBP::badseedcut = "SeedEnvelopeCut 只允许 None、Automatic 或四元列表 {Ex1,Ex2,Ex3,Ex4}（每项为整数或 Automatic），收到 `1`。 SeedEnvelopeCut only accepts None, Automatic, or a four-entry list {Ex1,Ex2,Ex3,Ex4} (each an integer or Automatic), received `1`.";
+Options[DSGenerateIBP] = {AuditLevel -> "standard", ProgressReporting -> Automatic,
+   TotalPowerLimit -> None, SeedEnvelopeCut -> Automatic};
 $dsMetaSeedRangeState = Missing["NotInitialized"];
 
 
@@ -709,6 +712,195 @@ dsReportDerivedSeedRanges[rangeAudits_List, setting_: Automatic] := Module[
    ];
 
 
+(* ::Section::Closed:: *)
+(*撒点主导方向截断（SeedEnvelopeCut）*)
+
+(* 主导方向截断作用在 seed 点域本身：C_+ 为全部正连续槽值之和，C_- 为全部负槽
+   绝对值之和，T=C_++C_-。C_+ >= C_- 时要求 T<=Ex1 且 C_-<=Ex2；C_- > C_+ 时要求
+   T<=Ex3 且 C_+<=Ex4。Ex1 缺省为该组连续槽位数 N+3，Ex2/Ex3/Ex4 缺省 4；N 逐组
+   取 group 的连续指标个数。筛点在 parity 预筛与模板代入之前执行，快慢两条生成
+   路径共享同一筛点结果；与 TotalPowerLimit（canonical 支撑级盒∩总幂判定）正交。 *)
+
+dsSeedCutDefaultSpec[slotCount_Integer] := {slotCount + 3, 4, 4, 4};
+
+
+dsSeedCutResolve[spec_, slotCount_Integer] := Module[{def = dsSeedCutDefaultSpec[slotCount]},
+   Table[
+    With[{v = If[TrueQ[spec === Automatic], def[[k]], spec[[k]]]},
+     If[TrueQ[v === Automatic], def[[k]], v]],
+    {k, 4}]
+   ];
+
+
+dsSeedCutInputQ[spec_] := TrueQ[spec === None] || TrueQ[spec === Automatic] ||
+   (ListQ[spec] && Length[spec] === 4 &&
+     And @@ ((IntegerQ[#] || TrueQ[# === Automatic]) & /@ spec));
+
+
+dsSeedPointInCutQ[values_List, specs_List] := Module[
+   {cp = Total[Select[values, Positive]], cm = -Total[Select[values, Negative]]},
+   If[cp >= cm,
+    cp + cm <= specs[[1]] && cm <= specs[[2]],
+    cp + cm <= specs[[3]] && cp <= specs[[4]]]
+   ];
+
+
+(* ::Chapter:: *)
+(*快速逐点展开路径：模板整型化分解与记忆化对称映射*)
+
+
+(* 快速路径实现：把逐点“符号代入 + Expand + 逐项 Cancel + 重投影”换成
+   一次性模板分解 + 整数向量移位 + 按 raw J 记忆化的单次对称映射。语义与慢路径
+   逐点等价：连续槽只允许 +1 斜率仿射移位；系数取 Cancel[term/J] 后 Expand；
+   对称规则按 raw J 自身 sector 单次应用；forbiddenNData 按 canonical J 集合重组。
+   任一模板分解或规范化失败则该模板整体回退慢路径，不改变公开输出结构。
+   TotalPowerLimit 开启 C 包络（逐槽盒约束 ∩ 总幂次上限）时，仅保留
+   canonical 支撑完全落在 C 内的撒点方程。 *)
+
+
+dsFastFallbackQ[x_] := MatchQ[x, dsFastFallback[_]];
+
+
+(* 单个连续槽必须是 groupVars 的整系数线性组合 + 整数常数（IBP 单生成元移位是
+   ±1 斜率，顶点/线组合移位会产生多变量和）。返回 {位置列表, 系数列表, 偏移}；
+   位置列表为空表示固定整数槽。 *)
+$dsFastDiagnosticSlots = {};
+
+
+dsFastSlotSpec[slotValue_, varPositions_Association] := Module[
+   {vars, coeffs, rest},
+   vars = Select[Keys[varPositions], ! FreeQ[slotValue, #] &];
+   If[vars === {},
+    If[IntegerQ[slotValue], Return[{{}, {}, slotValue}]];
+     AppendTo[$dsFastDiagnosticSlots, slotValue];
+     Return[dsFastFallback["nonIntegerSlot"]]];
+   coeffs = Coefficient[slotValue, #] & /@ vars;
+   If[! And @@ (IntegerQ /@ coeffs),
+    AppendTo[$dsFastDiagnosticSlots, slotValue];
+    Return[dsFastFallback["nonLinearSlot"]]];
+   rest = Expand[slotValue - Total[coeffs vars]];
+   If[! IntegerQ[rest],
+    AppendTo[$dsFastDiagnosticSlots, slotValue];
+    Return[dsFastFallback["nonLinearSlot"]]];
+   {varPositions /@ vars, coeffs, rest}
+   ];
+
+
+(* 连续槽取值与 integralSortKey 同口径：a 全部、长度 1/3 的 pack 首槽、isp 全部。 *)
+dsFastContinuousValues[J[aList_, linePacks_, ispList_]] := Join[
+   numericIndexValue /@ aList,
+   Cases[linePacks,
+    pack_List /; MemberQ[{1, 3}, Length[pack]] && NumberQ[First[pack]] :>
+      numericIndexValue[First[pack]]],
+   numericIndexValue /@ ispList
+   ];
+
+
+(* canonical J 每个连续槽的 root 包络键，结构与 makeBaseIntegral 同源：a 槽按
+   sector active 顶点序取 a[v]，pack 首槽取该线 b[id]（bS 由 dsRootEnvelopeIndex
+   折叠），fixed a / fixed line 槽为 None。键必须从 canonical J 自身结构出发，
+   不能沿用 raw 模板槽的变量——对称规则可能在槽间搬移数值。 *)
+dsFastCanonicalSlotKeys[sectorTopo_Association, J[aList_, linePacks_, ispList_]] := Module[
+   {fixedA = Lookup[sectorTopo, "fixedAVertexValues", <||>],
+    active = Lookup[sectorTopo, "activeVertexIds", Lookup[sectorTopo, "vertexIds", {}]],
+    lines = Lookup[sectorTopo, "lines", {}]},
+   Join[
+    Table[
+     If[AssociationQ[fixedA] && KeyExistsQ[fixedA, v], None, dsRootEnvelopeIndex[a[v]]],
+     {v, active}],
+    Cases[
+     MapThread[
+      If[MemberQ[{1, 3}, Length[#1]] && NumberQ[First[#1]] && lineIndexedPowerQ[#2],
+        dsRootEnvelopeIndex[b[#2["id"]]], Missing["skip"]] &,
+      {linePacks, lines}],
+     Except[Missing["skip"]]],
+    Table[dsRootEnvelopeIndex[ispN[j]], {j, Length[ispList]}]
+    ]
+   ];
+
+
+(* 模板方程一次性分解。每个连续槽换成唯一 marker 符号，返回各 marker 对
+   groupVars 的整系数线性组合（位置列表为空表示固定整数槽，仍计入总幂次）与
+   骨架 J。非三槽 J、非线性项、非整系数槽都触发回退。 *)
+dsFastTemplateDecompose[templateEquation_, groupVars_List] := Module[
+   {varPositions = AssociationThread[groupVars -> Range[Length[groupVars]]], terms,
+    pieces, term, js, int, coeff, specs, badSpec, markers, skeleton,
+    k, newA, newPacks, newIsps},
+   If[TrueQ[templateEquation === 0], Return[<|"status" -> "zeroTemplate", "pieces" -> {}|>]];
+   terms = linearTerms[templateEquation];
+   pieces = Table[
+     js = DeleteDuplicates[Cases[term, _J, {0, Infinity}]];
+     If[Length[js] =!= 1 || ! MatchQ[First[js], HoldPattern[J[_List, _List, _List]]],
+      Return[dsFastFallback["notSingleLinearJ"], Module]];
+     int = First[js];
+     coeff = Expand[Cancel[term/int]];
+     (* pack 首槽逐包产生 {spec} 或 {}，必须摊平一层，保证 specs 与骨架 marker
+        的顺序（a 全部、长度 1/3 pack 首槽、isp 全部）严格一致。 *)
+     specs = Join[
+       dsFastSlotSpec[#, varPositions] & /@ int[[1]],
+       Flatten[
+        If[MemberQ[{1, 3}, Length[#]], {dsFastSlotSpec[First[#], varPositions]}, {}] & /@ int[[2]],
+        1],
+       dsFastSlotSpec[#, varPositions] & /@ int[[3]]
+       ];
+     badSpec = SelectFirst[specs, dsFastFallbackQ, Null];
+     If[badSpec =!= Null, Return[badSpec, Module]];
+     markers = Table[Unique["dsFastSlot$"], {Length[specs]}];
+     k = 0;
+     newA = Table[k++; markers[[k]], {Length[int[[1]]]}];
+     newPacks = Table[
+       With[{pack = int[[2, e]]},
+        If[MemberQ[{1, 3}, Length[pack]], k++; Join[{markers[[k]]}, Rest[pack]], pack]],
+       {e, Length[int[[2]]]}];
+     newIsps = Table[k++; markers[[k]], {Length[int[[3]]]}];
+     skeleton = J[newA, newPacks, newIsps];
+     <|"coeff" -> coeff, "markers" -> markers,
+       "varPositions" -> specs[[All, 1]], "coefficients" -> specs[[All, 2]],
+       "offsets" -> specs[[All, 3]], "skeleton" -> skeleton,
+       "coeffIndexVarCount" -> Length[Select[groupVars, ! FreeQ[coeff, #] &]]|>,
+     {term, terms}];
+   <|"status" -> "ok", "pieces" -> pieces|>
+   ];
+
+
+(* raw J 的单次 sector 对称映射 + 派生数据（连续值、槽键、总幂次、forbidden、eom）。
+   结果按 raw J 记忆化；canon 为 0 时以 {0,{},{},0,{},True} 表示整项消失。
+   槽键从 canonical J 与 sector 拓扑结构重建，保证对称搬移槽值后盒约束仍按
+   正确的 root 指标判定。 *)
+dsFastCanonicalizeJ[rawJ_, topo_, sectorCache_, postSamplingQ_] := Module[
+   {entry0, rules, canon, vals, keys, sectorTopo},
+   entry0 = sectorEntryForIntegral018[topo, rawJ, sectorCache];
+   If[Head[entry0] === Missing, Return[dsFastFallback["sectorLookupFailed"]]];
+   rules = Lookup[entry0, "symmetryRules", dsFastFallback["noSymmetryRules"]];
+   If[dsFastFallbackQ[rules], Return[rules]];
+   canon = If[postSamplingQ, Expand[rawJ /. rules], rawJ];
+   Which[
+    TrueQ[canon === 0], {0, {}, {}, 0, {}, True},
+    MatchQ[canon, HoldPattern[J[_List, _List, _List]]],
+    sectorTopo = Lookup[entry0, "topology", Missing["NoSectorTopology"]];
+    If[Head[sectorTopo] === Missing, Return[dsFastFallback["noSectorTopology"]]];
+    vals = dsFastContinuousValues[canon];
+    keys = dsFastCanonicalSlotKeys[sectorTopo, canon];
+    If[Length[vals] =!= Length[keys],
+     Return[dsFastFallback["slotKeyMismatch"]]];
+    {canon, vals, keys, Total[Abs /@ vals], forbiddenNDataForIntegral[topo, canon],
+     FreeQ[canon, _n]},
+    True, dsFastFallback["unexpectedCanonicalForm"]]
+   ];
+
+
+(* C 判定按 canonical 支撑：值与槽键都来自 canonical J 的记忆化结果，每个连续槽
+   落在其 root 指标的盒内（无盒键的槽跳过盒判定，但仍计入总幂次），且总幂次
+   |连续幂| 之和不超过上限。 *)
+dsFastSupportInEnvelopeQ[canVals_List, slotKeys_List, boxRules_Association, totalLimit_Integer] :=
+   Total[Abs /@ canVals] <= totalLimit && AllTrue[
+     MapThread[
+      If[#1 === None, True,
+        KeyExistsQ[boxRules, #1] && boxRules[#1][[1]] <= #2 <= boxRules[#1][[2]]] &,
+      {slotKeys, canVals}],
+     TrueQ];
+
+
 (* ::Chapter:: *)
 (*公开连续撒点入口*)
 
@@ -863,11 +1055,47 @@ DSGenerateIBP[seeds_, specs__List, OptionsPattern[]] := Module[
     derivedRangeAudits, derivedRangeByGroup, entryGroupOrdinals, failedRangeAudits,
     progress, records, sectorTopologyCache, postSamplingCanonicalRequiredQ,
     pointRulesByGroup, parityPointRulesCache,
-    parityCertificate, batch, artifactContract, auditLevel = OptionValue[AuditLevel]},
+    parityCertificate, batch, artifactContract, auditLevel = OptionValue[AuditLevel],
+    powerLimit, envelopeActive, envelopeBoxRules, skippedPointCount,
+    seedCutSpec, seedCutActiveQ, seedCutSkippedPointCount, seedCutAcceptedPointCount,
+    seedCutSpecBySlotCount, seedCutEmptyGroups,
+    fastTemplateCount, fastTemplateFallbackCount, fastDecomposeTime, fastPointLoopTime,
+    fastJCache, fastFallbackReasons,
+    fastCanonSeconds, fastCanonMissCount, fastCanonHitCount},
    If[! MemberQ[{"standard", "full"}, auditLevel],
     Return[<|"status" -> "failed", "reason" -> "invalidAuditLevel",
       "auditLevel" -> auditLevel, "allowedAuditLevels" -> {"standard", "full"}|>]
     ];
+   powerLimit = OptionValue[TotalPowerLimit];
+   If[powerLimit =!= None && ! IntegerQ[powerLimit],
+    Message[DSGenerateIBP::badpower, powerLimit];
+    dsErrorPrint["TotalPowerLimit 必须是 None 或整数。 TotalPowerLimit must be None or an integer."];
+    Return[<|"status" -> "failed", "reason" -> "invalidTotalPowerLimit",
+      "totalPowerLimit" -> powerLimit|>]
+    ];
+   envelopeActive = IntegerQ[powerLimit];
+   seedCutSpec = OptionValue[SeedEnvelopeCut];
+   If[! dsSeedCutInputQ[seedCutSpec],
+    Message[DSGenerateIBP::badseedcut, seedCutSpec];
+    dsErrorPrint["SeedEnvelopeCut 格式无效。 The SeedEnvelopeCut format is invalid."];
+    Return[<|"status" -> "failed", "reason" -> "invalidSeedEnvelopeCut",
+      "seedEnvelopeCut" -> seedCutSpec|>]
+    ];
+   seedCutActiveQ = seedCutSpec =!= None;
+   seedCutSkippedPointCount = 0;
+   seedCutAcceptedPointCount = 0;
+   seedCutSpecBySlotCount = <||>;
+   seedCutEmptyGroups = {};
+   skippedPointCount = 0;
+   fastTemplateCount = 0;
+   fastTemplateFallbackCount = 0;
+   fastDecomposeTime = 0.;
+   fastPointLoopTime = 0.;
+   fastJCache = <||>;
+   fastFallbackReasons = <||>;
+   fastCanonSeconds = 0.;
+   fastCanonMissCount = 0;
+   fastCanonHitCount = 0;
    entries = dsSeedTemplateEntries[seeds];
    (* EOM/canonical 可以把某个完整离散态模板化为精确零；密封模板中的 0 仍是合法恒等式。
       非零且不含 J 的表达式继续拒绝，避免把任意常数列表误当作 IBP 模板。 *)
@@ -948,6 +1176,7 @@ DSGenerateIBP[seeds_, specs__List, OptionsPattern[]] := Module[
    postSamplingCanonicalRequiredQ =
     sectorCachePostSamplingCanonicalRequiredQ018[sectorTopologyCache];
    targetRangeAssociation = Association[audit["rangeRules"]];
+   envelopeBoxRules = targetRangeAssociation;
    derivedRangeAudits = dsDerivedSeedRangeAudit[#, targetRangeAssociation] & /@
      Lookup[metaState, "groups", {}];
    failedRangeAudits = Select[derivedRangeAudits, Lookup[#, "status", "failed"] =!= "passed" &];
@@ -962,14 +1191,28 @@ DSGenerateIBP[seeds_, specs__List, OptionsPattern[]] := Module[
      derivedRangeAudits
      ];
    (* 同一 group 的连续点域由相同的反推范围决定。这里一次性构造后复用，避免每个
-      离散态 template 重复建立相同 Tuples；空区间仍自然得到空点域。 *)
+      离散态 template 重复建立相同 Tuples；空区间仍自然得到空点域。SeedEnvelopeCut
+      在此处对点域逐点判定，被截掉的点不进入 parity 预筛与任何生成路径。 *)
    pointRulesByGroup = Association@Map[
       Function[rangeData,
        With[
         {ordinal = Lookup[rangeData, "groupOrdinal", Missing["groupOrdinal"]],
          groupIndices = Lookup[rangeData, "continuousIndices", {}],
          valueLists = (Range @@ Last[#]) & /@ Lookup[rangeData, "seedRangeRules", {}]},
-        ordinal -> If[groupIndices === {}, {{}}, Thread[groupIndices -> #] & /@ Tuples[valueLists]]
+        Module[{allRules, keptRules, cutSpecs},
+         allRules = If[groupIndices === {}, {{}},
+           Thread[groupIndices -> #] & /@ Tuples[valueLists]];
+         If[! seedCutActiveQ,
+          keptRules = allRules,
+          cutSpecs = dsSeedCutResolve[seedCutSpec, Length[groupIndices]];
+          seedCutSpecBySlotCount[Length[groupIndices]] = cutSpecs;
+          keptRules = Select[allRules, dsSeedPointInCutQ[Last /@ #, cutSpecs] &]];
+         If[allRules =!= {} && keptRules === {},
+          AppendTo[seedCutEmptyGroups, ordinal]];
+         seedCutSkippedPointCount += Length[allRules] - Length[keptRules];
+         seedCutAcceptedPointCount += Length[keptRules];
+         ordinal -> keptRules
+         ]
         ]
        ],
       derivedRangeAudits
@@ -986,7 +1229,8 @@ DSGenerateIBP[seeds_, specs__List, OptionsPattern[]] := Module[
           Module[{entry = First[item], groupOrdinal = Last[item], entryRangeAudit,
             pointRules, parityCacheKey, parityMetadata, paritySource, paritySignature,
             entryPointRules, templateEquation, canonicalTemplateEquation,
-             templateForbiddenNData, templateEOMCanonicalQ, expression, updated},
+             templateForbiddenNData, templateEOMCanonicalQ, expression, updated,
+            fastPathEnabledQ, fastDecompose, decDt, fastRecordsOrNull, recordsForEntry, loopDt},
         entryRangeAudit = Lookup[
           derivedRangeByGroup,
           groupOrdinal,
@@ -1036,6 +1280,94 @@ DSGenerateIBP[seeds_, specs__List, OptionsPattern[]] := Module[
           canonicalTemplateEquation
           ];
          templateEOMCanonicalQ = FreeQ[canonicalTemplateEquation, _n];
+        (* 快速路径先尝试整型化分解；分解或规范化失败时该模板整体回退慢路径。 *)
+        fastPathEnabledQ = TrueQ[
+          Lookup[context["topology"], "ibpMode", "full"] === "full" && AssociationQ[entry]];
+        {decDt, fastDecompose} = If[fastPathEnabledQ,
+          AbsoluteTiming[dsFastTemplateDecompose[canonicalTemplateEquation, Lookup[entryRangeAudit, "continuousIndices", {}]]],
+          {0., <|"status" -> "disabledTimeOnly"|>}];
+        fastDecomposeTime += decDt;
+        fastRecordsOrNull = Which[
+          (* 分解器自身返回 fallback 时透传其原始原因，便于统计。 *)
+          ! fastPathEnabledQ, dsFastFallback["notAttempted"],
+          dsFastFallbackQ[fastDecompose], fastDecompose,
+          fastDecompose["status"] === "ok" || fastDecompose["status"] === "zeroTemplate",
+          Module[{pieces = Lookup[fastDecompose, "pieces", {}], fastRecords},
+           {loopDt, fastRecords} = AbsoluteTiming[Table[
+              Module[{s = Lookup[entryRangeAudit, "continuousIndices", {}] /. rules,
+                eqTerms = {}, seenForbidden = <||>, eomQ = True,
+                abortQ = False, k, piece, vals, rawJ, cached, updated,
+                canonEntries = <||>, equationExpr, supportEntries, supportQ,
+                coeffVal, canonDt},
+               Do[
+                piece = pieces[[k]];
+                vals = MapThread[Total[#2 s[[#1]]] + #3 &,
+                  {piece["varPositions"], piece["coefficients"], piece["offsets"]}];
+                rawJ = piece["skeleton"] /. Thread[piece["markers"] -> vals];
+                cached = Lookup[fastJCache, Key[rawJ], Null];
+                If[cached =!= Null, fastCanonHitCount++];
+                If[cached === Null,
+                 fastCanonMissCount++;
+                 {canonDt, cached} = AbsoluteTiming[
+                   dsFastCanonicalizeJ[rawJ, context["topology"], sectorTopologyCache,
+                    postSamplingCanonicalRequiredQ]];
+                 fastCanonSeconds += canonDt;
+                 If[dsFastFallbackQ[cached], abortQ = True; Break[]];
+                 fastJCache[rawJ] = cached];
+                If[cached[[1]] =!= 0,
+                 (* 系数含连续指标变量时（如顶点幂 a[v] 乘子）必须与慢路径同样逐点取值。 *)
+                 coeffVal = If[piece["coeffIndexVarCount"] === 0, piece["coeff"],
+                   piece["coeff"] /. rules];
+                 AppendTo[eqTerms, coeffVal cached[[1]]];
+                 If[! KeyExistsQ[seenForbidden, cached[[1]]],
+                  seenForbidden[cached[[1]]] = cached[[5]]];
+                 canonEntries[cached[[1]]] = cached;
+                 eomQ = eomQ && TrueQ[cached[[6]]]],
+                {k, Length[pieces]}];
+               (* C 判定按方程实际支撑执行：合并同积分项并消去零系数项后，
+                 只有真正留在方程里的 canonical J 参加盒判定。逐 piece 判定会把
+                 零系数边界项误算进支撑，错杀支撑完全落在 C 内的方程。 *)
+               supportQ = True;
+               equationExpr = If[eqTerms === {}, 0, Total[eqTerms]];
+               If[envelopeActive,
+                supportEntries = With[
+                  {supportJs = DeleteDuplicates[Cases[equationExpr, _J, {0, Infinity}]]},
+                  Lookup[canonEntries, supportJs, Null]];
+                If[MemberQ[supportEntries, Null], supportQ = Null,
+                 supportQ = AllTrue[supportEntries,
+                  dsFastSupportInEnvelopeQ[#[[2]], #[[3]],
+                    envelopeBoxRules, powerLimit] &]]];
+               Which[
+                abortQ, dsFastFallback["entryAbort"],
+                supportQ === Null, dsFastFallback["supportCacheMissing"],
+                envelopeActive && ! TrueQ[supportQ], skippedPointCount++; Nothing,
+                True,
+                updated = Join[entry, <|
+                    "continuousRules" -> rules,
+                    "seedRangeGroupOrdinal" -> groupOrdinal,
+                    "targetEnvelopeRules" -> audit["rangeRules"],
+                    "derivedSeedRangeRules" -> entryRangeAudit["seedRangeRules"],
+                    "templateCandidatePointCount" -> Length[pointRules],
+                    "equation" -> equationExpr,
+                    "forbiddenNData" -> If[postSamplingCanonicalRequiredQ,
+                      DeleteCases[Flatten[Values[seenForbidden]], Null],
+                      templateForbiddenNData],
+                    "eomCanonicalQ" -> If[postSamplingCanonicalRequiredQ, eomQ,
+                      templateEOMCanonicalQ]
+                    |>];
+                If[AssociationQ[entry] && KeyExistsQ[entry, "treeSeed"],
+                 updated = Join[updated, <|"treeSeed" -> updated["equation"]|>]];
+                updated]
+               ],
+              {rules, entryPointRules}]];
+           fastPointLoopTime += loopDt;
+           If[AnyTrue[fastRecords, dsFastFallbackQ], dsFastFallback["entryAbort"],
+            fastRecords]],
+          True, dsFastFallback["notAttempted"]];
+        recordsForEntry = If[dsFastFallbackQ[fastRecordsOrNull],
+          fastTemplateFallbackCount++;
+          fastFallbackReasons[fastRecordsOrNull[[1]]] =
+            Lookup[fastFallbackReasons, Key[fastRecordsOrNull[[1]]], 0] + 1;
           Table[
           expression = canonicalTemplateEquation /. rules;
          If[postSamplingCanonicalRequiredQ,
@@ -1053,6 +1385,17 @@ DSGenerateIBP[seeds_, specs__List, OptionsPattern[]] := Module[
             dsLoopSeedExpressionToPublicCoordinates[expression, context["topology"]]
              ]
            ];
+           (* C 判定与快速路径同语义：按最终表达式的 canonical 支撑执行，回退模板
+             同样受 TotalPowerLimit 约束。Table 中直接用 Nothing 丢弃越界点。 *)
+           If[envelopeActive &&
+             ! TrueQ[AllTrue[
+               DeleteDuplicates[Cases[expression, _J, {0, Infinity}]],
+               With[{ce = dsFastCanonicalizeJ[#, context["topology"], sectorTopologyCache,
+                   postSamplingCanonicalRequiredQ]},
+                 ! dsFastFallbackQ[ce] && ce[[1]] =!= 0 &&
+                  dsFastSupportInEnvelopeQ[ce[[2]], ce[[3]],
+                    envelopeBoxRules, powerLimit]] &]],
+            skippedPointCount++; Nothing,
            (* parity 先筛点，连续指标随后取值，用户给出的有序 symmetry 再把每项送到唯一代表。 *)
           updated = If[AssociationQ[entry], Join[entry, <|
               "continuousRules" -> rules,
@@ -1080,9 +1423,11 @@ DSGenerateIBP[seeds_, specs__List, OptionsPattern[]] := Module[
              "eomCanonicalQ" -> If[postSamplingCanonicalRequiredQ,
                FreeQ[expression, _n], templateEOMCanonicalQ]|>];
          If[AssociationQ[entry] && KeyExistsQ[entry, "treeSeed"], updated = Join[updated, <|"treeSeed" -> expression|>]];
-         updated,
+         updated],
          {rules, entryPointRules}
-         ]
+         ],
+          fastTemplateCount++; fastRecordsOrNull];
+        recordsForEntry
         ]
        ],
       progress
@@ -1131,7 +1476,28 @@ DSGenerateIBP[seeds_, specs__List, OptionsPattern[]] := Module[
         ],
      "completeSystemQ" -> artifactContract["completeSystemQ"],
      "artifactContract" -> artifactContract,
-     "parityCertificate" -> parityCertificate
+     "parityCertificate" -> parityCertificate,
+     "totalPowerLimit" -> powerLimit,
+     "seedEnvelopeCut" -> <|
+       "spec" -> seedCutSpec,
+       "activeQ" -> seedCutActiveQ,
+       "defaultEx1Rule" -> "slotCount+3",
+       "defaultEx234" -> {4, 4, 4},
+       "resolvedSpecsBySlotCount" -> Normal[seedCutSpecBySlotCount],
+       "skippedPointCount" -> seedCutSkippedPointCount,
+       "acceptedPointCount" -> seedCutAcceptedPointCount,
+       "emptyAfterCutGroupOrdinals" -> seedCutEmptyGroups|>,
+     "powerEnvelopeSkippedPointCount" -> skippedPointCount,
+     "fastPathTemplateCount" -> fastTemplateCount,
+     "fastPathFallbackTemplateCount" -> fastTemplateFallbackCount,
+     "fastPathFallbackReasons" -> fastFallbackReasons,
+     "fastPathTiming" -> <|
+       "templateDecomposeSeconds" -> fastDecomposeTime,
+       "pointLoopSeconds" -> fastPointLoopTime,
+       "canonicalJCacheSize" -> Length[fastJCache],
+       "canonicalizeSeconds" -> fastCanonSeconds,
+       "canonicalizeMissCount" -> fastCanonMissCount,
+       "canonicalizeHitCount" -> fastCanonHitCount|>
      |>]
    ];
 

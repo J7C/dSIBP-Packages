@@ -50,16 +50,14 @@ exampleSymmetryRules0 = {
 (* ::Chapter:: *)
 (*Reference top 目标包络*)
 
-(* Reference 四组 top seed 的共同外包范围：a 仍为 [-1,4]；b 随外部 bubble reference 新构造
-   由 [-2,5] 扩为 [-4,6]（reference 源码的 bMin/bMax 从 1/3 改为 3/4，新的 19 项 basis 的
-   derivative closure 报告 canonical b1 缺口到 -3）。这里把它作为最终关系的共同目标包络，
-   同时用于 lower sectors；DSGenerateIBP 会按每组 shift 反推出更窄的 seed 点域。
-   旧脚本给 R1 随手放大的 [-4,8] 不作为缺省输入。 *)
+(* 四组 top target 的共同包络直接覆盖 19 项 active basis 及其 ss11/P0 导数支撑：
+   a 取 [0,3]，b 取 [-3,5]，同时用于 lower sectors；DSGenerateIBP 仍按每组 shift
+   反推出更窄的 seed 点域。该包络只声明目标支撑，是否足以闭合由 fresh reduction 验证。 *)
 referenceTopTargetEnvelope = {
-   {a[v1], -1, 4},
-   {a[v2], -1, 4},
-   {b[1], -4, 6},
-   {b[2], -4, 6}
+   {a[v1], 0, 3},
+   {a[v2], 0, 3},
+   {b[1], -3, 5},
+   {b[2], -3, 5}
    };
 
 (* DSMetaSeedRange 的声明集合包含 top 与 shrink sector 实际出现的全部连续指标；

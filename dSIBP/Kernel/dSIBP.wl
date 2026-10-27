@@ -7,6 +7,8 @@ BeginPackage["dSIBP`"];
 
 $dSIBPVersion::usage = "$dSIBPVersion 给出当前加载的 dSIBP package 发布号。";
 AuditLevel::usage = "AuditLevel 控制同源数据是否重跑完整开发证书；\"standard\" 复用 sealed producer 状态，\"full\" 重算内容 hash、coverage、representation 或 residual 审计。";
+TotalPowerLimit::usage = "TotalPowerLimit 是 DSGenerateIBP 的 canonical 支撑截断选项；None 关闭，整数 m 只保留连续幂绝对值总和不超过 m 且逐槽位于目标盒内的方程支撑。";
+SeedEnvelopeCut::usage = "SeedEnvelopeCut 是 DSGenerateIBP 的 seed 点域截断选项；None 关闭，Automatic 使用 {N+3,4,4,4}，也可显式给 {Ex1,Ex2,Ex3,Ex4}，每项为整数或 Automatic。";
 KiraRequireCompleteSystem::usage = "KiraRequireCompleteSystem 指定 Kira 导出是否要求 completeSystemQ；正式约化缺省为 True。";
 
 J::usage = "J 是统一积分 Head。full 模式使用 J[aList,linePacks,ispList]；timeOnly 公开接口只使用 J[sectorKey,timeShifts,stateBits]，其中 sectorKey 是 root propagator 顺序的定长 0/1 字符串。";
@@ -61,7 +63,7 @@ DSAllSeeds::usage = "DSAllSeeds[seedData] 取出 DSSeeds 返回的一维 allSeed
 DSSeedGroups::usage = "DSSeedGroups[seedData] 返回 DSSeeds 按 {sectorKey,ibpClass,generator} 排列的嵌套 seedGroups；每个二级组包含该 IBP 算符的全部离散态模板。无参数形式读取最近结果。";
 DSSeedGroupMetadata::usage = "DSSeedGroupMetadata[seedData] 返回与 DSSeedGroups 同序的 sector、IBP 类型、生成元、模板 ordinal 和计数。无参数形式读取最近结果。";
 DSMetaSeedRange::usage = "DSMetaSeedRange[seeds,{indices...}] 按用户给定的 seeds 外层结构初始化逐组 seed shift metadata；flat seeds 作为一组，nested seeds 的每个顶层元素作为一组。积分参数先统一 Flatten，再由 Variables 审计实际指标。声明多余或遗漏只 warning，metadata 仍按实际完整集合建立；再次初始化覆盖旧状态。DSMetaSeedRange[] 返回当前状态。";
-DSGenerateIBP::usage = "DSGenerateIBP[seeds,{min,max}] 把统一目标积分指标包络按已初始化的逐输入组 shift metadata 反推成 seed 点域；DSGenerateIBP[seeds,{index,min,max},...] 要求 root 指标 exact cover。用户可显式给负 ISP 下界；自动反推不会把 ISP seed 下界降到用户 target 下界以下。先筛 parity，再代入数值点生成 IBP；n_i 不得再次撒点。";
+DSGenerateIBP::usage = "DSGenerateIBP[seeds,{min,max}] 把统一目标积分指标包络按已初始化的逐输入组 shift metadata 反推成 seed 点域；DSGenerateIBP[seeds,{index,min,max},...] 要求 root 指标 exact cover。用户可显式给负 ISP 下界；自动反推不会把 ISP seed 下界降到用户 target 下界以下。先筛 parity，再代入数值点生成 IBP；n_i 不得再次撒点。TotalPowerLimit 缺省 None；给整数 m 时只保留合并后 canonical 支撑全部位于逐槽目标盒且连续幂绝对值总和不超过 m 的方程。SeedEnvelopeCut 在反推出的 seed 点域上再做主导方向截断：正槽绝对值和 C_+ 不小于负槽绝对值和 C_- 时要求总和<=Ex1 且 C_-<=Ex2，否则要求总和<=Ex3 且 C_+<=Ex4；缺省 Automatic 即 {N+3,4,4,4}（N 为组内连续槽位数），None 关闭，也可显式给 {Ex1,Ex2,Ex3,Ex4}（每项整数或 Automatic）。";
 DSLinear::usage = "DSLinear[seedData,context,opts] 把 canonical seeds 转换为 backend-neutral linearData。";
 DSReorderIntegrals::usage = "DSReorderIntegrals[linearData,order] 按用户给定的 J 或现有积分 ID 显式重排 linearData；其结果的 integralList 是后续 plan/export/import 的唯一积分顺序。";
 DSUserMI::usage = "DSUserMI[linearData,expressions,spec] 构造并附加有序 userMI basis；expressions 可为单个 J 或齐次 J 线性组合。DSUserMI[data] 或 DSUserMI[data,key] 查询同源可逆映射、秩和 backend ID。";

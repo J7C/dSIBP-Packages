@@ -1,19 +1,24 @@
 (* ::Package:: *)
 (***
-File: kira_input_summary.wl
-Purpose: Readable record of the formal Kira input built by the mixed bubble+tree example.
-Boundary: The full input is generated in a workspace outside this repository and handed to an
-external Kira. This file holds no equation tables and no run paths, and it is not package input.
+文件：kira_input_summary.wl
+用途：保存 mixed bubble+tree 正式 Kira 输入的轻量、可读摘要。
+边界：完整输入在仓库外工作区生成并交给 WSL Kira；本文件不含方程表或运行路径，也不作为程序包输入。
 ***)
 
 
 (* ::Chapter:: *)
-(*Formal input record*)
+(*正式输入摘要*)
 
 <|
   "schema" -> "dsibp_example_kira_input_summary_v1",
   "case" -> "mixBubbleTree",
   "packageVersion" -> "1.0",
+  "evidenceRelease" -> "024.0",
+  "uncutEquivalentOptionsForCurrentPackage" -> {
+    SeedEnvelopeCut -> None, TotalPowerLimit -> None
+  },
+  "packageSHA256" ->
+    "7B729536E62EC22E8A726F2D245D4A602E73811C531CCDC3982218A80A151740",
   "executionBoundary" -> <|
     "wolframInputDirectory" -> "external validation workspace",
     "kiraRuntime" -> "WSL",

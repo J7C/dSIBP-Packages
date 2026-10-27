@@ -1,14 +1,13 @@
 (* ::Package:: *)
 (***
-File: kira_result_summary.wl
-Purpose: Readable record of the external Kira reduction, DE and scaling outcome for the mixed
-bubble+tree example.
-Boundary: No reduction table, log, database or cache is kept here.
+文件：kira_result_summary.wl
+用途：保存 mixed bubble+tree 的 fresh WSL Kira、DE 与 scaling 最终摘要。
+边界：本文件不保留 reduction table、日志、database 或 cache；正式证据见独立检验报告。
 ***)
 
 
 (* ::Chapter:: *)
-(*Formal result record*)
+(*正式结果摘要*)
 
 <|
   "schema" -> "dsibp_example_kira_result_summary_v1",
@@ -37,5 +36,9 @@ Boundary: No reduction table, log, database or cache is kept here.
   "sourceResidualNonzeroCount" -> 0,
   "ordinaryExportedIntegralsCheckedForBridgePack" -> 310688,
   "fixedTreeBridgeExcludedFromParity" -> True,
+  "formalValidationManifestSHA256" ->
+    "B3C9ED791EB2C0247A114FA2AC29B526A860DB77FD9B1C6921E8AA412A7A7106",
+  "formalValidationReductionSHA256" ->
+    "7D66B032E78EB724B7EA643092CEAA1DCACA81AA3A6C2968D362E8127FD9C5BD",
   "intermediateArtifactsRetainedInRepository" -> False
 |>

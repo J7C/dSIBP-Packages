@@ -1,41 +1,15 @@
 # Pure massive bubble closed loop
 
-Run with `wolframscript -file main.wl`.
+本例固定 `--` branch、even parity 和等能量约束。package 与 reference 的能量满足 `P_pkg=P0=-P_ref`。两个顶点的零点均加入通用符号 `analyticRegulator`，在符号 seed 生成后才取 `analyticRegulator -> 0`；这使时间端点门禁能够区分已正规化 family 与未定义的发散 IBP。其余流程从初始化到 formal Kira 输入、外部 reduction、结果取回、19 维微分方程与 Eq. (51)/(64) 标度检查。顶点交换 symmetry 只在本例等能量约束下启用；独立 `P1/P2` family 不得复用。
 
-The case fixes the `--` contour branch, even parity, and equal external energies. Package and
-reference energies satisfy `P_pkg = P0 = -P_ref`. A generic symbolic `analyticRegulator` is
-attached to the zero point of both vertices and only set to `analyticRegulator -> 0` after the
-symbolic seeds are generated, so the time-endpoint gate can distinguish a regulated family
-from an undefined divergent IBP. The remaining flow runs from initialization to formal Kira
-input, external reduction, result readback, the 19-dimensional differential equation, and the
-Eq. (51)/(64) scaling checks. Vertex-exchange symmetry is enabled only under the equal-energy
-constraint of this case; a family with independent `P1/P2` must not reuse it.
+`reference_user_mi_basis.wl` 只保存 reference 的 19 个候选线性组合（全部 active，没有辅助关系）、`activeIndices=Range[19]`、physical `ks=ss11`、导数变量和 19 个统一 scaling degrees。`main.wl` 把这些数据直接交给 package 的 `DSUserMI`；线性秩、可逆 `J/userMI` 映射、backend ID、导数闭包和 manifest 均由 package 生成，example 不实现自己的 basis adapter。`dlog_basis.wl` 只保留 reference-readable 记号，不应单独作为 formal basis。
 
-`reference_user_mi_basis.wl` stores only the 19 reference candidate linear combinations (all
-active, with no auxiliary relations), `activeIndices = Range[19]`, the physical `ks = ss11`,
-the derivative variables, and the 19 uniform scaling degrees. `main.wl` hands this data
-straight to the package entry `DSUserMI`; the
-linear rank, the invertible `J/userMI` map, backend ids, derivative closure and the manifest
-are all produced by the package, so the example implements no basis adapter of its own.
-`dlog_basis.wl` keeps only the reference-readable notation and is not a formal basis on its
-own.
+当前 target 包络为 `a[v1],a[v2] in [0,3]`、`b[1],b[2] in [-3,5]`，直接覆盖 19 项 basis 及导数支撑；生成时使用 `SeedEnvelopeCut->Automatic` 与 `TotalPowerLimit->None`。fresh 结果为 20228 条生成 IBP、2442 条 canonical relations、2460 条 formal equations、1317 个源积分、300 targets。Kira 的 24 个全局 masters 中有 19 个 active masters 和 5 个额外全局项；验收以目标 RHS 为准，19 维 DE 无残留，post-Kira 23/23、三套 reference 矩阵各 361/361。复现旧未截断输入时须显式关闭两个截断选项。
 
-Kira is not run inside this directory. Input generation happens in a Wolfram session outside
-the repository and the reduction itself runs in an external Kira installation:
+本仓库没有在该 example 目录内运行 Kira。正式检验由 Windows Wolfram 在仓库外工作区生成输入，再由 WSL Kira 2.3 运行。发布副本已删除 `init/`、`kira/`、database、save、日志、reduction table、cache 和 DE 运行目录，只保留 `kira_input_summary.wl` 与 `kira_result_summary.wl` 两份轻量摘要。
 
-1. Set `DSIBP_KIRA_WORKSPACE` to a directory outside the repository, then run
-   `wolframscript -file main.wl`. The script writes `init/` and `kira/` under its
-   `pure_massive_bubble/` subdirectory and does not start Kira; the first clean state is
-   `awaitingExternalKira`.
-2. From a shell that can reach the same external workspace, enter
-   `pure_massive_bubble/kira/` and run `kira --parallel=10 jobs.yaml`. Full results stay in
-   that workspace and are not copied back into the example directory.
-3. Run `main.wl` again, or run only `post_kira_check.wl`. The latter regenerates nothing and
-   executes `DSKiraImport -> DSDE[{ss11, P0}] -> DSScaleCheck[{1, 1}]`, writing into the same
-   external workspace.
+1. 在 PowerShell 中把 `DSIBP_KIRA_WORKSPACE` 设为仓库外目录，再运行 `wolframscript -file main.wl`。脚本会在其 `pure_massive_bubble/` 子目录写出 `init/` 和 `kira/`，不会启动 Kira；首次正常状态为 `awaitingExternalKira`。
+2. 从 WSL 进入同一外置工作区的 `pure_massive_bubble/kira/`，运行 `kira --parallel=10 jobs.yaml`。完整结果写入外置工作区，不复制回 example 目录。
+3. 再运行 `main.wl`，或只运行 `post_kira_check.wl`。后者不重新生成输入，只执行 `DSKiraImport -> DSDE[{ss11,P0}] -> DSScaleCheck[{1,1}]`，结果仍写入外置工作区。
 
-The final DE and its ordered master list are written to `results/dlogDE/` of the external
-workspace, and the closed-loop summary to `results/post_kira_summary.wl`. If the family,
-active basis, package or Kira input changes, the reduction must be regenerated and rerun; the
-scripts refuse to read results older than the current export manifest. The two summaries kept
-here record the input scale and the final outcome of this case, and are not importer input.
+最终 DE 与同序 master list 写入外置工作区的 `results/dlogDE/`，闭环摘要写入其 `results/post_kira_summary.wl`。若修改 family、active basis、package 或 Kira 输入，必须重新生成并运行 reduction；脚本会拒绝读取早于当前 export manifest 的旧结果。仓库内两份摘要只记录正式检验的输入规模和最终结论，不作为 importer 输入。
