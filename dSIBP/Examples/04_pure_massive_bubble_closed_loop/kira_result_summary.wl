@@ -41,7 +41,6 @@
   "scalingCertificateScope" -> "symbolic",
   "sourceIntegralIdentities" -> {53, 53},
   "sourceActiveBasisIdentities" -> {19, 19},
-  "sourceIdentityEvidenceRelease" -> "024.0",
   "referenceMatrixEqualCounts" -> <|
     "P0" -> {361, 361}, "ip0" -> {361, 361}, "ks" -> {361, 361}
   |>,

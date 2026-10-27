@@ -22,13 +22,21 @@ workspaceGuardCandidates = Select[
    NestList[DirectoryName, exampleDir, 8],
    FileExistsQ[FileNameJoin[{#, ".git"}]] &
    ];
-workspaceGuardRoot = If[workspaceGuardCandidates === {},
-   ExpandFileName@FileNameJoin[{exampleDir, "..", ".."}],
+workspaceGuardRoot = ExpandFileName@If[workspaceGuardCandidates === {},
+   FileNameJoin[{exampleDir, "..", ".."}],
    First[workspaceGuardCandidates]
    ];
+(* ExpandFileName 保留尾分隔符，须先去掉再做前缀判定。 *)
+workspaceGuardRoot = StringReplace[workspaceGuardRoot, RegularExpression["[\\\\/]+$"] -> ""];
+If[$OperatingSystem === "Windows",
+  workspaceGuardKey = ToLowerCase[workspaceGuardRoot];
+  externalWorkspaceKey = ToLowerCase[externalWorkspaceRoot],
+  workspaceGuardKey = workspaceGuardRoot;
+  externalWorkspaceKey = externalWorkspaceRoot
+  ];
 If[
-  externalWorkspaceRoot === workspaceGuardRoot ||
-    StringStartsQ[externalWorkspaceRoot, workspaceGuardRoot <> $PathnameSeparator],
+  externalWorkspaceKey === workspaceGuardKey ||
+    StringStartsQ[externalWorkspaceKey, workspaceGuardKey <> $PathnameSeparator],
   Print["Kira 工作目录必须位于包所在 Git 仓库或交付目录之外；请修改 DSIBP_KIRA_WORKSPACE。"];
   Exit[2]
 ];
