@@ -6159,15 +6159,17 @@ treeDiagonalInverse[matrix_List] := Module[{diag, offDiagonal},
 treeAminusMatrix[vertex_Association, shift_: 0] := Module[{m1, inv},
    m1 = treeM1[vertex, vertex["nu0"] + shift];
    inv = treeDiagonalInverse[m1];
-   If[inv === $Failed, $Failed, -inv . treeM0[vertex]]
+   (* 递推恒等式是 M0.J[a] - M1.J[a-1] = 0，解出 J[a-1] = M1^-1.M0.J[a]，无前置负号。 *)
+   If[inv === $Failed, $Failed, inv . treeM0[vertex]]
    ];
 
 
 treeAplusMatrix[vertex_Association, shift_: 0] := Module[{m0t, inv},
    m0t = treeM0Tilde[vertex];
    inv = treeDiagonalInverse[m0t];
+   (* 同一恒等式解出 J[a+1] = M0^-1.M1.J[a]，换到 tilde 基后同样无前置负号。 *)
    If[inv === $Failed, $Failed,
-    -treeTpInverse[vertex] . inv . treeTp[vertex] . treeM1[vertex, vertex["nu0"] + shift + 1]
+    treeTpInverse[vertex] . inv . treeTp[vertex] . treeM1[vertex, vertex["nu0"] + shift + 1]
     ]
    ];
 
@@ -6620,10 +6622,12 @@ makeTreeTimeReductionRules[records_List, data_Association] := Module[
      If[MemberQ[{invM1, invM0t}, $Failed], Return[]];
      tp = treeTp[vertex];
      tpInv = treeTpInverse[vertex];
-     regular = m1.minusInts + m0.currentInts;
+     (* regular 必须与 dsDirectTreeRegularSeed 的 M0.J[a] - M1.J[a-1] 同构，
+        source 才是纯 contact 项；解出 J[a-1] 时 source 随 M0 块一起变号。 *)
+     regular = m0.currentInts - m1.minusInts;
      source = Expand[equations - regular];
      If[! TrueQ[source === ConstantArray[0, Length[source]]], sourceQ = True];
-     lowerRhs = Expand[treeAminusMatrix[vertex, First[currentInts[[1]]][[vertexIndex, 1]]] . currentInts - invM1.source];
+     lowerRhs = Expand[treeAminusMatrix[vertex, First[currentInts[[1]]][[vertexIndex, 1]]] . currentInts + invM1.source];
      upperRhs = Expand[treeAplusMatrix[vertex, First[currentInts[[1]]][[vertexIndex, 1]] - 1] . minusInts - tpInv.invM0t.tp.source];
      minusRules = Join[minusRules, Thread[minusInts -> lowerRhs]];
      plusRules = Join[plusRules, Thread[currentInts -> upperRhs]];

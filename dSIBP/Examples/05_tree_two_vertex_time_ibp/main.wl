@@ -106,11 +106,29 @@ selectedSeed = DSTreeSeeds[v1, selectedIntegral, treeContext];
 (*迭代约化、naive IBP/DE 与公式型 dlog DE*)
 
 treeDLog = DSTreeDLogDE[treeContext];
-treeTarget = First[treeDLog["masters"]]["integral"];
-treeReduction = repIterative[treeTarget, treeReductionEndpoint, treeContext];
-
 treeDEVariables = {E1, E2, sE1};
 treeNaiveIBP = DSTreeNaiveIBP[treeContext, treeDLog["masters"], ProgressReporting -> True];
+
+(* 演示 target 取真正移位过的 a=2 积分。若取 master（a=0），repIterative 已是终点、
+   约化退化为空操作，测不到递推降幂块的符号。 *)
+treeTarget = J["1", {2, 0}, {1, 0}];
+treeReduction = repIterative[treeTarget, treeReductionEndpoint, treeContext];
+
+(* 结构一致性检查：DSTreeNaiveIBP 报告的 master-basis 约化与 repIterative 公式递推，
+   对同一批一步升幂对象必须逐项相等。二者是同一套 tree 约化规则的两个消费者，本检查
+   捕获的是两个消费路径的实现分叉，不是整体符号约定。
+   注意：它无法钉住符号约定本身——若两条路径共享同一符号错误，本检查仍会通过。
+   符号约定的绝对锚在 check_tree_normalization_closure（对角块 -(2 nu+1)/sE1）与
+   independent-benchmark 对 arXiv:2411.03088 两顶点 DE 的数值复核（含 off-diagonal
+   top-to-child col5）里，不在本 example。 *)
+treeRouteAgreement = And @@ Table[
+    TrueQ[FullSimplify[
+       reduction["rhsExpression"] -
+        repIterative[reduction["lhs"]["integral"], treeReductionEndpoint, treeContext]["expression"]
+       ] === 0],
+    {reduction, treeNaiveIBP["reductions"]}
+    ];
+
 treeNaiveDE = DSTreeNaiveDE[treeNaiveIBP, treeDEVariables, ProgressReporting -> True];
 treeDEResiduals = Association@Table[
     variable -> (Together /@ Flatten[treeNaiveDE["matrices", variable] - D[treeDLog["omega"], variable]]),
@@ -130,6 +148,9 @@ summary = <|
    "linearRepresentation" -> Lookup[treeLinearData, "representation", Missing["representation"]],
    "selectedSeedRoute" -> Lookup[selectedSeed, "generationRoute", Missing["route"]],
    "iterativeReductionFreeOfFailure" -> FreeQ[treeReduction, $Failed],
+   "iterativeReductionStatus" -> Lookup[treeReduction, "status", "missing"],
+   "iterativeReductionSteps" -> Lookup[treeReduction, "steps", 0],
+   "routeReductionsAgree" -> treeRouteAgreement,
    "dlogStatus" -> Lookup[treeDLog, "status", "missing"],
    "naiveIBPStatus" -> Lookup[treeNaiveIBP, "status", "missing"],
    "naiveDEStatus" -> Lookup[treeNaiveDE, "status", "missing"],
@@ -151,6 +172,9 @@ If[! And[
     summary["seedRepresentation"] === "J[sectorKey,timeShifts,stateBits]",
     summary["selectedSeedRoute"] === "directPureTime",
     summary["iterativeReductionFreeOfFailure"],
+    summary["iterativeReductionStatus"] === "reduced",
+    summary["iterativeReductionSteps"] > 0,
+    summary["routeReductionsAgree"],
     summary["dlogStatus"] === "generated",
     summary["naiveIBPStatus"] === "solved",
     summary["naiveDEStatus"] === "generated",

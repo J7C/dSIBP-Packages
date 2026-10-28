@@ -69,9 +69,11 @@ dsDirectTreeRegularSeed[vertexId_, int_J, family_Association] := Module[
    stateRow = treeStateIndex[Rest[pack]];
    currentIntegrals = dsTreeStateVectorIntegrals[int, family, vertexIndex, currentA];
    lowerIntegrals = dsTreeStateVectorIntegrals[int, family, vertexIndex, currentA - 1];
+   (* 公开被积函数顶点因子是 (-tau)^(a+a0) Exp[eta E tau]，且 eta E = I k0；
+      对它作 tau 全导数得到的恒等式是 M0.J[a] - M1.J[a-1] = 0，故降幂块带前置负号。 *)
    equationVector = Expand[
-     treeM1[vertex, vertex["nu0"] + currentA] . lowerIntegrals +
-      treeM0[vertex] . currentIntegrals
+     treeM0[vertex] . currentIntegrals -
+      treeM1[vertex, vertex["nu0"] + currentA] . lowerIntegrals
      ];
    Expand[equationVector[[stateRow]]]
    ];

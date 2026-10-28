@@ -360,8 +360,12 @@ dsTreeAssembleConnection[
                   selectorCoefficients[sourceData["sectorKey"]]/
                    selectorCoefficients[targetSector] rawMatrix
                   ];
+               (* 对角块用 regular 部分的 M1（omega = omegaEx - I Tp^-1 Omega0 Tp M1）；
+                  非对角块用 contact source S。全导数恒等式 0 = regular + S 给出 S = -regular，
+                  故 contact selector 相对 M1 多带一个负号：这里前置系数取 +I 而非 -I，
+                  使 top-to-child 块与 naive DE 及 arXiv:2411.03088 potential col5 一致。 *)
                omegaBlocks[[sourceIndex, targetIndex]] = Expand[
-                 omegaBlocks[[sourceIndex, targetIndex]] - I sourcePrimitive . normalizedMatrix
+                 omegaBlocks[[sourceIndex, targetIndex]] + I sourcePrimitive . normalizedMatrix
                  ];
                targetSector -> normalizedMatrix
                ],
@@ -469,7 +473,7 @@ dsTreeMultiSectorDLog[context_Association, seedData_: Automatic, auditLevel_: "s
     "omegaBlocks" -> assembled["omegaBlocks"],
     "sourceEquations" -> sourceEquations,
     "inputSourceData" -> seedData,
-    "sourceConvention" -> "Eq. (3.66)-(3.68): -I T^-1 Omega0 T times direct compiled-WT contact selector"
+    "sourceConvention" -> "Eq. (3.66)-(3.68): off-diagonal block = +I T^-1 Omega0 T times direct compiled-WT contact selector; the +I (vs the diagonal block's -I) encodes S = -regular from 0 = regular + S"
     |>
    ];
 

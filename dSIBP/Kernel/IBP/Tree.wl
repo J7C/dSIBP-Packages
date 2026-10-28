@@ -129,10 +129,12 @@ dsMakeTreeTaggedTimeReductionRules[records_List, data_Association] := Module[
      If[MemberQ[{invM1, invM0t}, $Failed], singularQ = True; Return[]];
      tp = treeTp[vertex];
      tpInv = treeTpInverse[vertex];
-     regular = m1.minusTokens + m0.currentTokens;
+     (* regular 与 dsDirectTreeRegularSeed 的 M0.J[a] - M1.J[a-1] 同构，source 只留 contact；
+        解 J[a-1] 时 source 随 M0 块变号，解 J[a+1] 时 source 保持负号。 *)
+     regular = m0.currentTokens - m1.minusTokens;
      source = Expand[equations - regular];
      If[! TrueQ[source === ConstantArray[0, Length[source]]], sourceQ = True];
-     lowerRhs = Expand[treeAminusMatrix[vertex, First[currentInts[[1]]][[vertexIndex, 1]]] . currentTokens - invM1.source];
+     lowerRhs = Expand[treeAminusMatrix[vertex, First[currentInts[[1]]][[vertexIndex, 1]]] . currentTokens + invM1.source];
      upperRhs = Expand[treeAplusMatrix[vertex, First[currentInts[[1]]][[vertexIndex, 1]] - 1] . minusTokens - tpInv.invM0t.tp.source];
      minusRules = Join[minusRules, Thread[minusTokens -> lowerRhs]];
      plusRules = Join[plusRules, Thread[currentTokens -> upperRhs]];
