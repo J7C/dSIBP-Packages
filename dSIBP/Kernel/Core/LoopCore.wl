@@ -810,15 +810,6 @@ parseTopology[case_Association] := Module[
 lineIndexedPowerQ[line_Association] := Lookup[line, "linePowerMode", "indexed"] === "indexed";
 
 
-linePackNPositions[line_Association, packType_String] := Module[{offset = If[lineIndexedPowerQ[line], 1, 0]},
-   Switch[packType,
-    "massiveFull" | "massiveCross", offset + {1, 2},
-    "masslessFull", {offset + 1},
-    _, {}
-    ]
-   ];
-
-
 (* 只有 cycle line 的 pack 第一槽是整数动量幂。bridge 的第一槽可能是 n，
    因而任何物理幂次、排序或投影代码都必须通过本访问器读取。 *)
 lineIntegerPowerIndex[topo_Association, J[_, linePacks_, _], e_Integer] := If[
@@ -826,19 +817,6 @@ lineIntegerPowerIndex[topo_Association, J[_, linePacks_, _], e_Integer] := If[
    linePacks[[e, 1]],
    0
    ];
-
-
-makeLinePack[line_Association] := Module[{id = line["id"], indexedQ = lineIndexedPowerQ[line]},
-   Switch[line["packType"],
-    "massiveFull", If[indexedQ, {b[id], n[id, 1], n[id, 2]}, {n[id, 1], n[id, 2]}],
-    "massiveCross", If[indexedQ, {b[id], n[id, 1], n[id, 2]}, {n[id, 1], n[id, 2]}],
-    "masslessFull", If[indexedQ, {b[id], n[id]}, {n[id]}],
-    "masslessCross", If[indexedQ, {b[id]}, {}],
-    "shrunk", If[indexedQ, {bS[id]}, {}],
-    _, Message[makeLinePack::badtype, line["packType"], id]; $Failed
-    ]
-   ];
-makeLinePack::badtype = "未知 packType `1`，line id = `2`。";
 
 
 makeLinePacks[topo_Association] := makeLinePack /@ topo["lines"];

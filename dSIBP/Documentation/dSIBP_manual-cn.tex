@@ -637,7 +637,7 @@ massless 的 subsector parity 不保持原 offset。双顶点表示中 contact �
  b+n_1+n_2=b+1=bS+1\pmod 2.
  \label{manualMasslessContactParity}
 \end{equation}
-因此 cycle massless contact 使 child-sector parity offset 相对 parent 翻转 1；fixed/non-loop massless 传播子不参与 parity，没有这次翻转。多传播子 simultaneous contact 按被 shrink 的 massless cycle 传播子数模 2 累加。package 不自动给 pure massless family 启用 parity；mixed h/H 系统一旦使用已认证 root parity，massless cycle transition 必须携带上述 affine offset，不能套用 h/H 的“缺省不变”。
+因此 cycle massless contact 使 child-sector parity offset 相对 parent 翻转 1；fixed/non-loop massless 传播子不参与 parity，没有这次翻转。多传播子 simultaneous contact 按被 shrink 的 massless cycle 传播子数模 2 累加。parity 约束由用户显式给出后统一启用，pure massless 与 mixed、pure massive family 同一入口，package 不为任何 family 自动生成或猜测约束。mixed h/H 系统一旦使用已认证 root parity，massless cycle transition 必须携带上述 affine offset，不能套用 h/H 的“缺省不变”。
 
 缩并后，剩余传播子的两个原顶点可能映到同一个 active vertex。此时：
 \begin{enumerate}
@@ -1482,7 +1482,7 @@ de  = DSTreeNaiveDE[ibp, {K1,K2,k12}];
   \item seed 直接导出 Kira：错误；先构造 \texttt{linearData}。
 \end{itemize}
 
-当前未实现：一般图 automorphism/参数对称性的自动发现、scaleless 全自动前端、自动选择 propagator basis、streaming/chunked 高圈 seed、massless 三槽 quotient basis 上的公式型 tree 递推/dlog，以及实际运行 reduction。当前版本已实现标准 context、动力学变量审计、h/H parity、交互消息、Kira 结果取回和 loop/tree DE/scaling；package 仍只验证并导入用户在外部生成的完整 reduction。
+当前未实现：一般图 automorphism/参数对称性的自动发现、scaleless 全自动前端、自动选择 propagator basis、streaming/chunked 高圈 seed、massless 三槽 quotient basis 上的公式型 tree 递推/dlog，以及实际运行 reduction。当前版本已实现标准 context、动力学变量审计、h/H 与 massless exponential parity、交互消息、Kira 结果取回和 loop/tree DE/scaling；package 仍只验证并导入用户在外部生成的完整 reduction。
 
 \appendix
 \section{公开函数汇总}
