@@ -263,7 +263,7 @@ dsTreeMasterNormalizationRecords[
    ] := Module[{selectorCoefficients, records, physicalRecord, selectorCoefficient},
    selectorCoefficients = Lookup[selectorData, "selectorCoefficients", <||>];
    records = Association@Table[
-      physicalRecord = sectorPrefactorRecordForKey018[context, sectorKey];
+      physicalRecord = sectorPrefactorRecordForKey[context, sectorKey];
       If[! AssociationQ[physicalRecord],
        Return[<|"status" -> "error", "reason" -> "physicalSectorPrefactorMissing",
          "sectorKey" -> sectorKey, "record" -> physicalRecord|>]
@@ -391,7 +391,7 @@ dsTreeMultiSectorDLog[context_Association, seedData_: Automatic, auditLevel_: "s
    If[familyContext === $Failed, Return[<|"status" -> "error", "reason" -> "treeFamilyInitializationFailed"|>]];
    families = familyContext["families"];
    sectorOrder = familyContext["sectorOrder"];
-   blocks = dsTreeDLogBlock018 /@ families;
+   blocks = dsTreeDLogBlock /@ families;
    If[AnyTrue[blocks, Lookup[#, "status", "error"] =!= "generated" &],
     Return[<|"status" -> "error", "reason" -> "sectorDLogFailed", "sectorBlocks" -> blocks|>]
     ];

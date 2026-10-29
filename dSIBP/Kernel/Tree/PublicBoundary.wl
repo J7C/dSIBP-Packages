@@ -8,7 +8,7 @@
 
 (* 公式内核按顶点保存 massive 状态；先构造既有 line-packed producer 对象，再通过
    中央 registry 唯一转换为公开 time-only 表示。 *)
-dsTreeFormulaIntegralToPublic018[int : J[_List], sectorKey_String, context_Association] := Module[
+dsTreeFormulaIntegralToPublic[int : J[_List], sectorKey_String, context_Association] := Module[
    {familyContext, family, topo, packs, aList, baseline, linePacks, line, states,
     vertexIndex, legIndex, internalIntegral},
    familyContext = dsTreeFamilyContext[context];
@@ -23,7 +23,7 @@ dsTreeFormulaIntegralToPublic018[int : J[_List], sectorKey_String, context_Assoc
      Switch[
       Lookup[line, "state", "full"] === "shrunk" || Lookup[line, "packType", ""] === "shrunk",
       True,
-      If[lineIndexedPowerQ[line], {Lookup[baseline, line["id"], 0]}, {fixedLineSentinel018[]}],
+      If[lineIndexedPowerQ[line], {Lookup[baseline, line["id"], 0]}, {fixedLineSentinel[]}],
       False,
       states = Table[
         vertexIndex = FirstPosition[
@@ -43,22 +43,22 @@ dsTreeFormulaIntegralToPublic018[int : J[_List], sectorKey_String, context_Assoc
         ];
       If[lineIndexedPowerQ[line],
        Prepend[states, Lookup[baseline, line["id"], 0]],
-       Prepend[states, fixedLineSentinel018[]]
+       Prepend[states, fixedLineSentinel[]]
        ]
       ],
      {e, topo["nE"]}
      ];
    internalIntegral = J[aList, linePacks, {}];
-   dsTimeOnlyInternalIntegralToPublic020[internalIntegral, context]
+   dsTimeOnlyInternalIntegralToPublic[internalIntegral, context]
    ];
 
 
-dsTreePublicIntegralToFormula018[
+dsTreePublicIntegralToFormula[
    int : J[_, _, _], sectorKey_String, context_Association
    ] := Module[
    {internalIntegral, metadata, familyContext, family, topo, aList, linePacks, lineIds, vertexPacks,
     legId, linePosition, endpointSlot, statePosition, states},
-   internalIntegral = dsTimeOnlyPublicIntegralToInternal020[int, context];
+   internalIntegral = dsTimeOnlyPublicIntegralToInternal[int, context];
    If[internalIntegral === $Failed, Return[$Failed]];
    metadata = SelectFirst[
      context["sectors"],
@@ -101,23 +101,23 @@ dsTreePublicIntegralToFormula018[
    ];
 
 
-dsTreeTaggedTermToPublic018[term_Association, context_Association] := Module[
+dsTreeTaggedTermToPublic[term_Association, context_Association] := Module[
    {sectorKey, formulaIntegral, publicIntegral},
    sectorKey = Lookup[term, "sectorKey", Missing["NoSector"]];
    formulaIntegral = Lookup[term, "integral", Missing["NoIntegral"]];
    If[! StringQ[sectorKey] || ! MatchQ[formulaIntegral, J[_List]], Return[$Failed]];
-   publicIntegral = dsTreeFormulaIntegralToPublic018[formulaIntegral, sectorKey, context];
+   publicIntegral = dsTreeFormulaIntegralToPublic[formulaIntegral, sectorKey, context];
    If[publicIntegral === $Failed, Return[$Failed]];
    Join[KeyDrop[term, {"integral"}], <|"integral" -> publicIntegral|>]
    ];
 
 
-dsTreeTaggedTermToFormula018[term_Association, context_Association] := Module[
+dsTreeTaggedTermToFormula[term_Association, context_Association] := Module[
    {sectorKey, publicIntegral, formulaIntegral},
    sectorKey = Lookup[term, "sectorKey", Missing["NoSector"]];
    publicIntegral = Lookup[term, "integral", Missing["NoIntegral"]];
    If[! StringQ[sectorKey] || ! MatchQ[publicIntegral, J[_, _, _]], Return[$Failed]];
-   formulaIntegral = dsTreePublicIntegralToFormula018[publicIntegral, sectorKey, context];
+   formulaIntegral = dsTreePublicIntegralToFormula[publicIntegral, sectorKey, context];
    If[formulaIntegral === $Failed, Return[$Failed]];
    Join[KeyDrop[term, {"integral"}], <|"integral" -> formulaIntegral|>]
    ];
@@ -126,8 +126,8 @@ dsTreeTaggedTermToFormula018[term_Association, context_Association] := Module[
 (* ::Chapter:: *)
 (*Seed 与 tagged linearData 公开化*)
 
-dsTreeLinearDataToPublic018[data_Association, context_Association] := Module[{terms},
-   terms = dsTreeTaggedTermToPublic018[#, context] & /@ Lookup[data, "terms", {}];
+dsTreeLinearDataToPublic[data_Association, context_Association] := Module[{terms},
+   terms = dsTreeTaggedTermToPublic[#, context] & /@ Lookup[data, "terms", {}];
    If[MemberQ[terms, $Failed], Return[$Failed]];
    Join[
     KeyDrop[data, {"terms", "expression"}],
@@ -140,8 +140,8 @@ dsTreeLinearDataToPublic018[data_Association, context_Association] := Module[{te
    ];
 
 
-dsTreeLinearDataToFormula018[data_Association, context_Association] := Module[{terms},
-   terms = dsTreeTaggedTermToFormula018[#, context] & /@ Lookup[data, "terms", {}];
+dsTreeLinearDataToFormula[data_Association, context_Association] := Module[{terms},
+   terms = dsTreeTaggedTermToFormula[#, context] & /@ Lookup[data, "terms", {}];
    If[MemberQ[terms, $Failed], Return[$Failed]];
    Join[
     KeyDrop[data, {"terms", "expression"}],
@@ -153,11 +153,11 @@ dsTreeLinearDataToFormula018[data_Association, context_Association] := Module[{t
    ];
 
 
-dsTreeSeedRecordToPublic018[record_Association, context_Association, referenceInt_J] := Module[
+dsTreeSeedRecordToPublic[record_Association, context_Association, referenceInt_J] := Module[
    {linearData, publicLinearData},
    linearData = Lookup[record, "treeLinearData", Missing["NoTreeLinearData"]];
    If[! AssociationQ[linearData], Return[$Failed]];
-   publicLinearData = dsTreeLinearDataToPublic018[linearData, context];
+   publicLinearData = dsTreeLinearDataToPublic[linearData, context];
    If[publicLinearData === $Failed, Return[$Failed]];
    publicLinearData = Join[
      KeyDrop[publicLinearData, {"referenceTreeIntegral", "referenceLoopIntegral"}],
@@ -180,30 +180,30 @@ dsTreeSeedRecordToPublic018[record_Association, context_Association, referenceIn
 
 DSTreeSeeds[vertex_, int : J[_, _, _], context_Association] /; dsContextQ[context] := Module[
    {internalIntegral, metadata, sectorKey, familyContext, family, formulaIntegral, raw},
-   If[treeFormulaMasslessPendingQ018[context],
-    Return[treeFormulaPendingRederivation018["DSTreeSeeds", context]]
+   If[treeFormulaMasslessPendingQ[context],
+    Return[treeFormulaPendingRederivation["DSTreeSeeds", context]]
     ];
-   internalIntegral = dsTimeOnlyPublicIntegralToInternal020[int, context];
+   internalIntegral = dsTimeOnlyPublicIntegralToInternal[int, context];
    If[internalIntegral === $Failed,
     Return[<|"status" -> "failed", "reason" -> "invalidPublicTimeOnlyIntegral"|>]
     ];
-   metadata = integralSectorMetadata018[context["topology"], internalIntegral];
+   metadata = integralSectorMetadata[context["topology"], internalIntegral];
    If[Head[metadata] === Missing, Return[<|"status" -> "failed", "reason" -> "unknownTreeSector"|>]];
    sectorKey = metadata["sectorKey"];
    familyContext = dsTreeFamilyContext[context];
    family = dsTreeFamilyBySector[sectorKey, familyContext];
-   formulaIntegral = dsTreePublicIntegralToFormula018[int, sectorKey, context];
+   formulaIntegral = dsTreePublicIntegralToFormula[int, sectorKey, context];
    If[Head[family] === Missing || formulaIntegral === $Failed,
     Return[<|"status" -> "failed", "reason" -> "treePublicToFormulaFailed"|>]
     ];
    raw = dsDirectTreeSeedRecord[vertex, formulaIntegral, family, familyContext];
-   If[! AssociationQ[raw], $Failed, dsTreeSeedRecordToPublic018[raw, context, int]]
+   If[! AssociationQ[raw], $Failed, dsTreeSeedRecordToPublic[raw, context, int]]
    ];
 
 
 DSTreeSeeds[int : J[_, _, _], context_Association] /; dsContextQ[context] :=
-  If[treeFormulaMasslessPendingQ018[context],
-   treeFormulaPendingRederivation018["DSTreeSeeds", context],
+  If[treeFormulaMasslessPendingQ[context],
+   treeFormulaPendingRederivation["DSTreeSeeds", context],
    DSTreeSeeds[#, int, context] & /@ Lookup[
      Select[makeIBPGenerators[context["topology"]], #["type"] === "time" &],
      "vertex"
@@ -211,7 +211,7 @@ DSTreeSeeds[int : J[_, _, _], context_Association] /; dsContextQ[context] :=
    ];
 
 
-dsTreePublicExpressionData018[expr_, context_Association] := Module[
+dsTreePublicExpressionData[expr_, context_Association] := Module[
    {terms, parsed},
    terms = dsExpandedTerms[Expand[expr]];
    parsed = Map[
@@ -221,10 +221,10 @@ dsTreePublicExpressionData018[expr_, context_Association] := Module[
        integrals = DeleteDuplicates[Cases[term, item : J[_, _, _] :> item, {0, Infinity}]];
        If[Length[integrals] =!= 1, Return[$Failed]];
        int = First[integrals];
-       internalIntegral = dsTimeOnlyPublicIntegralToInternal020[int, context];
+       internalIntegral = dsTimeOnlyPublicIntegralToInternal[int, context];
        If[internalIntegral === $Failed, Return[$Failed]];
        coefficient = Cancel[term/int];
-       metadata = integralSectorMetadata018[context["topology"], internalIntegral];
+       metadata = integralSectorMetadata[context["topology"], internalIntegral];
        If[Head[metadata] === Missing, Return[$Failed]];
        <|"sectorKey" -> metadata["sectorKey"], "integral" -> int, "coefficient" -> coefficient|>
        ]
@@ -239,24 +239,24 @@ dsTreePublicExpressionData018[expr_, context_Association] := Module[
 
 repIterative[data_Association, end_: Automatic, context_Association, opts : OptionsPattern[]] /;
    dsContextQ[context] := Module[{formulaData, result},
-   If[treeFormulaMasslessPendingQ018[context],
-    Return[treeFormulaPendingRederivation018["repIterative", context]]
+   If[treeFormulaMasslessPendingQ[context],
+    Return[treeFormulaPendingRederivation["repIterative", context]]
     ];
-   formulaData = dsTreeLinearDataToFormula018[data, context];
+   formulaData = dsTreeLinearDataToFormula[data, context];
    If[formulaData === $Failed, Return[<|"status" -> "error", "reason" -> "invalidUnifiedTreeData"|>]];
    result = dsRepIterativeTreeLinearData[formulaData, end, context, opts];
    If[! AssociationQ[result] || ! ListQ[Lookup[result, "terms", None]], result,
-    dsTreePublicResult018[result, context]
+    dsTreePublicResult[result, context]
     ]
    ];
 
 
 repIterative[expr_, end_: Automatic, context_Association, opts : OptionsPattern[]] /;
    dsContextQ[context] := Module[{data},
-   If[treeFormulaMasslessPendingQ018[context],
-    Return[treeFormulaPendingRederivation018["repIterative", context]]
+   If[treeFormulaMasslessPendingQ[context],
+    Return[treeFormulaPendingRederivation["repIterative", context]]
     ];
-   data = dsTreePublicExpressionData018[expr, context];
+   data = dsTreePublicExpressionData[expr, context];
    If[data === $Failed,
     <|"status" -> "error", "reason" -> "invalidUnifiedTreeExpression"|>,
     repIterative[data, end, context, opts]
@@ -267,8 +267,8 @@ repIterative[expr_, end_: Automatic, context_Association, opts : OptionsPattern[
 (* ::Chapter:: *)
 (*Naive 与 dlog 结果的公开结构化映射*)
 
-dsTreeMasterToFormula018[master_Association, context_Association] := Module[{term},
-   term = dsTreeTaggedTermToFormula018[
+dsTreeMasterToFormula[master_Association, context_Association] := Module[{term},
+   term = dsTreeTaggedTermToFormula[
      KeyTake[master, {"sectorKey", "integral", "coefficient"}],
      context
      ];
@@ -280,10 +280,10 @@ dsTreeMasterToFormula018[master_Association, context_Association] := Module[{ter
 
 (* 公开 naive-IBP 结果中的 lhs/rhsTerms 已经是统一 time-only J；本适配器只恢复
    Private 公式内核所需的 sector-tagged vertex basis，并保留全部系数与 sectorKey。 *)
-dsTreeNaiveReductionToFormula018[record_Association, context_Association] := Module[
+dsTreeNaiveReductionToFormula[record_Association, context_Association] := Module[
    {lhs, rhsTerms},
-   lhs = dsTreeTaggedTermToFormula018[Lookup[record, "lhs", <||>], context];
-   rhsTerms = dsTreeTaggedTermToFormula018[#, context] & /@ Lookup[record, "rhsTerms", {}];
+   lhs = dsTreeTaggedTermToFormula[Lookup[record, "lhs", <||>], context];
+   rhsTerms = dsTreeTaggedTermToFormula[#, context] & /@ Lookup[record, "rhsTerms", {}];
    If[lhs === $Failed || MemberQ[rhsTerms, $Failed], Return[$Failed]];
    Join[
     KeyDrop[record, {"lhs", "rhsTerms", "rhsExpression"}],
@@ -297,10 +297,10 @@ dsTreeNaiveReductionToFormula018[record_Association, context_Association] := Mod
 
 
 (* 输入必须是同一 context 产生的公开 solved 数据；失败时不猜测 sector 或积分形状。 *)
-dsTreeNaiveIBPDataToFormula018[data_Association, context_Association] := Module[
+dsTreeNaiveIBPDataToFormula[data_Association, context_Association] := Module[
    {masters, reductions},
-   masters = dsTreeMasterToFormula018[#, context] & /@ Lookup[data, "masters", {}];
-   reductions = dsTreeNaiveReductionToFormula018[#, context] & /@ Lookup[data, "reductions", {}];
+   masters = dsTreeMasterToFormula[#, context] & /@ Lookup[data, "masters", {}];
+   reductions = dsTreeNaiveReductionToFormula[#, context] & /@ Lookup[data, "reductions", {}];
    If[masters === {} || reductions === {} || MemberQ[Join[masters, reductions], $Failed],
     Return[$Failed]
     ];
@@ -311,21 +311,21 @@ dsTreeNaiveIBPDataToFormula018[data_Association, context_Association] := Module[
    ];
 
 
-dsTreePublicizeData018[value_, context_Association, sectorHint_: None] := Module[
+dsTreePublicizeData[value_, context_Association, sectorHint_: None] := Module[
    {hint = sectorHint, mapped, publicIntegral},
    Which[
     MatchQ[value, dsTreeToken[_String, J[_List]]],
-    publicIntegral = dsTreeFormulaIntegralToPublic018[value[[2]], value[[1]], context];
+    publicIntegral = dsTreeFormulaIntegralToPublic[value[[2]], value[[1]], context];
     If[publicIntegral === $Failed, value, publicIntegral],
 
     MatchQ[value, J[_List]] && StringQ[hint],
-    publicIntegral = dsTreeFormulaIntegralToPublic018[value, hint, context];
+    publicIntegral = dsTreeFormulaIntegralToPublic[value, hint, context];
     If[publicIntegral === $Failed, value, publicIntegral],
 
     AssociationQ[value],
     hint = Lookup[value, "sectorKey", Lookup[value, "sector", hint]];
     mapped = Association@KeyValueMap[
-       Function[{key, item}, key -> dsTreePublicizeData018[item, context, hint]],
+       Function[{key, item}, key -> dsTreePublicizeData[item, context, hint]],
        value
        ];
     If[AssociationQ[Lookup[mapped, "treeLinearData", None]],
@@ -354,17 +354,17 @@ dsTreePublicizeData018[value_, context_Association, sectorHint_: None] := Module
      ];
     mapped,
 
-    ListQ[value], dsTreePublicizeData018[#, context, hint] & /@ value,
+    ListQ[value], dsTreePublicizeData[#, context, hint] & /@ value,
     Head[value] === Rule,
-    Rule @@ (dsTreePublicizeData018[#, context, hint] & /@ List @@ value),
+    Rule @@ (dsTreePublicizeData[#, context, hint] & /@ List @@ value),
     True, value
     ]
    ];
 
 
-dsTreePublicResult018[result_Association, context_Association, auditLevel_: "standard"] := Module[
+dsTreePublicResult[result_Association, context_Association, auditLevel_: "standard"] := Module[
    {public, masters, legacyIntegrals, oldPublicLeakQ, privateTokens, representationAudit},
-   public = dsTreePublicizeData018[result, context];
+   public = dsTreePublicizeData[result, context];
    If[ListQ[Lookup[public, "masters", None]],
     masters = public["masters"];
     If[And @@ (AssociationQ /@ masters),
@@ -377,7 +377,7 @@ dsTreePublicResult018[result_Association, context_Association, auditLevel_: "sta
    representationAudit = If[
       auditLevel === "full",
       legacyIntegrals = DeleteDuplicates[Cases[public, item : J[_List] :> item, Infinity]];
-      oldPublicLeakQ = dsTimeOnlyOldIntegralLeakQ020[public];
+      oldPublicLeakQ = dsTimeOnlyOldIntegralLeakQ[public];
       privateTokens = DeleteDuplicates[Cases[public, _dsTreeToken, Infinity]];
       <|"status" -> "audited", "passQ" -> TrueQ[legacyIntegrals === {} && ! oldPublicLeakQ && privateTokens === {}],
         "legacyVertexIntegrals" -> legacyIntegrals, "oldPublicIntegralLeakQ" -> oldPublicLeakQ,
@@ -396,46 +396,46 @@ dsTreePublicResult018[result_Association, context_Association, auditLevel_: "sta
 
 DSTreeNaiveIBP[context_Association, masters_: Automatic, OptionsPattern[]] /; dsContextQ[context] := Module[
    {formulaMasters, raw},
-   If[treeFormulaMasslessPendingQ018[context],
-    Return[treeFormulaPendingRederivation018["DSTreeNaiveIBP", context]]
+   If[treeFormulaMasslessPendingQ[context],
+    Return[treeFormulaPendingRederivation["DSTreeNaiveIBP", context]]
     ];
    formulaMasters = If[masters === Automatic,
      Automatic,
-     dsTreeMasterToFormula018[#, context] & /@ masters
+     dsTreeMasterToFormula[#, context] & /@ masters
      ];
    If[ListQ[formulaMasters] && MemberQ[formulaMasters, $Failed],
     Return[<|"status" -> "failed", "reason" -> "invalidUnifiedMasters"|>]
     ];
-   raw = dsTreeNaiveIBPRaw018[
+   raw = dsTreeNaiveIBPRaw[
      context,
      formulaMasters,
      AuditLevel -> OptionValue[AuditLevel],
      ProgressReporting -> OptionValue[ProgressReporting]
      ];
-   If[AssociationQ[raw], dsTreePublicResult018[raw, context, OptionValue[AuditLevel]], raw]
+   If[AssociationQ[raw], dsTreePublicResult[raw, context, OptionValue[AuditLevel]], raw]
    ];
 
 
 DSTreeNaiveDE[context_Association, variables_: Automatic, masters_: Automatic, OptionsPattern[]] /;
    dsContextQ[context] := Module[{formulaMasters, raw},
-   If[treeFormulaMasslessPendingQ018[context],
-    Return[treeFormulaPendingRederivation018["DSTreeNaiveDE", context]]
+   If[treeFormulaMasslessPendingQ[context],
+    Return[treeFormulaPendingRederivation["DSTreeNaiveDE", context]]
     ];
    formulaMasters = If[masters === Automatic,
      Automatic,
-     dsTreeMasterToFormula018[#, context] & /@ masters
+     dsTreeMasterToFormula[#, context] & /@ masters
      ];
    If[ListQ[formulaMasters] && MemberQ[formulaMasters, $Failed],
     Return[<|"status" -> "failed", "reason" -> "invalidUnifiedMasters"|>]
     ];
-    raw = dsTreeNaiveDERaw018[
+    raw = dsTreeNaiveDERaw[
      context,
      variables,
       formulaMasters,
       AuditLevel -> OptionValue[AuditLevel],
       ProgressReporting -> OptionValue[ProgressReporting]
      ];
-   If[AssociationQ[raw], dsTreePublicResult018[raw, context, OptionValue[AuditLevel]], raw]
+   If[AssociationQ[raw], dsTreePublicResult[raw, context, OptionValue[AuditLevel]], raw]
    ];
 
 
@@ -449,7 +449,7 @@ DSTreeNaiveDE[ibpData_Association, variables_: Automatic, OptionsPattern[]] /;
      ! TrueQ[Lookup[Lookup[ibpData, "publicRepresentationAudit", <||>], "passQ", False]],
     Return[<|"status" -> "failed", "reason" -> "invalidPublicNaiveIBPData"|>]
     ];
-   formulaData = dsTreeNaiveIBPDataToFormula018[ibpData, context];
+   formulaData = dsTreeNaiveIBPDataToFormula[ibpData, context];
    If[formulaData === $Failed,
     Return[<|"status" -> "failed", "reason" -> "publicNaiveIBPConversionFailed"|>]
     ];
@@ -458,7 +458,7 @@ DSTreeNaiveDE[ibpData_Association, variables_: Automatic, OptionsPattern[]] /;
      variables,
      ProgressReporting -> OptionValue[ProgressReporting]
      ];
-   If[AssociationQ[raw], dsTreePublicResult018[raw, context, OptionValue[AuditLevel]], raw]
+   If[AssociationQ[raw], dsTreePublicResult[raw, context, OptionValue[AuditLevel]], raw]
    ];
 
 
@@ -466,18 +466,18 @@ Options[DSTreeDLogDE] = {AuditLevel -> "standard"};
 
 
 DSTreeDLogDE[context_Association, opts : OptionsPattern[]] /; dsContextQ[context] := Module[{raw},
-   If[treeFormulaMasslessPendingQ018[context],
-    Return[treeFormulaPendingRederivation018["DSTreeDLogDE", context]]
+   If[treeFormulaMasslessPendingQ[context],
+    Return[treeFormulaPendingRederivation["DSTreeDLogDE", context]]
     ];
    raw = dsTreeMultiSectorDLog[context, Automatic, OptionValue[AuditLevel]];
-   If[AssociationQ[raw], dsTreePublicResult018[raw, context, OptionValue[AuditLevel]], raw]
+   If[AssociationQ[raw], dsTreePublicResult[raw, context, OptionValue[AuditLevel]], raw]
    ];
 
 
 DSTreeDLogDE[context_Association, seedData_, opts : OptionsPattern[]] /; dsContextQ[context] := Module[{raw},
-   If[treeFormulaMasslessPendingQ018[context],
-    Return[treeFormulaPendingRederivation018["DSTreeDLogDE", context]]
+   If[treeFormulaMasslessPendingQ[context],
+    Return[treeFormulaPendingRederivation["DSTreeDLogDE", context]]
     ];
    raw = dsTreeMultiSectorDLog[context, seedData, OptionValue[AuditLevel]];
-   If[AssociationQ[raw], dsTreePublicResult018[raw, context, OptionValue[AuditLevel]], raw]
+   If[AssociationQ[raw], dsTreePublicResult[raw, context, OptionValue[AuditLevel]], raw]
    ];

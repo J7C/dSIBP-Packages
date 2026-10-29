@@ -344,12 +344,12 @@ dsTreeNaiveMasterDerivative[master_Association, variable_, familyContext_Associa
    If[Lookup[phaseData, "status", "failed"] =!= "generated", Return[phaseData]];
    lineDerivative = dsTreeLineMomentumMagnitudeDerivative[master["integral"], variable, family];
    If[lineDerivative === $Failed, Return[<|"status" -> "failed", "reason" -> "lineMomentumMagnitudeDerivativeFailed"|>]];
-   physicalRecord = sectorPrefactorRecordForKey018[context, master["sectorKey"]];
+   physicalRecord = sectorPrefactorRecordForKey[context, master["sectorKey"]];
    If[! AssociationQ[physicalRecord],
     Return[<|"status" -> "failed", "reason" -> "physicalSectorPrefactorMissing",
       "sectorKey" -> master["sectorKey"], "record" -> physicalRecord|>]
     ];
-   physicalLogDerivative = sectorPrefactorLogDerivative018[
+   physicalLogDerivative = sectorPrefactorLogDerivative[
      <|"sectorPrefactorData" -> physicalRecord["physicalSectorPrefactorData"]|>,
      variable
      ];
@@ -472,12 +472,12 @@ dsTreeNaiveDEFromIBP[ibpData_Association, variables_, OptionsPattern[DSTreeNaive
    ];
 
 
-dsTreeNaiveDERaw018[context_Association, variables_: Automatic, masters_: Automatic, OptionsPattern[DSTreeNaiveDE]] /; dsContextQ[context] := Module[
+dsTreeNaiveDERaw[context_Association, variables_: Automatic, masters_: Automatic, OptionsPattern[DSTreeNaiveDE]] /; dsContextQ[context] := Module[
    {ibpData},
-   If[treeFormulaMasslessPendingQ018[context],
-    Return[treeFormulaPendingRederivation018["DSTreeNaiveDE", context]]
+   If[treeFormulaMasslessPendingQ[context],
+    Return[treeFormulaPendingRederivation["DSTreeNaiveDE", context]]
     ];
-   ibpData = dsTreeNaiveIBPRaw018[context, masters,
+   ibpData = dsTreeNaiveIBPRaw[context, masters,
      AuditLevel -> OptionValue[AuditLevel], ProgressReporting -> OptionValue[ProgressReporting]];
    If[Lookup[ibpData, "status", "failed"] =!= "solved", ibpData,
     dsTreeNaiveDEFromIBP[ibpData, variables, ProgressReporting -> OptionValue[ProgressReporting]]]

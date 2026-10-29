@@ -7,7 +7,7 @@
 (* ::Chapter:: *)
 (*统一 line-pack schema*)
 
-fixedLineSentinel018[] := "F";
+fixedLineSentinel[] := "F";
 
 
 linePackNPositions[line_Association, packType_String] := Switch[packType,
@@ -21,14 +21,14 @@ linePackBPosition[line_Association] := If[lineIndexedPowerQ[line], 1, Missing["F
 
 makeLinePack[line_Association] := Module[
    {id = line["id"], indexedQ = lineIndexedPowerQ[line], firstSlot},
-   firstSlot = If[indexedQ, b[id], fixedLineSentinel018[]];
+   firstSlot = If[indexedQ, b[id], fixedLineSentinel[]];
    Switch[line["packType"],
     "massiveFull" | "massiveCross" | "masslessFull",
     {firstSlot, n[id, 1], n[id, 2]},
     "masslessCross",
     {firstSlot, 0, 0},
     "shrunk",
-    If[indexedQ, {bS[id]}, {fixedLineSentinel018[]}],
+    If[indexedQ, {bS[id]}, {fixedLineSentinel[]}],
     _, Message[makeLinePack::badtype, line["packType"], id]; $Failed
     ]
    ];
@@ -39,8 +39,8 @@ actualLinePackType[topo_Association, e_Integer, pack_List] := Module[
    declared = line["packType"];
    Which[
     declared === "shrunk", "shrunk",
-    Length[pack] === 1 && lineIndexedPowerQ[line] && pack[[1]] =!= fixedLineSentinel018[], "shrunk",
-    Length[pack] === 1 && ! lineIndexedPowerQ[line] && pack[[1]] === fixedLineSentinel018[], "shrunk",
+    Length[pack] === 1 && lineIndexedPowerQ[line] && pack[[1]] =!= fixedLineSentinel[], "shrunk",
+    Length[pack] === 1 && ! lineIndexedPowerQ[line] && pack[[1]] === fixedLineSentinel[], "shrunk",
     True, declared
     ]
    ];
@@ -65,7 +65,7 @@ discreteVarsForLine[line_Association] := If[
 
 (* 输入输出仍保留两个端点槽；这里只缩减 DSSeeds 的 source representatives。
    massive 需要四态，masslessFull 只生成 00/10，cross 与 shrunk 不生成离散态。 *)
-discreteSeedRuleSetsForLine018[line_Association] := Module[
+discreteSeedRuleSetsForLine[line_Association] := Module[
    {id = line["id"], variables = discreteVarsForLine[line]},
    Switch[Lookup[line, "packType", ""],
     "masslessFull" /; Lookup[line, "state", "full"] =!= "shrunk",
@@ -78,21 +78,21 @@ discreteSeedRuleSetsForLine018[line_Association] := Module[
    ];
 
 
-rawBinaryDiscreteStateCountForLine018[line_Association] :=
+rawBinaryDiscreteStateCountForLine[line_Association] :=
   2^Length[discreteVarsForLine[line]];
 
 
 discreteStateCountForLine[line_Association] :=
-  Length[discreteSeedRuleSetsForLine018[line]];
+  Length[discreteSeedRuleSetsForLine[line]];
 
 
 (* enumerateDiscreteStates 是所有普通 time/momentum seed 的共同入口。返回值同时保存
    raw 双端点空间与 quotient representative 空间，供 release/audit 核对缩减边界。 *)
 enumerateDiscreteStates[expr_, topo_Association] := Module[
    {perLineRuleSets, allRuleSets, rawStateCount},
-   perLineRuleSets = discreteSeedRuleSetsForLine018 /@ topo["lines"];
+   perLineRuleSets = discreteSeedRuleSetsForLine /@ topo["lines"];
    allRuleSets = Flatten[#, 1] & /@ Tuples[perLineRuleSets];
-   rawStateCount = Times @@ (rawBinaryDiscreteStateCountForLine018 /@ topo["lines"]);
+   rawStateCount = Times @@ (rawBinaryDiscreteStateCountForLine /@ topo["lines"]);
    <|
     "rules" -> allRuleSets,
     "integrals" -> (expr /. # & /@ allRuleSets),
@@ -141,24 +141,24 @@ makeBaseIntegral[topo_Association] := Module[
 (* ::Chapter:: *)
 (*Sector pattern 与唯一解析*)
 
-sectorLinePattern018[line_Association, pack_List] := <|
+sectorLinePattern[line_Association, pack_List] := <|
    "powerKind" -> If[lineIndexedPowerQ[line], "cycle", "fixed"],
    "state" -> If[Length[pack] === 1, "shrunk", "full"]
    |>;
 
 
-sectorPattern018[topo_Association, linePacks_List] := MapThread[
-   sectorLinePattern018,
+sectorPattern[topo_Association, linePacks_List] := MapThread[
+   sectorLinePattern,
    {topo["lines"], linePacks}
    ];
 
 
-sectorShrunkLinesFromPattern018[pattern_List] := Flatten@Position[Lookup[pattern, "state", {}], "shrunk"];
+sectorShrunkLinesFromPattern[pattern_List] := Flatten@Position[Lookup[pattern, "state", {}], "shrunk"];
 
 
-sectorKeyFromPattern018[topo_Association, pattern_List] := sectorKeyFromShrunkLines[
+sectorKeyFromPattern[topo_Association, pattern_List] := sectorKeyFromShrunkLines[
    topo,
-   sectorShrunkLinesFromPattern018[pattern]
+   sectorShrunkLinesFromPattern[pattern]
    ];
 
 
@@ -167,9 +167,9 @@ linePackMatchesSlotQ[pack_List, slot_Association] := Module[
    If[Length[pack] =!= Length[template], Return[False]];
    If[template === {}, Return[pack === {}]];
    firstTemplate = First[template];
-   fixedQ = SameQ[firstTemplate, fixedLineSentinel018[]];
+   fixedQ = SameQ[firstTemplate, fixedLineSentinel[]];
    TrueQ[
-    If[fixedQ, SameQ[First[pack], fixedLineSentinel018[]], First[pack] =!= fixedLineSentinel018[]]
+    If[fixedQ, SameQ[First[pack], fixedLineSentinel[]], First[pack] =!= fixedLineSentinel[]]
     ]
    ];
 
@@ -177,20 +177,20 @@ linePackMatchesSlotQ[pack_List, slot_Association] := Module[
 (* ::Chapter:: *)
 (*结构化 fixed-line sector prefactor*)
 
-zeroPointRuleValue018[rules_List, symbol_, default_: 0] := Module[{hits},
+zeroPointRuleValueFromRules[rules_List, symbol_, default_: 0] := Module[{hits},
    hits = Cases[rules, (Rule | RuleDelayed)[lhs_, rhs_] /; lhs === symbol :> rhs];
    If[hits === {}, default, Last[hits]]
    ];
 
 
-explicitZeroPointRuleValue018[rules_List, symbol_] := Module[{hits},
+explicitZeroPointRuleValue[rules_List, symbol_] := Module[{hits},
    hits = Cases[rules, (Rule | RuleDelayed)[lhs_, rhs_] /; lhs === symbol :> rhs];
    If[hits === {}, Missing["NoExplicitZeroPoint", symbol], Last[hits]]
    ];
 
 
-lineDerivedShrinkZeroPoint018[topo_Association, e_Integer] := Expand[
-   zeroPointRuleValue018[
+lineDerivedShrinkZeroPoint[topo_Association, e_Integer] := Expand[
+   zeroPointRuleValueFromRules[
      Lookup[topo, "rootZeroPointRules", topo["zeroPointRules"]],
      b0[topo["lines"][[e, "id"]]],
      0
@@ -198,20 +198,20 @@ lineDerivedShrinkZeroPoint018[topo_Association, e_Integer] := Expand[
    ];
 
 
-lineTargetShrinkZeroPoint018[topo_Association, e_Integer] := Module[
+lineTargetShrinkZeroPoint[topo_Association, e_Integer] := Module[
    {rootRules, id, explicit},
    rootRules = Lookup[topo, "rootZeroPointRules", topo["zeroPointRules"]];
    id = topo["lines"][[e, "id"]];
-   explicit = explicitZeroPointRuleValue018[rootRules, bS0[id]];
-   If[Head[explicit] === Missing, lineDerivedShrinkZeroPoint018[topo, e], explicit]
+   explicit = explicitZeroPointRuleValue[rootRules, bS0[id]];
+   If[Head[explicit] === Missing, lineDerivedShrinkZeroPoint[topo, e], explicit]
    ];
 
 
-lineShrinkZeroPointSource018[topo_Association, e_Integer] := Module[
+lineShrinkZeroPointSource[topo_Association, e_Integer] := Module[
    {rootRules, id},
    rootRules = Lookup[topo, "rootZeroPointRules", topo["zeroPointRules"]];
    id = topo["lines"][[e, "id"]];
-   If[Head[explicitZeroPointRuleValue018[rootRules, bS0[id]]] === Missing,
+   If[Head[explicitZeroPointRuleValue[rootRules, bS0[id]]] === Missing,
     "compiledDefault",
     "userBS0Override"
     ]
@@ -228,7 +228,7 @@ sectorZeroPointRules[
    {lineRules, vertexRules, classVertices, classShrunkLines, shiftSum, rep},
    lineRules = Table[
      If[MemberQ[shrunkLines, e],
-      bS0[topo["lines"][[e, "id"]]] -> lineTargetShrinkZeroPoint018[topo, e],
+      bS0[topo["lines"][[e, "id"]]] -> lineTargetShrinkZeroPoint[topo, e],
       Switch[actualLinePackType[topo, e, makeLinePack[topo["lines"][[e]]]],
        "shrunk", bS0[topo["lines"][[e, "id"]]] -> lineBSZeroPoint[topo, e],
        _, b0[topo["lines"][[e, "id"]]] -> lineBZeroPoint[topo, e]
@@ -251,7 +251,7 @@ sectorZeroPointRules[
    ];
 
 
-independentExternalMagnitudeExpressions018[topo_Association] := Module[
+independentExternalMagnitudeExpressions[topo_Association] := Module[
    {count, bindingData},
    count = Length[Lookup[topo, "independentExternalMomenta", {}]];
    bindingData = externalLegMagnitudeBindingData[topo];
@@ -259,7 +259,7 @@ independentExternalMagnitudeExpressions018[topo_Association] := Module[
    ];
 
 
-fixedLineKEIndex018[topo_Association, e_Integer] := Module[
+fixedLineKEIndex[topo_Association, e_Integer] := Module[
    {momentum, declared, matches},
    momentum = Expand[topo["lines"][[e, "momentum"]]];
    declared = Expand /@ Lookup[topo, "independentExternalMomenta", {}];
@@ -271,7 +271,7 @@ fixedLineKEIndex018[topo_Association, e_Integer] := Module[
    ];
 
 
-lineShrinkNormalizationFactor018[topo_Association, e_Integer] := Module[
+lineShrinkNormalizationFactor[topo_Association, e_Integer] := Module[
    {line, terms, coefficients, nonzero, contourSign},
    line = topo["lines"][[e]];
    If[Lookup[line, "massType", "massive"] =!= "massive", Return[1]];
@@ -284,7 +284,7 @@ lineShrinkNormalizationFactor018[topo_Association, e_Integer] := Module[
    ];
 
 
-fixedLinePrefactorRecord018[topo_Association, e_Integer, state_: Automatic] := Module[
+fixedLinePrefactorRecord[topo_Association, e_Integer, state_: Automatic] := Module[
    {line = topo["lines"][[e]], id, shrunkQ, rootRules, sourcePower, targetPower,
      integerShift, zeroPointShift, targetMinusSource, residualPower, parameter,
      derivedTarget, overrideSource, kEIndex},
@@ -295,18 +295,18 @@ fixedLinePrefactorRecord018[topo_Association, e_Integer, state_: Automatic] := M
      TrueQ[state === "shrunk"]
      ];
    rootRules = Lookup[topo, "rootZeroPointRules", topo["zeroPointRules"]];
-   sourcePower = zeroPointRuleValue018[rootRules, b0[id], 0];
+   sourcePower = zeroPointRuleValueFromRules[rootRules, b0[id], 0];
    (* 本函数也会以 root topology 和目标 J 重建 prefactor；此时 root rules 通常没有 bS0。
       必须沿现行 compiled-default/显式 override 合同求 target，而不能把缺失 bS0 当成零。 *)
-   targetPower = If[shrunkQ, lineTargetShrinkZeroPoint018[topo, e], lineBZeroPoint[topo, e]];
+   targetPower = If[shrunkQ, lineTargetShrinkZeroPoint[topo, e], lineBZeroPoint[topo, e]];
    integerShift = If[shrunkQ, lineShrinkBShift[line], 0];
    zeroPointShift = If[shrunkQ, lineShrinkZeroPointShift[line], 0];
-   derivedTarget = If[shrunkQ, lineDerivedShrinkZeroPoint018[topo, e], sourcePower];
-   overrideSource = If[shrunkQ, lineShrinkZeroPointSource018[topo, e], "sourceSector"];
+   derivedTarget = If[shrunkQ, lineDerivedShrinkZeroPoint[topo, e], sourcePower];
+   overrideSource = If[shrunkQ, lineShrinkZeroPointSource[topo, e], "sourceSector"];
    targetMinusSource = Expand[targetPower - sourcePower];
    residualPower = Expand[integerShift + zeroPointShift - targetMinusSource];
    parameter = fixedLineMomentumMagnitude[topo, e];
-   kEIndex = fixedLineKEIndex018[topo, e];
+   kEIndex = fixedLineKEIndex[topo, e];
    <|
     "lineIndex" -> e,
     "lineId" -> id,
@@ -329,7 +329,7 @@ fixedLinePrefactorRecord018[topo_Association, e_Integer, state_: Automatic] := M
    ];
 
 
-sectorPrefactorData018[topo_Association, shrunkLines_: Automatic] := Module[
+sectorPrefactorData[topo_Association, shrunkLines_: Automatic] := Module[
    {effectiveShrunkLines, records, kEIndices, kEMomenta, kEExpressions, kEPowers,
     residualRecords, contractionRecords},
    effectiveShrunkLines = If[
@@ -341,12 +341,12 @@ sectorPrefactorData018[topo_Association, shrunkLines_: Automatic] := Module[
        ],
      Sort@DeleteDuplicates[shrunkLines]
      ];
-   records = fixedLinePrefactorRecord018[topo, #] & /@ Select[
+   records = fixedLinePrefactorRecord[topo, #] & /@ Select[
       Range[topo["nE"]],
       ! lineIndexedPowerQ[topo["lines"][[#]]] &
       ];
    records = Map[
-     fixedLinePrefactorRecord018[
+     fixedLinePrefactorRecord[
        topo,
        Lookup[#, "lineIndex"],
        If[MemberQ[effectiveShrunkLines, Lookup[#, "lineIndex"]], "shrunk", "full"]
@@ -355,7 +355,7 @@ sectorPrefactorData018[topo_Association, shrunkLines_: Automatic] := Module[
      ];
    kEIndices = Range[Length[Lookup[topo, "independentExternalMomenta", {}]]];
    kEMomenta = Lookup[topo, "independentExternalMomenta", {}];
-   kEExpressions = independentExternalMagnitudeExpressions018[topo];
+   kEExpressions = independentExternalMagnitudeExpressions[topo];
    kEPowers = Table[
      Total[Lookup[Select[records, SameQ[Lookup[#, "kEIndex", None], i] &], "prefactorPower", {}]],
      {i, Length[kEIndices]}
@@ -365,7 +365,7 @@ sectorPrefactorData018[topo_Association, shrunkLines_: Automatic] := Module[
      <|
        "lineIndex" -> #,
        "lineId" -> topo["lines"][[#, "id"]],
-       "normalizationFactor" -> lineShrinkNormalizationFactor018[topo, #]
+       "normalizationFactor" -> lineShrinkNormalizationFactor[topo, #]
        |> &,
      effectiveShrunkLines
      ];
@@ -387,7 +387,7 @@ sectorPrefactorData018[topo_Association, shrunkLines_: Automatic] := Module[
    ];
 
 
-materializeSectorPrefactor018[data_Association] := Module[
+materializeSectorPrefactor[data_Association] := Module[
     {powerHead, powers, expressions, residualParts},
     powerHead = Lookup[data, "kEPower", Missing["NoStructuralKEPower"]];
     If[Head[powerHead] === Missing,
@@ -407,12 +407,12 @@ materializeSectorPrefactor018[data_Association] := Module[
    ];
 
 
-sectorPrefactorDataForIntegral018[topo_Association, int : J[_, linePacks_List, _]] := Module[
+sectorPrefactorDataForIntegral[topo_Association, int : J[_, linePacks_List, _]] := Module[
    {metadata, frozenData, pattern, shrunkLines},
    (* time-only 的 sector 身份已经由公开 key 和冻结 metadata 唯一确定；逆转换后的
       旧 pack 只服务 producer，不能再次推断 normalization，否则会丢失 child zero point 幂。 *)
    If[Lookup[topo, "ibpMode", "full"] === "timeOnly",
-    metadata = integralSectorMetadata018[topo, int];
+    metadata = integralSectorMetadata[topo, int];
     frozenData = If[
       AssociationQ[metadata],
       Lookup[metadata, "sectorPrefactorData", Missing["NoSectorPrefactorData"]],
@@ -420,42 +420,42 @@ sectorPrefactorDataForIntegral018[topo_Association, int : J[_, linePacks_List, _
       ];
     If[AssociationQ[frozenData], Return[frozenData]]
     ];
-   pattern = sectorPattern018[topo, linePacks];
-   shrunkLines = sectorShrunkLinesFromPattern018[pattern];
-   sectorPrefactorData018[topo, shrunkLines]
+   pattern = sectorPattern[topo, linePacks];
+   shrunkLines = sectorShrunkLinesFromPattern[pattern];
+   sectorPrefactorData[topo, shrunkLines]
    ];
 
 
-normalizeContactTerm018[topo_Association, sourceInt_J, rawTerm_] := Module[
+normalizeContactTerm[topo_Association, sourceInt_J, rawTerm_] := Module[
    {targets, targetInt, rawCoefficient, sourceData, targetData, ratio},
    targets = DeleteDuplicates[Cases[rawTerm, _J, {0, Infinity}]];
    If[Length[targets] =!= 1, Return[$Failed]];
    targetInt = First[targets];
    rawCoefficient = Cancel[rawTerm/targetInt];
-   sourceData = sectorPrefactorDataForIntegral018[topo, sourceInt];
-   targetData = sectorPrefactorDataForIntegral018[topo, targetInt];
+   sourceData = sectorPrefactorDataForIntegral[topo, sourceInt];
+   targetData = sectorPrefactorDataForIntegral[topo, targetInt];
    ratio = Cancel[
-     materializeSectorPrefactor018[sourceData]/materializeSectorPrefactor018[targetData]
+     materializeSectorPrefactor[sourceData]/materializeSectorPrefactor[targetData]
      ];
    Expand[rawCoefficient ratio targetInt]
    ];
 
 
-sectorPrefactorRatio018[source_Association, target_Association] := Cancel[
-   materializeSectorPrefactor018[Lookup[source, "sectorPrefactorData", <||>]]/
-    materializeSectorPrefactor018[Lookup[target, "sectorPrefactorData", <||>]]
+sectorPrefactorRatio[source_Association, target_Association] := Cancel[
+   materializeSectorPrefactor[Lookup[source, "sectorPrefactorData", <||>]]/
+    materializeSectorPrefactor[Lookup[target, "sectorPrefactorData", <||>]]
    ];
 
 
-sectorPrefactorLogDerivative018[metadata_Association, variable_] := Cancel[
-   D[materializeSectorPrefactor018[Lookup[metadata, "sectorPrefactorData", <||>]], variable]/
-    materializeSectorPrefactor018[Lookup[metadata, "sectorPrefactorData", <||>]]
+sectorPrefactorLogDerivative[metadata_Association, variable_] := Cancel[
+   D[materializeSectorPrefactor[Lookup[metadata, "sectorPrefactorData", <||>]], variable]/
+    materializeSectorPrefactor[Lookup[metadata, "sectorPrefactorData", <||>]]
    ];
 
 
 (* 按 sectorKey 从 DSInit 冻结的 metadata 读取物理 prefactor。tree dlog、naive DE 与
    普通 ds 必须共用这一份数据，不能从 contact coefficient 或旧 pack 反推连续零点幂。 *)
-sectorPrefactorRecordForKey018[context_Association, sectorKey_] := Module[
+sectorPrefactorRecordForKey[context_Association, sectorKey_] := Module[
    {metadata, data, prefactor},
    metadata = SelectFirst[
      Lookup[context, "sectors", {}],
@@ -465,7 +465,7 @@ sectorPrefactorRecordForKey018[context_Association, sectorKey_] := Module[
    If[Head[metadata] === Missing, Return[metadata]];
    data = Lookup[metadata, "sectorPrefactorData", Missing["NoSectorPrefactorData", sectorKey]];
    If[Head[data] === Missing, Return[data]];
-   prefactor = materializeSectorPrefactor018[data];
+   prefactor = materializeSectorPrefactor[data];
    If[prefactor === $Failed, Return[Missing["InvalidSectorPrefactorData", sectorKey]]];
    <|
     "sectorKey" -> sectorKey,
@@ -475,13 +475,13 @@ sectorPrefactorRecordForKey018[context_Association, sectorKey_] := Module[
    ];
 
 
-(* makeSectorMetadataBase018 保存 vertex/line slot 的基础 metadata；本包装层只在其上追加
+(* makeSectorMetadataBase 保存 vertex/line slot 的基础 metadata；本包装层只在其上追加
    sector 不变量，不复制既有构造。 *)
 makeSectorMetadata[topo_Association] := Module[
    {base, pattern, shrunkLines, lineSlots, ispSlots, parityData, timeOnlyStateSlots},
-   base = makeSectorMetadataBase018[topo];
-   pattern = sectorPattern018[topo, Lookup[Lookup[base, "lineSlots", {}], "packTemplate", {}]];
-   shrunkLines = sectorShrunkLinesFromPattern018[pattern];
+   base = makeSectorMetadataBase[topo];
+   pattern = sectorPattern[topo, Lookup[Lookup[base, "lineSlots", {}], "packTemplate", {}]];
+   shrunkLines = sectorShrunkLinesFromPattern[pattern];
    lineSlots = MapThread[
      Join[#1, <|
         "rootLinePosition" -> #2,
@@ -491,14 +491,14 @@ makeSectorMetadata[topo_Association] := Module[
      {Lookup[base, "lineSlots", {}], Range[Length[pattern]]}
      ];
    ispSlots = If[Lookup[topo, "ibpMode", "full"] === "timeOnly", {}, Lookup[base, "ispSlots", {}]];
-   parityData = If[Length[DownValues[parityMetadataForSector018]] > 0,
-     parityMetadataForSector018[topo],
+   parityData = If[Length[DownValues[parityMetadataForSector]] > 0,
+     parityMetadataForSector[topo],
      <|"status" -> "notLoaded"|>
      ];
     timeOnlyStateSlots = If[
       Lookup[topo, "ibpMode", "full"] === "timeOnly" &&
-       Length[DownValues[dsTimeOnlyStateSlots020]] > 0,
-      dsTimeOnlyStateSlots020[topo, Join[base, <|"lineSlots" -> lineSlots|>]],
+       Length[DownValues[dsTimeOnlyStateSlots]] > 0,
+      dsTimeOnlyStateSlots[topo, Join[base, <|"lineSlots" -> lineSlots|>]],
       {}
       ];
     Join[base, <|
@@ -507,10 +507,10 @@ makeSectorMetadata[topo_Association] := Module[
       "ibpMode" -> Lookup[topo, "ibpMode", "full"],
       "sectorShrunkLines" -> shrunkLines,
       "sectorPattern" -> pattern,
-      "sectorKey" -> sectorKeyFromPattern018[topo, pattern],
+      "sectorKey" -> sectorKeyFromPattern[topo, pattern],
       "sectorBits" -> If[
         Lookup[topo, "ibpMode", "full"] === "timeOnly",
-        Characters[sectorKeyFromPattern018[topo, pattern]],
+        Characters[sectorKeyFromPattern[topo, pattern]],
         Missing["NotTimeOnlyBitString"]
         ],
       "sectorKeySchema" -> sectorKeySchemaFromTopology[topo],
@@ -523,9 +523,9 @@ makeSectorMetadata[topo_Association] := Module[
         "J[sectorKey,timeShifts,stateBits]",
         "J[aList,linePacks,ispList]"
         ],
-     "sectorPrefactorData" -> sectorPrefactorData018[topo],
-     "builtInRelationData" -> If[Length[DownValues[masslessBuiltInRelationData018]] > 0,
-       Join[masslessBuiltInRelationData018[topo], masslessParallelFoldRelationData[topo]],
+     "sectorPrefactorData" -> sectorPrefactorData[topo],
+     "builtInRelationData" -> If[Length[DownValues[masslessBuiltInRelationData]] > 0,
+       Join[masslessBuiltInRelationData[topo], masslessParallelFoldRelationData[topo]],
        {}
        ],
      "parityData" -> parityData,
@@ -538,7 +538,7 @@ makeSectorMetadata[topo_Association] := Module[
    ];
 
 
-integralSectorMetadata018[topo_Association, int_J] := Module[{metadataList, matches},
+integralSectorMetadata[topo_Association, int_J] := Module[{metadataList, matches},
    metadataList = Lookup[topo, "sectorMetadataList", {makeSectorMetadata[topo]}];
    matches = Select[metadataList, integralMatchesSectorMetadataQ[int, #] &];
    Which[
@@ -549,15 +549,15 @@ integralSectorMetadata018[topo_Association, int_J] := Module[{metadataList, matc
    ];
 
 
-sectorTopologyForMetadata018[rootTopo_Association, metadata_Association] := Module[{shrunk},
+sectorTopologyForMetadata[rootTopo_Association, metadata_Association] := Module[{shrunk},
    shrunk = Lookup[metadata, "sectorShrunkLines", {}];
    If[shrunk === {}, rootTopo, shrinkSectorTopology[rootTopo, shrunk]]
    ];
 
 
-sectorTopologyForIntegral018[rootTopo_Association, int_J] := Module[{metadata},
-   metadata = integralSectorMetadata018[rootTopo, int];
-   If[Head[metadata] === Missing, metadata, sectorTopologyForMetadata018[rootTopo, metadata]]
+sectorTopologyForIntegral[rootTopo_Association, int_J] := Module[{metadata},
+   metadata = integralSectorMetadata[rootTopo, int];
+   If[Head[metadata] === Missing, metadata, sectorTopologyForMetadata[rootTopo, metadata]]
    ];
 
 
@@ -566,7 +566,7 @@ sectorTopologyForIntegral018[rootTopo_Association, int_J] := Module[{metadata},
 
 publicIntegralShapeIssues[topo_Association, int : J[aList_, linePacks_, ispList_]] := Module[
    {metadata, issues = {}, lineSlots, expectedISP},
-   metadata = integralSectorMetadata018[topo, int];
+   metadata = integralSectorMetadata[topo, int];
    If[Head[metadata] === Missing,
     Return[{<|"slot" -> "sector", "reason" -> metadata|>}]
     ];
@@ -594,7 +594,7 @@ publicIntegralShapeIssues[topo_Association, int : J[aList_, linePacks_, ispList_
 
 publicResolvedDiscreteStateIssues[topo_Association, int : J[_, linePacks_, _]] := Module[
    {metadata, issues = {}, lineSlots, positions},
-   metadata = integralSectorMetadata018[topo, int];
+   metadata = integralSectorMetadata[topo, int];
    If[Head[metadata] === Missing, Return[{<|"slot" -> "sector", "reason" -> metadata|>}]];
    lineSlots = Lookup[metadata, "lineSlots", {}];
    Do[
@@ -615,7 +615,7 @@ publicResolvedDiscreteStateIssues[topo_Association, int : J[_, linePacks_, _]] :
    shape 与离散态门禁仍由同一套既有检查负责，避免维护第二套物理规则。 *)
 publicIntegralShapeIssues[topo_Association, int : J[_String, _List, _List]] /;
    Lookup[topo, "ibpMode", "full"] === "timeOnly" := Module[{internal},
-   internal = dsTimeOnlyPublicIntegralToInternal020[int, topo];
+   internal = dsTimeOnlyPublicIntegralToInternal[int, topo];
    If[
     internal === $Failed,
     {<|"slot" -> "timeOnlyIntegral", "reason" -> "invalidPublicTimeOnlyIntegral", "integral" -> int|>},
@@ -626,7 +626,7 @@ publicIntegralShapeIssues[topo_Association, int : J[_String, _List, _List]] /;
 
 publicResolvedDiscreteStateIssues[topo_Association, int : J[_String, _List, _List]] /;
    Lookup[topo, "ibpMode", "full"] === "timeOnly" := Module[{internal},
-   internal = dsTimeOnlyPublicIntegralToInternal020[int, topo];
+   internal = dsTimeOnlyPublicIntegralToInternal[int, topo];
    If[
     internal === $Failed,
     {<|"slot" -> "timeOnlyIntegral", "reason" -> "invalidPublicTimeOnlyIntegral", "integral" -> int|>},

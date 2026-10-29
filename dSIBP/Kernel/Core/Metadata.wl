@@ -352,7 +352,7 @@ dsTimeIBPVertexCertificate[topo_Association, sectorKey_, vertexId_] := Module[
 dsTimeIBPDomainCertificate[topologyData_Association] := Module[
    {metadataList, sectorTopologies, records, integerIssues, unsupported},
    metadataList = Lookup[topologyData, "sectorMetadataList", {}];
-   sectorTopologies = sectorTopologyForMetadata018[topologyData, #] & /@ metadataList;
+   sectorTopologies = sectorTopologyForMetadata[topologyData, #] & /@ metadataList;
    records = Flatten[
     MapThread[
      Function[{sectorTopology, metadata},

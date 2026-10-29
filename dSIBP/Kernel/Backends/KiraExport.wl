@@ -63,10 +63,10 @@ dsKiraDerivativeInternalHelperResidues[expr_] := DeleteDuplicates[
        shiftISPIndex | absorbLinearFactor | absorbLinearFactorExpressionTerm |
        applyEOM | applyEOMToIntegral | eomReduceIntegralAt |
        applyMasslessEndpointCanonical | applyMassiveCoincidentCanonical |
-       canonicalizeMassiveCoincidentIntegral | canonicalizeMasslessIntegral018 |
-       sectorAwareCanonical018 | sectorAwareCanonicalTerm018 |
-       sectorAwareSymmetry018 | sectorAwareSymmetryTerm018 |
-       applySeedCanonicalWithRules018)[___]
+       canonicalizeMassiveCoincidentIntegral | canonicalizeMasslessIntegral |
+       sectorAwareCanonical | sectorAwareCanonicalTerm |
+       sectorAwareSymmetry | sectorAwareSymmetryTerm |
+       applySeedCanonicalWithRules)[___]
      ],
     Infinity
     ],

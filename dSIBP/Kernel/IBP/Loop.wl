@@ -74,7 +74,7 @@ DSLinear[seedData_Association, context_: Automatic, opts : OptionsPattern[]] := 
      ];
     workingSeedData = If[
       Lookup[resolved["topology"], "ibpMode", "full"] === "timeOnly",
-      dsTimeOnlyDataToInternal020[seedData, resolved],
+      dsTimeOnlyDataToInternal[seedData, resolved],
       seedData
       ];
     If[workingSeedData === $Failed,
@@ -117,7 +117,7 @@ DSLinear[seedData_Association, context_: Automatic, opts : OptionsPattern[]] := 
     Return[Join[linearData, <|"dSIBPStatus" -> "failed", "dSIBPContextSummary" -> dsContextSummary[resolved]|>]]
     ];
     If[Lookup[resolved["topology"], "ibpMode", "full"] === "timeOnly",
-     linearData = dsTimeOnlyDataToPublic020[linearData, resolved];
+     linearData = dsTimeOnlyDataToPublic[linearData, resolved];
      If[linearData === $Failed,
       Return[<|"status" -> "failed", "reason" -> "timeOnlyPublicConversionFailed"|>]
       ];

@@ -385,11 +385,11 @@ dsTreeInternalReductionRules[data_Association] := Map[
    ];
 
 
-dsTreeNaiveIBPRaw018[context_Association, masters_: Automatic, OptionsPattern[DSTreeNaiveIBP]] /; dsContextQ[context] := Module[
+dsTreeNaiveIBPRaw[context_Association, masters_: Automatic, OptionsPattern[DSTreeNaiveIBP]] /; dsContextQ[context] := Module[
    {resolvedMasters, familyContext, masterFamilyRecords, seedRecords, equations, masterTokens, allTokens,
     unknownTokens, matrix, constantVector, solution, tokenRules, publicRules, solveResiduals, status},
-   If[treeFormulaMasslessPendingQ018[context],
-    Return[treeFormulaPendingRederivation018["DSTreeNaiveIBP", context]]
+   If[treeFormulaMasslessPendingQ[context],
+    Return[treeFormulaPendingRederivation["DSTreeNaiveIBP", context]]
     ];
    resolvedMasters = dsTreeResolveNaiveMasters[masters, context];
    familyContext = dsTreeFamilyContext[context];

@@ -13,14 +13,14 @@
 (*Time-only sector 与 slot metadata*)
 
 (* 从 context 或 parsed topology 取得同一份 root topology；转换规则不得依赖调用方猜测。 *)
-dsTimeOnlyTopology020[data_Association] := If[
+dsTimeOnlyTopology[data_Association] := If[
    KeyExistsQ[data, "topology"] && AssociationQ[data["topology"]],
    data["topology"],
    data
    ];
 
 
-dsTimeOnlyMetadataList020[data_Association] := Module[{topo = dsTimeOnlyTopology020[data]},
+dsTimeOnlyMetadataList[data_Association] := Module[{topo = dsTimeOnlyTopology[data]},
    If[
     KeyExistsQ[data, "sectors"],
     Lookup[data, "sectors", {}],
@@ -29,19 +29,19 @@ dsTimeOnlyMetadataList020[data_Association] := Module[{topo = dsTimeOnlyTopology
    ];
 
 
-dsTimeOnlyModeQ020[data_Association] :=
-  Lookup[dsTimeOnlyTopology020[data], "ibpMode", "full"] === "timeOnly";
+dsTimeOnlyModeQ[data_Association] :=
+  Lookup[dsTimeOnlyTopology[data], "ibpMode", "full"] === "timeOnly";
 
 
-dsTimeOnlySectorMetadata020[data_Association, sectorKey_String] := SelectFirst[
-   dsTimeOnlyMetadataList020[data],
+dsTimeOnlySectorMetadata[data_Association, sectorKey_String] := SelectFirst[
+   dsTimeOnlyMetadataList[data],
    Lookup[#, "sectorKey", None] === sectorKey &,
    Missing["UnknownTimeOnlySector", sectorKey]
    ];
 
 
 (* 每个 slot 直接保存旧 line pack 中的位置；双向转换因此只读取 metadata，不重复推断图。 *)
-dsTimeOnlyStateSlots020[topo_Association, metadata_Association] := Module[
+dsTimeOnlyStateSlots[topo_Association, metadata_Association] := Module[
    {lines = Lookup[topo, "lines", {}], lineSlots = Lookup[metadata, "lineSlots", {}]},
    Flatten@MapThread[
      Function[{line, lineSlot, linePosition},
@@ -78,26 +78,26 @@ dsTimeOnlyStateSlots020[topo_Association, metadata_Association] := Module[
    ];
 
 
-dsTimeOnlyStateSlotsForMetadata020[topo_Association, metadata_Association] := Lookup[
+dsTimeOnlyStateSlotsForMetadata[topo_Association, metadata_Association] := Lookup[
    metadata,
    "timeOnlyStateSlots",
-   dsTimeOnlyStateSlots020[topo, metadata]
+   dsTimeOnlyStateSlots[topo, metadata]
    ];
 
 
 (* ::Chapter:: *)
 (*单积分双向转换*)
 
-dsTimeOnlyInternalIntegralToPublic020[
+dsTimeOnlyInternalIntegralToPublic[
    int : J[aList_List, linePacks_List, {}],
    data_Association
    ] := Module[{topo, metadata, sectorKey, slots, stateBits},
-   topo = dsTimeOnlyTopology020[data];
-   If[! dsTimeOnlyModeQ020[data], Return[int]];
-   metadata = integralSectorMetadata018[topo, int];
+   topo = dsTimeOnlyTopology[data];
+   If[! dsTimeOnlyModeQ[data], Return[int]];
+   metadata = integralSectorMetadata[topo, int];
    If[Head[metadata] === Missing, Return[$Failed]];
    sectorKey = Lookup[metadata, "sectorKey", Missing["NoSectorKey"]];
-   slots = dsTimeOnlyStateSlotsForMetadata020[topo, metadata];
+   slots = dsTimeOnlyStateSlotsForMetadata[topo, metadata];
    If[! StringQ[sectorKey] || Length[aList] =!= Length[Lookup[metadata, "compactASlots", {}]],
     Return[$Failed]
     ];
@@ -110,22 +110,22 @@ dsTimeOnlyInternalIntegralToPublic020[
    ];
 
 
-dsTimeOnlyInternalIntegralToPublic020[int_J, data_Association] := If[
-   dsTimeOnlyModeQ020[data],
+dsTimeOnlyInternalIntegralToPublic[int_J, data_Association] := If[
+   dsTimeOnlyModeQ[data],
    $Failed,
    int
    ];
 
 
-dsTimeOnlyPublicIntegralToInternal020[
+dsTimeOnlyPublicIntegralToInternal[
    int : J[sectorKey_String, timeShifts_List, stateBits_List],
    data_Association
    ] := Module[{topo, metadata, slots, linePacks, lines, lineSlots},
-   topo = dsTimeOnlyTopology020[data];
-   If[! dsTimeOnlyModeQ020[data], Return[$Failed]];
-   metadata = dsTimeOnlySectorMetadata020[data, sectorKey];
+   topo = dsTimeOnlyTopology[data];
+   If[! dsTimeOnlyModeQ[data], Return[$Failed]];
+   metadata = dsTimeOnlySectorMetadata[data, sectorKey];
    If[Head[metadata] === Missing, Return[$Failed]];
-   slots = dsTimeOnlyStateSlotsForMetadata020[topo, metadata];
+   slots = dsTimeOnlyStateSlotsForMetadata[topo, metadata];
    If[
     Length[timeShifts] =!= Length[Lookup[metadata, "compactASlots", {}]] ||
      Length[stateBits] =!= Length[slots] ||
@@ -157,8 +157,8 @@ dsTimeOnlyPublicIntegralToInternal020[
    ];
 
 
-dsTimeOnlyPublicIntegralToInternal020[int_J, data_Association] := If[
-   dsTimeOnlyModeQ020[data],
+dsTimeOnlyPublicIntegralToInternal[int_J, data_Association] := If[
+   dsTimeOnlyModeQ[data],
    $Failed,
    int
    ];
@@ -167,50 +167,50 @@ dsTimeOnlyPublicIntegralToInternal020[int_J, data_Association] := If[
 (* ::Chapter:: *)
 (*表达式与 Association 边界转换*)
 
-dsTimeOnlyExpressionToPublic020[expr_, data_Association] := Module[{result},
-   If[! dsTimeOnlyModeQ020[data], Return[expr]];
+dsTimeOnlyExpressionToPublic[expr_, data_Association] := Module[{result},
+   If[! dsTimeOnlyModeQ[data], Return[expr]];
    result = expr /. int : J[_List, _List, {}] :>
-      dsTimeOnlyInternalIntegralToPublic020[int, data];
+      dsTimeOnlyInternalIntegralToPublic[int, data];
    If[FreeQ[result, $Failed], result, $Failed]
    ];
 
 
-dsTimeOnlyExpressionToInternal020[expr_, data_Association] := Module[{result, oldIntegrals},
-   If[! dsTimeOnlyModeQ020[data], Return[expr]];
+dsTimeOnlyExpressionToInternal[expr_, data_Association] := Module[{result, oldIntegrals},
+   If[! dsTimeOnlyModeQ[data], Return[expr]];
    oldIntegrals = ! FreeQ[expr, J[_List, _List, _List]];
    If[TrueQ[oldIntegrals], Return[$Failed]];
    result = expr /. int : J[_String, _List, _List] :>
-      dsTimeOnlyPublicIntegralToInternal020[int, data];
+      dsTimeOnlyPublicIntegralToInternal[int, data];
    If[FreeQ[result, $Failed], result, $Failed]
    ];
 
 
-dsTimeOnlyDataToPublic020[value_Association, data_Association] := Association@KeyValueMap[
-   dsTimeOnlyDataToPublic020[#1, data] -> dsTimeOnlyDataToPublic020[#2, data] &,
+dsTimeOnlyDataToPublic[value_Association, data_Association] := Association@KeyValueMap[
+   dsTimeOnlyDataToPublic[#1, data] -> dsTimeOnlyDataToPublic[#2, data] &,
    value
    ];
-dsTimeOnlyDataToPublic020[value_List, data_Association] :=
-  dsTimeOnlyDataToPublic020[#, data] & /@ value;
-dsTimeOnlyDataToPublic020[value_, data_Association] :=
-  dsTimeOnlyExpressionToPublic020[value, data];
+dsTimeOnlyDataToPublic[value_List, data_Association] :=
+  dsTimeOnlyDataToPublic[#, data] & /@ value;
+dsTimeOnlyDataToPublic[value_, data_Association] :=
+  dsTimeOnlyExpressionToPublic[value, data];
 
 
-dsTimeOnlyDataToInternal020[value_Association, data_Association] := Association@KeyValueMap[
-   dsTimeOnlyDataToInternal020[#1, data] -> dsTimeOnlyDataToInternal020[#2, data] &,
+dsTimeOnlyDataToInternal[value_Association, data_Association] := Association@KeyValueMap[
+   dsTimeOnlyDataToInternal[#1, data] -> dsTimeOnlyDataToInternal[#2, data] &,
    value
    ];
-dsTimeOnlyDataToInternal020[value_List, data_Association] :=
-  dsTimeOnlyDataToInternal020[#, data] & /@ value;
-dsTimeOnlyDataToInternal020[value_, data_Association] :=
-  dsTimeOnlyExpressionToInternal020[value, data];
+dsTimeOnlyDataToInternal[value_List, data_Association] :=
+  dsTimeOnlyDataToInternal[#, data] & /@ value;
+dsTimeOnlyDataToInternal[value_, data_Association] :=
+  dsTimeOnlyExpressionToInternal[value, data];
 
 
-dsTimeOnlyOldIntegralLeakQ020[value_Association] := AnyTrue[
+dsTimeOnlyOldIntegralLeakQ[value_Association] := AnyTrue[
    Values[value],
-   dsTimeOnlyOldIntegralLeakQ020
+   dsTimeOnlyOldIntegralLeakQ
    ];
-dsTimeOnlyOldIntegralLeakQ020[value_List] := AnyTrue[
+dsTimeOnlyOldIntegralLeakQ[value_List] := AnyTrue[
    value,
-   dsTimeOnlyOldIntegralLeakQ020
+   dsTimeOnlyOldIntegralLeakQ
    ];
-dsTimeOnlyOldIntegralLeakQ020[value_] := ! FreeQ[value, J[_List, _List, _List]];
+dsTimeOnlyOldIntegralLeakQ[value_] := ! FreeQ[value, J[_List, _List, _List]];

@@ -839,7 +839,7 @@ lineIntegerPowerIndex[topo_Association, J[_, linePacks_, _], e_Integer] := If[
 makeLinePacks[topo_Association] := makeLinePack /@ topo["lines"];
 
 
-makeSectorMetadataBase018[topo_Association] := Module[
+makeSectorMetadataBase[topo_Association] := Module[
    {fixedA = Lookup[topo, "fixedAVertexValues", <||>], active = Lookup[topo, "activeVertexIds", topo["vertexIds"]],
     lines = topo["lines"], vertexIds = topo["vertexIds"], repMap, originalSlotByVertex, compactSlotByVertex,
     activeOriginalGroups, vertexSlots, compactASlots, lineSlots},
@@ -1692,12 +1692,12 @@ symmetry[expr_, topo_Association] := Module[
      ! FreeQ[expr, J[_String, _List, _List]];
    internalExpr = If[
      publicTimeOnlyQ,
-     dsTimeOnlyExpressionToInternal020[expr, topo],
+     dsTimeOnlyExpressionToInternal[expr, topo],
      expr
      ];
    If[internalExpr === $Failed, Return[$Failed]];
    result = internalExpr /. rules;
-   If[publicTimeOnlyQ, dsTimeOnlyExpressionToPublic020[result, topo], result]
+   If[publicTimeOnlyQ, dsTimeOnlyExpressionToPublic[result, topo], result]
    ];
 
 (* ::Chapter:: *)
@@ -2995,7 +2995,7 @@ timeThetaBoundaryShrinkTerms[topo_Association, int : J[aList_, linePacks_, ispLi
         0,
         Total[
          Function[choice,
-            normalizeContactTerm018[
+            normalizeContactTerm[
              topo,
              int,
              2^(1 - Length[selected]) Times @@ Lookup[choice, "coefficient"] *
@@ -5767,7 +5767,7 @@ publicApplyIBPGenerator[expr_, topo_Association, gen_Association] := Module[{int
     ];
     internalExpr = If[
       Lookup[topo, "ibpMode", "full"] === "timeOnly",
-      dsTimeOnlyExpressionToInternal020[expr, topo],
+      dsTimeOnlyExpressionToInternal[expr, topo],
       expr
       ];
     If[internalExpr === $Failed, Return[$Failed]];
@@ -5780,7 +5780,7 @@ publicApplyIBPGenerator[expr_, topo_Association, gen_Association] := Module[{int
     If[! FreeQ[result, $Failed], Return[$Failed]];
     result = applySeedCanonical[result, topo];
     If[result === $Failed, Return[$Failed]];
-    dsTimeOnlyExpressionToPublic020[result, topo]
+    dsTimeOnlyExpressionToPublic[result, topo]
     ];
 
 
@@ -5952,7 +5952,7 @@ integrandBuildingBlock[line_Association, pack_List, momentumMagnitude_] := Modul
    nPositions = linePackNPositions[line, packType];
    Switch[packType,
     "massiveFull" | "massiveCross",
-    Hh[MassiveBlock[lineFunctionPreset018[line], Lookup[line, "nu", nu], Lookup[line, "skType", "++"], lineId, endpoints, momentumMagnitude, pack[[nPositions[[1]]]], pack[[nPositions[[2]]]]]],
+    Hh[MassiveBlock[lineFunctionPreset[line], Lookup[line, "nu", nu], Lookup[line, "skType", "++"], lineId, endpoints, momentumMagnitude, pack[[nPositions[[1]]]], pack[[nPositions[[2]]]]]],
     "masslessFull",
     Hh[MasslessBlock[Lookup[line, "skType", "++"], lineId, endpoints, momentumMagnitude, pack[[First[nPositions]]]]],
     "masslessCross",
@@ -6875,7 +6875,7 @@ treeEmbedVertexMatrix[matrix_List, vertexIndex_Integer, dimensions_List] := tree
    ];
 
 
-dsTreeDLogBlock018[data_Association] := Module[{vertices, dimensions, omega, letters, letterMatrices, masters},
+dsTreeDLogBlock[data_Association] := Module[{vertices, dimensions, omega, letters, letterMatrices, masters},
    vertices = treeVertexDLogData /@ data["vertices"];
    dimensions = 2^Lookup[data["vertices"], "p"];
    omega = Total[MapIndexed[treeEmbedVertexMatrix[#1["omega"], First[#2], dimensions] &, vertices]];
@@ -6900,7 +6900,7 @@ dsTreeDLogBlock018[data_Association] := Module[{vertices, dimensions, omega, let
    ];
 
 
-dsTreeDLogBlock018[data_Association, seedData_] := Join[
-   dsTreeDLogBlock018[data],
+dsTreeDLogBlock[data_Association, seedData_] := Join[
+   dsTreeDLogBlock[data],
    <|"sourceEquations" -> seedData|>
    ];

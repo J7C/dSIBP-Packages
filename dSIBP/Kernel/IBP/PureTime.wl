@@ -183,7 +183,7 @@ dsDirectTreeContactCoefficient[
    Expand[
     thetaBundleCoefficient atomicCoefficient
       Times @@ MapThread[Power, {lineMomentumMagnitudes, -deltaLinePowers}]
-      sectorPrefactorRatio018[
+      sectorPrefactorRatio[
        makeSectorMetadata[sourceTopo],
        makeSectorMetadata[targetTopo]
        ]

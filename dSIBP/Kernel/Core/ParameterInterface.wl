@@ -14,7 +14,7 @@ dsParameterNotation[topo_Association] := Module[
      "independentExternalMomenta" -> Lookup[topo, "independentExternalMomenta", {}],
      "kEIndices" -> Range[Length[Lookup[topo, "independentExternalMomenta", {}]]],
      "kEMomenta" -> Lookup[topo, "independentExternalMomenta", {}],
-     "kEParameterExpressions" -> independentExternalMagnitudeExpressions018[topo],
+     "kEParameterExpressions" -> independentExternalMagnitudeExpressions[topo],
     "defaultRules" -> Lookup[audit, "defaultRules", {}],
     "selectedRules" -> Lookup[audit, "selectedRules", {}],
     "selectedUserVariables" -> Lookup[audit, "selectedUserVariables", {}],

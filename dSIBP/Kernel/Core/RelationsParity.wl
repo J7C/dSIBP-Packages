@@ -6,11 +6,11 @@
 (* ::Chapter:: *)
 (*Massless 双端点 quotient*)
 
-masslessFullLineQ018[line_Association] := Lookup[line, "packType", ""] === "masslessFull" &&
+masslessFullLineQ[line_Association] := Lookup[line, "packType", ""] === "masslessFull" &&
    Lookup[line, "state", "full"] =!= "shrunk";
 
 
-canonicalizeMasslessIntegral018[
+canonicalizeMasslessIntegral[
    topo_Association,
    int : J[aList_, linePacks_, ispList_]
    ] := Module[{newPacks = linePacks, coefficient = 1, positions, n1, n2},
@@ -50,7 +50,7 @@ masslessCoincidentAntisymmetricIntegralQ[
 
 
 applyMasslessEndpointCanonical[expr_, topo_Association] := Module[{quotient},
-   quotient = Expand[expr /. int_J :> canonicalizeMasslessIntegral018[topo, int]];
+   quotient = Expand[expr /. int_J :> canonicalizeMasslessIntegral[topo, int]];
    Expand[quotient /. (int_J /; masslessCoincidentAntisymmetricIntegralQ[topo, int]) :> 0]
    ];
 
@@ -64,7 +64,7 @@ applyMasslessEndpointCanonical[expr_, topo_Association] := Module[{quotient},
 
 
 masslessParallelFoldBundles[topo_Association] := Module[{masslessFullLines, grouped},
-   masslessFullLines = Select[Range[Length[topo["lines"]]], masslessFullLineQ018[topo["lines"][[#]]] &];
+   masslessFullLines = Select[Range[Length[topo["lines"]]], masslessFullLineQ[topo["lines"][[#]]] &];
    grouped = GroupBy[masslessFullLines, vertexPairBundleKey[topo["lines"][[#]]] &];
    Select[Values[grouped], Length[#] > 1 &]
    ];
@@ -76,7 +76,7 @@ masslessParallelFoldBundles[topo_Association] := Module[{masslessFullLines, grou
    fold 本身（奇偶位在线间搬移）按内置关系不产生符号。 *)
 
 
-canonicalizeMasslessParallelFold018[
+canonicalizeMasslessParallelFold[
    topo_Association,
    int : J[aList_, linePacks_, ispList_]
    ] := Module[
@@ -120,7 +120,7 @@ canonicalizeMasslessParallelFold018[
 
 
 applyMasslessParallelFoldCanonical[expr_, topo_Association] := Expand[
-   expr /. int_J :> canonicalizeMasslessParallelFold018[topo, int]
+   expr /. int_J :> canonicalizeMasslessParallelFold[topo, int]
    ];
 
 
@@ -152,7 +152,7 @@ masslessParallelFoldRelationData[topo_Association] := Map[
    ];
 
 
-masslessBuiltInRelationData018[topo_Association] := Map[
+masslessBuiltInRelationData[topo_Association] := Map[
    Function[e,
     With[{id = topo["lines"][[e, "id"]]},
      <|
@@ -166,7 +166,7 @@ masslessBuiltInRelationData018[topo_Association] := Map[
       |>
      ]
     ],
-   Select[Range[topo["nE"]], masslessFullLineQ018[topo["lines"][[#]]] &]
+   Select[Range[topo["nE"]], masslessFullLineQ[topo["lines"][[#]]] &]
    ];
 
 
@@ -204,7 +204,7 @@ forbiddenNDataForIntegral[topo_Association, J[_, linePacks_, _]] := Module[
 (* ::Chapter:: *)
 (*Massless regular 与 contact 原子*)
 
-toggleMasslessEndpointState018[
+toggleMasslessEndpointState[
    J[aList_, linePacks_, ispList_], e_Integer, endpointSlot_Integer
    ] := Module[{newPacks = linePacks, position},
    position = 1 + endpointSlot;
@@ -214,7 +214,7 @@ toggleMasslessEndpointState018[
 
 
 toggleMasslessLineState[topo_Association, int_J, e_Integer] :=
-  toggleMasslessEndpointState018[int, e, 1];
+  toggleMasslessEndpointState[int, e, 1];
 
 
 timeMasslessEndpointDerivativeTerms[
@@ -233,7 +233,7 @@ timeMasslessEndpointDerivativeTerms[
       sigma = sameBranchSKSign[line];
       Total@Table[
         shiftedIntegral = shiftLinePower[
-          topo, toggleMasslessEndpointState018[int, e, endpointSlot], e, -1
+          topo, toggleMasslessEndpointState[int, e, endpointSlot], e, -1
           ];
         I sigma shiftedIntegral,
         {endpointSlot, endpointSlots}
@@ -275,7 +275,7 @@ momentumBuildingBlockDerivativeTerms[
         (* bridge 的 fixed-line 幂移会产生显式模长系数；先对裸 J 做顶点移位，
            再移线幂，避免把 coefficient J 整体送入只接受裸积分的 helper。 *)
         shiftedInt = shiftVertexA[
-          toggleMasslessEndpointState018[int, e, endpointSlot],
+          toggleMasslessEndpointState[int, e, endpointSlot],
           topo, line["endpoints"][[endpointSlot]], 1
           ];
         -I sigma absorbLinearFactor[
@@ -324,7 +324,7 @@ externalVectorBuildingBlockDerivativeTerms[
        extCoeff Total@Table[
         (* 与 loop-momentum 路线使用同一顺序：裸 J 顶点移位先于 fixed-line 系数生成。 *)
         shiftedInt = shiftVertexA[
-          toggleMasslessEndpointState018[int, e, endpointSlot],
+          toggleMasslessEndpointState[int, e, endpointSlot],
           topo, line["endpoints"][[endpointSlot]], 1
           ];
         -I sigma absorbLinearFactor[
@@ -359,7 +359,7 @@ scalarMomentumBuildingBlockDerivativeTerms[topo_Association, int_J, e_Integer] :
      sigma = sameBranchSKSign[line];
     Total@Table[
       -I sigma shiftVertexA[
-        toggleMasslessEndpointState018[int, e, endpointSlot],
+        toggleMasslessEndpointState[int, e, endpointSlot],
         topo, line["endpoints"][[endpointSlot]], 1
         ],
       {endpointSlot, 2}
@@ -454,7 +454,7 @@ shrinkLinesIntegral[
         -spec["bShift"] -
          Lookup[spec, "zeroPointShift", lineShrinkZeroPointShift[topo["lines"][[spec["lineIndex"]]]]]
         );
-      newLinePacks[[spec["lineIndex"]]] = {fixedLineSentinel018[]}
+      newLinePacks[[spec["lineIndex"]]] = {fixedLineSentinel[]}
       ]
      ],
     specs
@@ -468,7 +468,7 @@ shrinkLinesIntegral[
 
 (* fixed/non-loop line 的零点幂属于 N_s；裸积分核导数只微分有 b/bS 槽的
    cycle denominator。模式函数本身的动量导数仍由原 building-block 路线处理。 *)
-lineBarePowerIndex018[topo_Association, int_J, e_Integer] := If[
+lineBarePowerIndex[topo_Association, int_J, e_Integer] := If[
    lineIndexedPowerQ[topo["lines"][[e]]],
    linePowerIndex[topo, int, e],
    0
@@ -485,7 +485,7 @@ externalLegMagnitudeOccurrenceLineDerivativeSeed[topo_Association, int_J, coordi
       Heads -> False
       ];
    Total@Table[
-     -lineBarePowerIndex018[topo, int, e] shiftLinePower[topo, int, e, 1] +
+     -lineBarePowerIndex[topo, int, e] shiftLinePower[topo, int, e, 1] +
       scalarMomentumBuildingBlockDerivativeTerms[topo, int, e],
      {e, matchingLines}
      ]
@@ -503,13 +503,13 @@ externalVectorPropagatorDerivativeTerms[topo_Association, int_J, gen_Association
       0,
       vDotQ = Expand[expandDotExpr[vector, lineMomenta[[e]], topo] /. repSP2ZRules];
       shiftedInt = shiftLinePower[topo, int, e, 2];
-      -extCoeff lineBarePowerIndex018[topo, int, e] absorbLinearFactor[vDotQ, shiftedInt, topo]
+      -extCoeff lineBarePowerIndex[topo, int, e] absorbLinearFactor[vDotQ, shiftedInt, topo]
       ],
      {e, topo["nE"]}
      ]
    ];
 
-sectorAwareCanonicalTerm018[term_, rootTopo_Association] := Module[
+sectorAwareCanonicalTerm[term_, rootTopo_Association] := Module[
    {integrals, int, coefficient, sectorTopo},
    integrals = DeleteDuplicates[Cases[term, _J, {0, Infinity}]];
    Which[
@@ -518,22 +518,22 @@ sectorAwareCanonicalTerm018[term_, rootTopo_Association] := Module[
     True,
     int = First[integrals];
     coefficient = Cancel[term/int];
-    sectorTopo = sectorTopologyForIntegral018[rootTopo, int];
+    sectorTopo = sectorTopologyForIntegral[rootTopo, int];
     If[Head[sectorTopo] === Missing, $Failed, applySeedCanonical[coefficient int, sectorTopo]]
     ]
    ];
 
 
-sectorAwareCanonical018[expr_, rootTopo_Association] := Module[{terms, result},
+sectorAwareCanonical[expr_, rootTopo_Association] := Module[{terms, result},
    terms = linearTerms[Expand[expr]];
-   result = sectorAwareCanonicalTerm018[#, rootTopo] & /@ terms;
+   result = sectorAwareCanonicalTerm[#, rootTopo] & /@ terms;
    If[MemberQ[result, $Failed], $Failed, Expand[Total[result]]]
    ];
 
 
 (* 连续撒点会反复命中同一批 sector。缓存只复用已经初始化的 sector topology，
    积分仍须与该 sector 的 shape metadata 匹配，不能用缓存绕过表示门禁。 *)
-sectorTopologyCache018[rootTopo_Association, metadataList_List] := Module[
+buildSectorTopologyCache[rootTopo_Association, metadataList_List] := Module[
    {keys, entries, sectorTopo, symmetryRules, tadpoleData, postSamplingCanonicalRequiredQ},
    keys = Lookup[metadataList, "sectorKey", Missing["NoSectorKey"]];
    If[MemberQ[keys, _Missing] || DuplicateFreeQ[keys] =!= True,
@@ -541,7 +541,7 @@ sectorTopologyCache018[rootTopo_Association, metadataList_List] := Module[
     ];
    entries = Map[
      Function[metadata,
-      sectorTopo = sectorTopologyForMetadata018[rootTopo, metadata];
+      sectorTopo = sectorTopologyForMetadata[rootTopo, metadata];
       symmetryRules = effectiveSymmetryRules0[sectorTopo];
       If[
        ! ListQ[symmetryRules] || ! And @@ (validDiscreteReplacementRuleQ /@ symmetryRules),
@@ -570,28 +570,28 @@ sectorTopologyCache018[rootTopo_Association, metadataList_List] := Module[
    ];
 
 
-sectorCachePostSamplingCanonicalRequiredQ018[cache_Association] := AnyTrue[
+sectorCachePostSamplingCanonicalRequiredQ[cache_Association] := AnyTrue[
    Values[cache],
    TrueQ[Lookup[#, "postSamplingCanonicalRequiredQ", True]] &
    ];
 
 
-sectorKeyForIntegral018[
+sectorKeyForIntegral[
    rootTopo_Association,
    J[_, linePacks_List, _]
    ] := If[
    Length[linePacks] =!= Length[Lookup[rootTopo, "lines", {}]],
    Missing["LinePackCountMismatch"],
-   sectorKeyFromPattern018[rootTopo, sectorPattern018[rootTopo, linePacks]]
+   sectorKeyFromPattern[rootTopo, sectorPattern[rootTopo, linePacks]]
    ];
 
 
-sectorTopologyForIntegral018[
+sectorTopologyForIntegral[
    rootTopo_Association,
    int_J,
    cache_Association
    ] := Module[{key, entry, metadata},
-   key = sectorKeyForIntegral018[rootTopo, int];
+   key = sectorKeyForIntegral[rootTopo, int];
    If[Head[key] === Missing, Return[key]];
    entry = Lookup[cache, key, Missing["NoMatchingSector", key]];
    If[Head[entry] === Missing, Return[entry]];
@@ -603,12 +603,12 @@ sectorTopologyForIntegral018[
    ];
 
 
-sectorEntryForIntegral018[
+sectorEntryForIntegral[
    rootTopo_Association,
    int_J,
    cache_Association
    ] := Module[{key, entry, metadata},
-   key = sectorKeyForIntegral018[rootTopo, int];
+   key = sectorKeyForIntegral[rootTopo, int];
    If[Head[key] === Missing, Return[key]];
    entry = Lookup[cache, key, Missing["NoMatchingSector", key]];
    If[Head[entry] === Missing, Return[entry]];
@@ -620,7 +620,7 @@ sectorEntryForIntegral018[
    ];
 
 
-applySeedCanonicalWithRules018[
+applySeedCanonicalWithRules[
    expr_,
    topo_Association,
    symmetryRules_List
@@ -635,7 +635,7 @@ applySeedCanonicalWithRules018[
    ];
 
 
-sectorAwareSymmetryTerm018[
+sectorAwareSymmetryTerm[
    term_,
    rootTopo_Association,
    cache_Association
@@ -647,7 +647,7 @@ sectorAwareSymmetryTerm018[
     True,
     int = First[integrals];
     coefficient = Cancel[term/int];
-    sectorEntry = sectorEntryForIntegral018[rootTopo, int, cache];
+    sectorEntry = sectorEntryForIntegral[rootTopo, int, cache];
     If[Head[sectorEntry] === Missing, Return[$Failed, Module]];
     symmetryRules = Lookup[sectorEntry, "symmetryRules", Missing["NoSectorSymmetryRules"]];
     If[
@@ -660,18 +660,18 @@ sectorAwareSymmetryTerm018[
    ];
 
 
-sectorAwareSymmetry018[
+sectorAwareSymmetry[
    expr_,
    rootTopo_Association,
    cache_Association
    ] := Module[{terms, result},
    terms = linearTerms[Expand[expr]];
-   result = sectorAwareSymmetryTerm018[#, rootTopo, cache] & /@ terms;
+   result = sectorAwareSymmetryTerm[#, rootTopo, cache] & /@ terms;
    If[MemberQ[result, $Failed], $Failed, Expand[Total[result]]]
    ];
 
 
-sectorAwareCanonicalTerm018[
+sectorAwareCanonicalTerm[
    term_,
    rootTopo_Association,
    cache_Association
@@ -683,26 +683,26 @@ sectorAwareCanonicalTerm018[
     True,
     int = First[integrals];
     coefficient = Cancel[term/int];
-    sectorEntry = sectorEntryForIntegral018[rootTopo, int, cache];
+    sectorEntry = sectorEntryForIntegral[rootTopo, int, cache];
     If[Head[sectorEntry] === Missing, Return[$Failed, Module]];
     sectorTopo = Lookup[sectorEntry, "topology", Missing["NoSectorTopology"]];
     symmetryRules = Lookup[sectorEntry, "symmetryRules", Missing["NoSectorSymmetryRules"]];
      If[Head[sectorTopo] === Missing || Head[symmetryRules] === Missing, Return[$Failed, Module]];
      (* EOM 与 canonical helper 的合同是裸 J。显式动力学系数只在外层保存，
         这样 fixed-line 幂移不能把系数误带进后续的顶点或指标移位。 *)
-     canonicalInt = applySeedCanonicalWithRules018[int, sectorTopo, symmetryRules];
+     canonicalInt = applySeedCanonicalWithRules[int, sectorTopo, symmetryRules];
      If[canonicalInt === $Failed, $Failed, Expand[coefficient canonicalInt]]
      ]
    ];
 
 
-sectorAwareCanonical018[
+sectorAwareCanonical[
    expr_,
    rootTopo_Association,
    cache_Association
    ] := Module[{terms, result},
    terms = linearTerms[Expand[expr]];
-   result = sectorAwareCanonicalTerm018[#, rootTopo, cache] & /@ terms;
+   result = sectorAwareCanonicalTerm[#, rootTopo, cache] & /@ terms;
    If[MemberQ[result, $Failed], $Failed, Expand[Total[result]]]
    ];
 
@@ -724,7 +724,7 @@ ds[expr_, userVariable_, topoSpec_Association] := Module[
      ];
     internalExpr = If[
       Lookup[rootTopo, "ibpMode", "full"] === "timeOnly",
-      dsTimeOnlyExpressionToInternal020[expr, rootTopo],
+      dsTimeOnlyExpressionToInternal[expr, rootTopo],
       expr
       ];
     If[internalExpr === $Failed, Return[$Failed]];
@@ -741,11 +741,11 @@ ds[expr_, userVariable_, topoSpec_Association] := Module[
      ];
    integralDerivativeTerms = MapThread[
      Function[{coefficient, int},
-      sectorTopo = sectorTopologyForIntegral018[rootTopo, int];
+      sectorTopo = sectorTopologyForIntegral[rootTopo, int];
        If[Head[sectorTopo] === Missing,
         $Failed,
-        prefactorData = sectorPrefactorDataForIntegral018[rootTopo, int];
-        prefactorLogDerivative = sectorPrefactorLogDerivative018[
+        prefactorData = sectorPrefactorDataForIntegral[rootTopo, int];
+        prefactorLogDerivative = sectorPrefactorLogDerivative[
           <|"sectorPrefactorData" -> prefactorData|>,
           userVariable
           ];
@@ -762,14 +762,14 @@ ds[expr_, userVariable_, topoSpec_Association] := Module[
    If[MemberQ[integralDerivativeTerms, $Failed],
     Message[dSIBPPublicAPI::derivativefailed, userVariable]; Return[$Failed]
     ];
-   result = sectorAwareCanonical018[
+   result = sectorAwareCanonical[
      Expand[coefficientDerivative + Total[integralDerivativeTerms]],
      rootTopo
      ];
     If[result === $Failed, Return[$Failed]];
     result = rep2outform[result, rootTopo];
     If[result === $Failed, Return[$Failed]];
-    dsTimeOnlyExpressionToPublic020[result, rootTopo]
+    dsTimeOnlyExpressionToPublic[result, rootTopo]
     ];
 
 
@@ -779,7 +779,7 @@ integrandBuildingBlock[line_Association, pack_List, momentumMagnitude_] := Modul
    Switch[packType,
     "massiveFull" | "massiveCross",
     Hh[MassiveBlock[
-       lineFunctionPreset018[line], Lookup[line, "nu", nu], Lookup[line, "skType", "++"],
+       lineFunctionPreset[line], Lookup[line, "nu", nu], Lookup[line, "skType", "++"],
       lineId, endpoints, momentumMagnitude, pack[[positions[[1]]]], pack[[positions[[2]]]]
       ]],
     "masslessFull",
@@ -794,7 +794,7 @@ integrandBuildingBlock[line_Association, pack_List, momentumMagnitude_] := Modul
    ];
 
 
-integrandLineBareFactor018[topo_Association, int_J, e_Integer] := Module[
+integrandLineBareFactor[topo_Association, int_J, e_Integer] := Module[
    {line, pack, packType, momentumMagnitude, denominator},
    line = topo["lines"][[e]];
    pack = int[[2, e]];
@@ -813,9 +813,9 @@ integrandLineBareFactor018[topo_Association, int_J, e_Integer] := Module[
    ];
 
 
-integralToBareInertIntegrand018[topo_Association, int_J] := Times[
+integralToBareInertIntegrand[topo_Association, int_J] := Times[
    integrandVertexFactor[topo, int],
-   Times @@ Table[integrandLineBareFactor018[topo, int, e], {e, topo["nE"]}],
+   Times @@ Table[integrandLineBareFactor[topo, int, e], {e, topo["nE"]}],
    integrandISPFactor[topo, int]
    ];
 
@@ -826,18 +826,18 @@ rep2Integrand[expr_, topoSpec_Association] := Module[
    If[rootTopo === $Failed, Return[$Failed]];
    internalExpr = If[
      Lookup[rootTopo, "ibpMode", "full"] === "timeOnly",
-     dsTimeOnlyExpressionToInternal020[expr, rootTopo],
+     dsTimeOnlyExpressionToInternal[expr, rootTopo],
      expr
      ];
    If[internalExpr === $Failed || ! validatePublicExpression[internalExpr, rootTopo], Return[$Failed]];
    result = Expand[internalExpr /. int_J :> (
-         sectorTopo = sectorTopologyForIntegral018[rootTopo, int];
-         prefactorData = sectorPrefactorDataForIntegral018[rootTopo, int];
-         prefactor = materializeSectorPrefactor018[prefactorData];
+         sectorTopo = sectorTopologyForIntegral[rootTopo, int];
+         prefactorData = sectorPrefactorDataForIntegral[rootTopo, int];
+         prefactor = materializeSectorPrefactor[prefactorData];
          If[
           Head[sectorTopo] === Missing || prefactor === $Failed,
           $Failed,
-          prefactor integralToBareInertIntegrand018[sectorTopo, int]
+          prefactor integralToBareInertIntegrand[sectorTopo, int]
           ]
          )];
    If[! FreeQ[result, $Failed], Return[$Failed]];
@@ -848,7 +848,7 @@ rep2Integrand[expr_, topoSpec_Association] := Module[
 (* ::Chapter:: *)
 (*GF(2) parity metadata 与 sector transport*)
 
-normalizeParityConstraints018[constraints_] := Map[
+normalizeParityConstraints[constraints_] := Map[
    Function[item,
     Which[
      MatchQ[item, _Rule | _RuleDelayed], <|"expression" -> First[item], "remainder" -> Last[item]|>,
@@ -861,7 +861,7 @@ normalizeParityConstraints018[constraints_] := Map[
    ];
 
 
-lineFunctionPreset018[line_Association] := Lookup[
+lineFunctionPreset[line_Association] := Lookup[
    lineCompiledFunctionSystem[line],
    "preset",
     Lookup[Lookup[lineCompiledFunctionSystem[line], "input", <||>], "preset", "custom"]
@@ -871,26 +871,26 @@ lineFunctionPreset018[line_Association] := Lookup[
 (* Parity transport only needs every line building block to have a proved GF(2)
    closure. Massive h/H and massless exponential lines both satisfy this contract;
    an unknown custom function system remains fail closed. *)
-parityLineFunctionSystemUsableQ018[line_Association] := Switch[
+parityLineFunctionSystemUsableQ[line_Association] := Switch[
    Lookup[line, "massType", "massive"],
-   "massive", MemberQ[{"h", "H"}, lineFunctionPreset018[line]],
+   "massive", MemberQ[{"h", "H"}, lineFunctionPreset[line]],
     "massless", True,
    _, False
    ];
 
 
-parityFunctionSystemUsableQ018[topo_Association] := Module[{lines},
+parityFunctionSystemUsableQ[topo_Association] := Module[{lines},
    lines = Lookup[topo, "lines", {}];
-   lines =!= {} && And @@ (parityLineFunctionSystemUsableQ018 /@ lines)
+   lines =!= {} && And @@ (parityLineFunctionSystemUsableQ /@ lines)
    ];
 
 
-parityLineVariables018[line_Association] := {
+parityLineVariables[line_Association] := {
    b[line["id"]], n[line["id"], 1], n[line["id"], 2]
    };
 
 
-transportParityConstraint018[topo_Association, constraint_Association] := Module[
+transportParityConstraint[topo_Association, constraint_Association] := Module[
    {expr, remainder, rootRules, issues = {}, line, vars, coefficients, cb, c1, c2,
     integerShift, zeroShift, sourceZero, targetZero, delta, shrunkQ},
    If[Lookup[constraint, "status", "valid"] === "invalid", Return[constraint]];
@@ -899,7 +899,7 @@ transportParityConstraint018[topo_Association, constraint_Association] := Module
    rootRules = Lookup[topo, "rootZeroPointRules", topo["zeroPointRules"]];
    Do[
     line = topo["lines"][[e]];
-    vars = parityLineVariables018[line];
+    vars = parityLineVariables[line];
     coefficients = Coefficient[expr, #] & /@ vars;
     {cb, c1, c2} = coefficients;
     If[And @@ (zeroQ /@ coefficients), Continue[]];
@@ -912,7 +912,7 @@ transportParityConstraint018[topo_Association, constraint_Association] := Module
       AppendTo[issues, <|"reason" -> "endpointWeightsNotTransportable", "lineIndex" -> e, "coefficients" -> coefficients|>],
       integerShift = lineShrinkBShift[line];
       zeroShift = lineShrinkZeroPointShift[line];
-      sourceZero = zeroPointRuleValue018[rootRules, b0[line["id"]], 0];
+      sourceZero = zeroPointRuleValueFromRules[rootRules, b0[line["id"]], 0];
       targetZero = lineBSZeroPoint[topo, e];
       delta = Simplify[Expand[(targetZero - sourceZero) - zeroShift]];
       If[!(TrueQ[delta === 0] || IntegerQ[delta]),
@@ -933,10 +933,10 @@ transportParityConstraint018[topo_Association, constraint_Association] := Module
    ];
 
 
-parityMetadataForSector018[topo_Association] := Module[
+parityMetadataForSector[topo_Association] := Module[
    {raw, normalized, transported, invalid, usableFunctionQ},
    raw = Lookup[topo, "parityConstraints", {}];
-   usableFunctionQ = parityFunctionSystemUsableQ018[topo];
+   usableFunctionQ = parityFunctionSystemUsableQ[topo];
    If[raw === {} || raw === None,
     Return[<|"status" -> "disabled", "reason" -> "noParityConstraints",
       "parityUsableQ" -> usableFunctionQ, "constraints" -> {}|>]
@@ -945,8 +945,8 @@ parityMetadataForSector018[topo_Association] := Module[
     Return[<|"status" -> "disabled", "reason" -> "unsupportedParityFunctionSystem",
       "parityUsableQ" -> False, "constraints" -> {}|>]
     ];
-   normalized = normalizeParityConstraints018[raw];
-   transported = transportParityConstraint018[topo, #] & /@ normalized;
+   normalized = normalizeParityConstraints[raw];
+   transported = transportParityConstraint[topo, #] & /@ normalized;
    invalid = Select[transported, Lookup[#, "status", "invalid"] =!= "transported" &];
    If[invalid =!= {},
     <|"status" -> "disabled", "reason" -> "constraintTransportFailed",
@@ -962,7 +962,7 @@ parityMetadataForSector018[topo_Association] := Module[
    ];
 
 
-parityIntegralIndexRules018[metadata_Association, int_J] := Module[{lineRules, ispRules},
+parityIntegralIndexRules[metadata_Association, int_J] := Module[{lineRules, ispRules},
    lineRules = Flatten@MapThread[
       Thread[Lookup[#1, "packTemplate", {}] -> #2] &,
       {Lookup[metadata, "lineSlots", {}], int[[2]]}
@@ -975,21 +975,21 @@ parityIntegralIndexRules018[metadata_Association, int_J] := Module[{lineRules, i
    ];
 
 
-parityIntegralSignature018[metadata_Association, int_J] := Module[{data, rules},
+parityIntegralSignature[metadata_Association, int_J] := Module[{data, rules},
    data = Lookup[metadata, "parityData", <|"status" -> "disabled"|>];
    If[Lookup[data, "status", "disabled"] =!= "enabled", Return[{}]];
-   rules = parityIntegralIndexRules018[metadata, int];
+   rules = parityIntegralIndexRules[metadata, int];
    Mod[Expand[(#expression - #remainder) /. rules], 2] & /@ Lookup[data, "constraints", {}]
    ];
 
 
-parityIntegralAllowedQ018[metadata_Association, int_J] := Module[{signature},
-   signature = parityIntegralSignature018[metadata, int];
+parityIntegralAllowedQ[metadata_Association, int_J] := Module[{signature},
+   signature = parityIntegralSignature[metadata, int];
    signature === {} || And @@ (TrueQ[# === 0] & /@ signature)
    ];
 
 
-dsParityFilteredPointRules018[entry_Association, pointRules_List, context_Association] := Module[
+dsParityFilteredPointRules[entry_Association, pointRules_List, context_Association] := Module[
    {metadata, parityData, sourceIntegral},
    metadata = Lookup[entry, "sectorMetadata", Missing["NoSectorMetadata"]];
    If[! AssociationQ[metadata], Return[pointRules]];
@@ -997,16 +997,16 @@ dsParityFilteredPointRules018[entry_Association, pointRules_List, context_Associ
    If[Lookup[parityData, "status", "disabled"] =!= "enabled", Return[pointRules]];
    sourceIntegral = Lookup[entry, "sourceIntegral", Missing["NoSourceIntegral"]];
    If[Head[sourceIntegral] =!= J, Return[pointRules]];
-   Select[pointRules, parityIntegralAllowedQ018[metadata, sourceIntegral /. #] &]
+   Select[pointRules, parityIntegralAllowedQ[metadata, sourceIntegral /. #] &]
    ];
 
 
 (* 用户直接传入表达式时没有 sourceIntegral/sector parity provenance，不能在撒点前猜测
    seed parity。此时保留用户点域，并由生成后的 parity certificate 检查实际积分。 *)
-dsParityFilteredPointRules018[_, pointRules_List, _Association] := pointRules;
+dsParityFilteredPointRules[_, pointRules_List, _Association] := pointRules;
 
 
-dsParityCertificate018[records_List, context_Association] := Module[
+dsParityCertificate[records_List, context_Association] := Module[
    {metadataList = context["sectors"], failures = {}, integrals, metadata, signature},
    Do[
     integrals = DeleteDuplicates[Cases[Lookup[records[[i]], "equation", 0], _J, {0, Infinity}]];
@@ -1014,7 +1014,7 @@ dsParityCertificate018[records_List, context_Association] := Module[
      metadata = SelectFirst[metadataList, integralMatchesSectorMetadataQ[int, #] &, Missing["NoMatchingSector"]];
      If[Head[metadata] === Missing,
       AppendTo[failures, <|"equationIndex" -> i, "integral" -> int, "reason" -> metadata|>],
-      signature = parityIntegralSignature018[metadata, int];
+      signature = parityIntegralSignature[metadata, int];
       If[signature =!= {} && ! And @@ (TrueQ[# === 0] & /@ signature),
        AppendTo[failures, <|"equationIndex" -> i, "sectorKey" -> metadata["sectorKey"],
          "integral" -> int, "signature" -> signature|>]
@@ -1032,7 +1032,7 @@ dsParityCertificate018[records_List, context_Association] := Module[
 (* ::Chapter:: *)
 (*Massless tree formula capability*)
 
-treeFormulaMasslessLines018[context_Association] := Lookup[
+treeFormulaMasslessLines[context_Association] := Lookup[
    Select[
     Lookup[context["topology"], "lines", {}],
     Lookup[#, "massType", "massive"] === "massless" &
@@ -1042,11 +1042,11 @@ treeFormulaMasslessLines018[context_Association] := Lookup[
    ];
 
 
-treeFormulaMasslessPendingQ018[context_Association] := treeFormulaMasslessLines018[context] =!= {};
+treeFormulaMasslessPendingQ[context_Association] := treeFormulaMasslessLines[context] =!= {};
 
 
-treeFormulaPendingRederivation018[operation_String, context_Association] := Module[{lines},
-   lines = treeFormulaMasslessLines018[context];
+treeFormulaPendingRederivation[operation_String, context_Association] := Module[{lines},
+   lines = treeFormulaMasslessLines[context];
    dsErrorPrint[
     operation <> " 尚未在 massless 三槽 quotient basis 上重新推导，公式型 tree 路线已停止。" <>
      " " <> operation <> " has not been rederived on the massless three-slot quotient basis; the formula-based tree route was stopped."
@@ -1105,7 +1105,7 @@ DSSeeds[context_: Automatic, opts : OptionsPattern[]] := Module[
      templateData = Join[templateData, <|
         "generationRoute" -> "internalThreeSlotConverted",
         "representation" -> "J[sectorKey,timeShifts,stateBits]",
-        "allSeeds" -> dsTimeOnlyDataToPublic020[Lookup[templateData, "allSeeds", {}], resolved]
+        "allSeeds" -> dsTimeOnlyDataToPublic[Lookup[templateData, "allSeeds", {}], resolved]
         |>];
      If[Lookup[templateData, "allSeeds", $Failed] === $Failed,
       Message[DSSeeds::failed, dsReasonSentence["timeOnlyPublicConversionFailed"]];

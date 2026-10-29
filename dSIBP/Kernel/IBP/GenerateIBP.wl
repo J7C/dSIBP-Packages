@@ -265,7 +265,7 @@ dsSeedTemplateEntries[seeds_] := Flatten[{seeds}, Infinity];
 
 (* 公开坐标模板在撒点前只投影一次。canonical 若重新引入底层原子，才需要在该点
    再投影；该判定只跳过恒等变换，不改变任何代数或 sector 规则。 *)
-dsInternalCoordinatePresentQ018[expr_] := ! FreeQ[
+dsInternalCoordinatePresentQ[expr_] := ! FreeQ[
    expr,
    _qq | _qk | _kk | _z | _xi | _rho | _externalLegSquaredCoordinate
    ];
@@ -869,7 +869,7 @@ dsFastTemplateDecompose[templateEquation_, groupVars_List] := Module[
    正确的 root 指标判定。 *)
 dsFastCanonicalizeJ[rawJ_, topo_, sectorCache_, postSamplingQ_] := Module[
    {entry0, rules, canon, vals, keys, sectorTopo},
-   entry0 = sectorEntryForIntegral018[topo, rawJ, sectorCache];
+   entry0 = sectorEntryForIntegral[topo, rawJ, sectorCache];
    If[Head[entry0] === Missing, Return[dsFastFallback["sectorLookupFailed"]]];
    rules = Lookup[entry0, "symmetryRules", dsFastFallback["noSymmetryRules"]];
    If[dsFastFallbackQ[rules], Return[rules]];
@@ -1161,20 +1161,20 @@ DSGenerateIBP[seeds_, specs__List, OptionsPattern[]] := Module[
      ];
     workingEntries = If[
       Lookup[context["topology"], "ibpMode", "full"] === "timeOnly",
-      dsTimeOnlyDataToInternal020[entries, context],
+      dsTimeOnlyDataToInternal[entries, context],
       entries
       ];
     If[workingEntries === $Failed,
      Return[<|"status" -> "failed", "reason" -> "timeOnlyPublicInputRequired"|>]
      ];
-   sectorTopologyCache = sectorTopologyCache018[context["topology"], context["sectors"]];
+   sectorTopologyCache = buildSectorTopologyCache[context["topology"], context["sectors"]];
    If[Head[sectorTopologyCache] === Missing,
     dsErrorPrint["sector topology 缓存初始化失败。 Failed to initialize the sector-topology cache."];
     Return[<|"status" -> "failed", "reason" -> "sectorTopologyCacheFailed",
       "cacheFailure" -> sectorTopologyCache|>]
     ];
    postSamplingCanonicalRequiredQ =
-    sectorCachePostSamplingCanonicalRequiredQ018[sectorTopologyCache];
+    sectorCachePostSamplingCanonicalRequiredQ[sectorTopologyCache];
    targetRangeAssociation = Association[audit["rangeRules"]];
    envelopeBoxRules = targetRangeAssociation;
    derivedRangeAudits = dsDerivedSeedRangeAudit[#, targetRangeAssociation] & /@
@@ -1241,7 +1241,7 @@ DSGenerateIBP[seeds_, specs__List, OptionsPattern[]] := Module[
          paritySource = If[AssociationQ[entry], Lookup[entry, "sourceIntegral", Missing["NoSourceIntegral"]], Missing["NoSourceIntegral"]];
          paritySignature = If[
            AssociationQ[parityMetadata] && Head[paritySource] === J,
-           parityIntegralSignature018[parityMetadata, paritySource],
+           parityIntegralSignature[parityMetadata, paritySource],
            Missing["NoParitySignature"]
            ];
          parityCacheKey = HoldComplete[
@@ -1252,7 +1252,7 @@ DSGenerateIBP[seeds_, specs__List, OptionsPattern[]] := Module[
          entryPointRules = If[
            KeyExistsQ[parityPointRulesCache, parityCacheKey],
            parityPointRulesCache[parityCacheKey],
-           With[{filtered = dsParityFilteredPointRules018[entry, pointRules, context]},
+           With[{filtered = dsParityFilteredPointRules[entry, pointRules, context]},
             AssociateTo[parityPointRulesCache, parityCacheKey -> filtered];
             filtered
             ]
@@ -1261,14 +1261,14 @@ DSGenerateIBP[seeds_, specs__List, OptionsPattern[]] := Module[
           dsSeedTemplateEquation[entry],
           context["topology"]
           ];
-        canonicalTemplateEquation = sectorAwareCanonical018[
+        canonicalTemplateEquation = sectorAwareCanonical[
           templateEquation,
           context["topology"],
           sectorTopologyCache
           ];
         canonicalTemplateEquation = If[
           canonicalTemplateEquation === $Failed ||
-           ! dsInternalCoordinatePresentQ018[canonicalTemplateEquation],
+           ! dsInternalCoordinatePresentQ[canonicalTemplateEquation],
           canonicalTemplateEquation,
           dsLoopSeedExpressionToPublicCoordinates[
            canonicalTemplateEquation,
@@ -1373,14 +1373,14 @@ DSGenerateIBP[seeds_, specs__List, OptionsPattern[]] := Module[
          If[postSamplingCanonicalRequiredQ,
           (* general template 已完成 EOM 与 target-sector endpoint canonical；具体整数点
              只需补做可能依赖连续指标值的用户/tadpole symmetry。 *)
-          expression = sectorAwareSymmetry018[
+          expression = sectorAwareSymmetry[
             Expand[expression],
             context["topology"],
             sectorTopologyCache
             ];
            (* symmetry 可能重新引入内部 Gram 原子，因此在进入 linearData 前重投影。 *)
           expression = If[
-            expression === $Failed || ! dsInternalCoordinatePresentQ018[expression],
+            expression === $Failed || ! dsInternalCoordinatePresentQ[expression],
             expression,
             dsLoopSeedExpressionToPublicCoordinates[expression, context["topology"]]
              ]
@@ -1438,7 +1438,7 @@ DSGenerateIBP[seeds_, specs__List, OptionsPattern[]] := Module[
     ];
    parityCertificate = If[
      auditLevel === "full" || ! TrueQ[Lookup[integrity, "sealedQ", False]],
-     dsParityCertificate018[records, context],
+     dsParityCertificate[records, context],
      <|
       "status" -> "producerGuaranteed",
       "passQ" -> True,
@@ -1453,7 +1453,7 @@ DSGenerateIBP[seeds_, specs__List, OptionsPattern[]] := Module[
      ];
     publicRecords = If[
       Lookup[context["topology"], "ibpMode", "full"] === "timeOnly",
-      dsTimeOnlyDataToPublic020[records, context],
+      dsTimeOnlyDataToPublic[records, context],
       records
       ];
     If[publicRecords === $Failed,

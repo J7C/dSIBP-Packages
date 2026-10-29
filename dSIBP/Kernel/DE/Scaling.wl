@@ -21,7 +21,7 @@ DSScaleCheck::badspec = "标度 relation/variables/weights/degrees 不完整或�
 
 dsIntegralPhysicalPowers[int : J[aList_List, linePacks_List, _List], context_Association] := Module[
    {sectorTopo, activeVertices, aPowers, bPowers},
-   sectorTopo = sectorTopologyForIntegral018[context["topology"], int];
+   sectorTopo = sectorTopologyForIntegral[context["topology"], int];
    If[Head[sectorTopo] === Missing, Return[$Failed]];
    activeVertices = activeAVertexIds[sectorTopo];
    aPowers = MapThread[#1 + vertexZeroPoint[sectorTopo, #2] &, {aList, activeVertices}];
@@ -55,7 +55,7 @@ dsLoopTopologyDegree[
    rootTopo = context["topology"];
    internalInt = If[
      Lookup[rootTopo, "ibpMode", "full"] === "timeOnly",
-     dsTimeOnlyPublicIntegralToInternal020[int, rootTopo],
+     dsTimeOnlyPublicIntegralToInternal[int, rootTopo],
      int
      ];
    If[! MatchQ[internalInt, J[_List, _List, _List]], Return[$Failed]];
@@ -64,8 +64,8 @@ dsLoopTopologyDegree[
    If[powers === $Failed, Return[$Failed]];
    loopCount = Lookup[rootTopo, "graphLoopCount", Length[Lookup[rootTopo, "loopMomenta", {}]]];
    vertexCount = Length[powers["aPowers"]];
-   prefactorData = sectorPrefactorDataForIntegral018[rootTopo, internalInt];
-   prefactor = materializeSectorPrefactor018[prefactorData];
+   prefactorData = sectorPrefactorDataForIntegral[rootTopo, internalInt];
+   prefactor = materializeSectorPrefactor[prefactorData];
    If[prefactor === $Failed || TrueQ[prefactor === 0], Return[$Failed]];
    prefactorDegree = Together[
      Total[MapThread[#1 #2 D[prefactor, #2] &, {weights, variables}]]/prefactor
