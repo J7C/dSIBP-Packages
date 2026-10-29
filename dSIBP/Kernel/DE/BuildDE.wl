@@ -255,7 +255,7 @@ DSDE[reductionData_, variables_: Automatic, OptionsPattern[]] := (Message[DSDE::
 (* tree 原生导数直接作用于 Exp[I k0_v tau_v] 与 h building block。
    tree J 使用统一的 (-tau)^a convention：顶点相位导数给 -I D[k0_v,x] J[...,a_v+1,...]，
    massive line 的 |k| 导数把 state 翻转并抬 a+1（state0:+J[a+1,1]，
-   state1:-J[a+1,0]-(2nu+1)/|k| J[a,1]）；contact 合并不再另乘 (-1)^Delta a。
+   state1:-J[a+1,0]-(1-2 formulaNu)/|k| J[a,1]）；contact 合并不再另乘 (-1)^Delta a。
    sector master 的 normalization N 最后另按乘积法则求导。 *)
 
 Options[DSTreeNaiveDE] = {AuditLevel -> "standard", ProgressReporting -> Automatic};
@@ -282,13 +282,13 @@ dsTreeLineMomentumMagnitudeDerivative[int_J, variable_, family_Association] := M
       shiftedIntegral = J[newPacks];
       AppendTo[terms,
         (* z = |k|(-tau)：state0 给 m0'=m1，链式 (-tau) 抬 a+1，故 +J[a+1,state1]；
-           state1 给 m1'=-(2nu+1)m1/z-m0，其中 -m0 项抬 a+1 翻 state 给 -J[a+1,state0]，
-           -(2nu+1)m1/z 项 z 约掉 (-tau) 不抬幂，给 -(2nu+1)/|k| J[a,state1]。 *)
+           state1 给 m1'=-(1-2formulaNu)m1/z-m0，其中 -m0 项抬 a+1 翻 state 给 -J[a+1,state0]，
+           -(1-2formulaNu)m1/z 项 z 约掉 (-tau) 不抬幂，给 -(1-2formulaNu)/|k| J[a,state1]。 *)
         magnitudeDerivative If[
          state === 0,
          dsTreeToken[family["sector"], shiftedIntegral],
          -dsTreeToken[family["sector"], shiftedIntegral] -
-          (2 leg["nu"] + 1)/leg["momentumMagnitude"] dsTreeToken[family["sector"], int]
+          (1 - 2 dsLineFormulaNu[leg])/leg["momentumMagnitude"] dsTreeToken[family["sector"], int]
          ]
        ]
       ],

@@ -95,6 +95,9 @@ initOptions = {
    WriteInitializationFiles -> True,
    InitializationDirectory -> FileNameJoin[{exampleWorkspace, "init"}],
    GenerateDerivativeMetadata -> True,
+   (* 本例的 Kira 输入、结果摘要与 dlog 基准是 025 冻结基线；Negative 逐字节复现该口径。
+      新计算请用缺省 Positive 记法。 *)
+   NuConvention -> "Negative",
    (* 本闭环例会随输入配置刷新同目录 metadata；缺省仍为 False。 *)
    OverwriteInitialization -> True
    };

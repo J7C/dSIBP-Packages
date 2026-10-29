@@ -11,6 +11,7 @@ DSInit::badinput = "DSInit 无法解析当前 topology，或 ISP/动量坐标不
 DSInit::sectorincomplete = "无法完整初始化所有可由 contact 到达的 sector：`1`。请检查传播子端点和缩并规则后重新初始化。 Not all contact-reachable sectors could be initialized: `1`. Check propagator endpoints and contraction rules, then initialize again.";
 DSInit::initconflict = "初始化目录 `1` 已含不同输入哈希或未知文件；如确认覆盖，请显式设置 OverwriteInitialization -> True。 Initialization directory `1` contains a different input hash or unknown files. Set OverwriteInitialization -> True explicitly only if these files may be replaced.";
 DSInit::writefailed = "初始化 metadata 无法写入 `1`。请检查输出路径、路径长度和写入权限后重试。 Initialization metadata could not be written to `1`. Check the output path, path length, and write permission, then try again.";
+DSInit::badnuconvention = "NuConvention 只接受 \"Positive\" 或 \"Negative\"。 NuConvention accepts only \"Positive\" or \"Negative\".";
 DSInfo::noinit = "当前没有已注册的 DSInit context。请先成功调用 DSInit。 No DSInit context is currently registered. Run DSInit successfully first.";
 DSInfo::badcontext = "给定对象不是有效的 DSInit context。请传入 DSInit 成功返回的 context。 The supplied object is not a valid DSInit context. Pass a context returned by a successful DSInit call.";
 
@@ -77,6 +78,7 @@ DSScaleCheck::failed = "标度关系未通过。证书范围为 `1`，矩阵和�
 parseTopology::missingkeys = "topology 缺少必需字段：`1`。请按当前输入格式补齐这些字段。 The topology is missing required fields: `1`. Add these fields using the current input schema.";
 parseTopology::badinput = "topology 输入检查失败：`1`。请修正所列字段后重新初始化。 Topology input validation failed: `1`. Correct the listed fields and initialize again.";
 parseTopology::badfunction = "massive line 的函数系统无法编译：`1`。请检查 P、Q、T、W 和变量定义。 A massive-line function system could not be compiled: `1`. Check its P, Q, T, W, and variable definitions.";
+parseTopology::badnuconvention = "NuConvention 只接受 \"Positive\" 或 \"Negative\"，收到：`1`。 NuConvention accepts only \"Positive\" or \"Negative\", received: `1`.";
 makeLinePack::badtype = "line `2` 的内部状态无法识别：`1`。请重新生成同源 sector 数据，不要手工构造 line pack。 The internal state of line `2` is not recognized: `1`. Regenerate same-source sector data instead of constructing a line pack manually.";
 symmetry::badrules = "symmetryRules 必须是 Rule 或 RuleDelayed 的列表。请修正列表格式后重试。 symmetryRules must be a list of Rule or RuleDelayed expressions. Correct the list format and try again.";
 

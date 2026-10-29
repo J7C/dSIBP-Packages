@@ -56,7 +56,7 @@ treeVertexDLogData[vertex_Association] := Module[
       {row, Length[states]}
       ]];
    omegaEx = DiagonalMatrix[Table[
-     -Sum[states[[row, i]] (2 vertex["massiveLegs"][[i, "nu"]] + 1) Log[momentumMagnitudes[[i]]], {i, p}],
+     -Sum[states[[row, i]] (1 - 2 dsLineFormulaNu[vertex["massiveLegs"][[i]]]) Log[momentumMagnitudes[[i]]], {i, p}],
      {row, Length[states]}
      ]];
    tp = treeTp[vertex];

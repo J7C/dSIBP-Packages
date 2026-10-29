@@ -408,17 +408,22 @@ compileShrinkTerms[wt_, variable_, spec_Association] := Module[
    ];
 
 
+(* formulaNu = sNu nu 是 NuConvention 的带号 Hankel 阶：基准公式一律写在 +nu 形状上，
+   "Negative" 只是 formulaNu 换号，Hankel order 始终是输入 nu 原值。 *)
+dsLineFormulaNu[line_Association] := Lookup[line, "formulaNu", -Lookup[line, "nu", nu]];
+
+
 functionSystemPreset[preset_String, line_Association] := Module[
-   {variable = x, nuValue = Lookup[line, "nu", nu], prefactor},
+   {variable = x, nuValue = Lookup[line, "nu", nu], formulaNuValue = dsLineFormulaNu[line], prefactor},
    prefactor = (4 I/Pi) Exp[Pi Im[nuValue]];
    Switch[preset,
     "h",
     <|
      "preset" -> "h", "variable" -> variable,
-     "P" -> (2 nuValue + 1)/variable, "Q" -> 1,
+     "P" -> (1 - 2 formulaNuValue)/variable, "Q" -> 1,
      "T" -> IdentityMatrix[2],
-     "W" -> -prefactor variable^(-2 nuValue - 1), "WT" -> Automatic,
-     "shrinkBShift" -> 1, "shrinkZeroPointShift" -> 2 nuValue
+     "W" -> -prefactor variable^(2 formulaNuValue - 1), "WT" -> Automatic,
+     "shrinkBShift" -> 1, "shrinkZeroPointShift" -> -2 formulaNuValue
      |>,
     "H",
     <|
@@ -504,8 +509,9 @@ compileFunctionSystem[data_Association] /; KeyExistsQ[data, "endpoints"] := Modu
 
 
 (* 补齐每条线的默认 metadata。thetaConvention 固定为 mergedTwoTheta。
-   endpoints 是有序输入；对 masslessFull，第一端点定义单 n=1 的反对称方向。 *)
-completeLineMetadata[line_, vertexSignAssoc_] := Module[
+   endpoints 是有序输入；对 masslessFull，第一端点定义单 n=1 的反对称方向。
+   formulaNu 只在 massive 线上按 NuConvention 解析并冻结，下游一律读该字段。 *)
+completeLineMetadata[line_, vertexSignAssoc_, nuConvention_: "Positive"] := Module[
    {endpoints, referenceEndpoints, massType, skType, state, packType, metadata, functionSpec, compiled},
    endpoints = line["endpoints"];
    referenceEndpoints = endpoints;
@@ -525,6 +531,10 @@ completeLineMetadata[line_, vertexSignAssoc_] := Module[
      "masslessN1OppositeEndpoint" -> If[packType === "masslessFull", referenceEndpoints[[2]], Missing["NotApplicable"]]
       |>
      ];
+   If[massType === "massive",
+    metadata = Join[metadata, <|
+      "formulaNu" -> If[nuConvention === "Negative", -Lookup[line, "nu", nu], Lookup[line, "nu", nu]]|>]
+    ];
    If[massType =!= "massive", Return[metadata]];
    functionSpec = normalizeLineFunctionSystem[metadata];
    compiled = If[Head[functionSpec] === Missing,
@@ -543,6 +553,7 @@ completeLineMetadata[line_, vertexSignAssoc_] := Module[
 parseTopology::missingkeys = "case 缺少必需字段：`1`。";
 parseTopology::badinput = "case 输入 preflight 失败：`1`。";
 parseTopology::badfunction = "massive line 的函数系统编译失败：`1`。";
+parseTopology::badnuconvention = "NuConvention 只接受 \"Positive\" 或 \"Negative\"，收到：`1`。";
 
 
 parseTopology[case_Association] := Module[
@@ -556,7 +567,7 @@ parseTopology[case_Association] := Module[
     topologyMomentumAudit, graphAudit, routingAudit, declarationAudit, capabilities, ibpMode,
     rawLineMomenta, normalizedLineMomenta, referenceLoopMatrix, referenceLoopResiduals,
     loopMomentumInputToNormalizedRules,
-      topoContext},
+      nuConvention, topoContext},
    If[caseInputPreflightErrorQ[case],
     If[caseInputMissingRequiredKeysQ[case],
      Message[parseTopology::missingkeys, caseInputRequirementReport[case]["missingRequiredKeys"]],
@@ -564,12 +575,17 @@ parseTopology[case_Association] := Module[
      ];
     Return[$Failed]
     ];
+   nuConvention = Lookup[case, "nuConvention", "Positive"];
+   If[! MemberQ[{"Positive", "Negative"}, nuConvention],
+    Message[parseTopology::badnuconvention, ToString[nuConvention, InputForm]];
+    Return[$Failed]
+    ];
    vertices = normalizeVertex /@ case["vertices"];
    vertexIds = Lookup[vertices, "id"];
    vertexSignAssoc = AssociationThread[vertexIds -> Lookup[vertices, "vertexType"]];
    rootExternalLegEnergies = AssociationThread[vertexIds -> Lookup[vertices, "externalLegEnergy"]];
    rawLines = normalizeLine /@ case["lines"];
-   lines = completeLineMetadata[#, vertexSignAssoc] & /@ rawLines;
+   lines = completeLineMetadata[#, vertexSignAssoc, nuConvention] & /@ rawLines;
    badFunctionLines = Select[
      MapIndexed[Join[<|"lineIndex" -> First[#2], "lineId" -> Lookup[#1, "id", Missing["NoLineId"]]|>, Lookup[#1, "compiledFunctionSystem", <||>]] &, lines],
      KeyExistsQ[#, "status"] && #["status"] =!= "compiled" &
@@ -795,6 +811,7 @@ parseTopology[case_Association] := Module[
     "rootZeroPointRules" -> Lookup[case, "zeroPointRules", {}],
     "symmetryRules" -> Lookup[case, "symmetryRules", {}],
     "parityConstraints" -> Lookup[case, "parityConstraints", {}],
+    "nuConvention" -> nuConvention,
     "sectorVertexRepresentativeMap" -> AssociationThread[vertexIds -> vertexIds]
     |>
    ];
@@ -1447,8 +1464,11 @@ applyMassiveCoincidentCanonical[expr_, topo_Association] := Expand[
 
 applySeedCanonical[expr_, topo_Association] :=
   symmetry[
-   applyMasslessEndpointCanonical[
-    applyMassiveCoincidentCanonical[applyEOM[expr, topo], topo],
+   applyMasslessParallelFoldCanonical[
+    applyMasslessEndpointCanonical[
+     applyMassiveCoincidentCanonical[applyEOM[expr, topo], topo],
+     topo
+     ],
     topo
     ],
    topo
@@ -6084,14 +6104,14 @@ treePauliLift[p_Integer?Positive, slot_Integer, component_Integer] := treeTensor
    ];
 
 
-treeM1[vertex_Association, effectiveNu0_] := Module[{p, nus, identity},
+treeM1[vertex_Association, effectiveNu0_] := Module[{p, formulaNus, identity},
    p = vertex["p"];
-   nus = Lookup[vertex["massiveLegs"], "nu"];
+   formulaNus = dsLineFormulaNu /@ vertex["massiveLegs"];
    identity = IdentityMatrix[2^p];
    If[p === 0,
     effectiveNu0 identity,
-    Sum[(nus[[i]] + 1/2) treePauliLift[p, i, 3], {i, p}] +
-     (effectiveNu0 - p/2 - Total[nus]) identity
+    Sum[(1/2 - formulaNus[[i]]) treePauliLift[p, i, 3], {i, p}] +
+     (effectiveNu0 - p/2 + Total[formulaNus]) identity
     ]
    ];
 
@@ -6642,6 +6662,7 @@ makeTreeFamilyDataFromTopology[topoSpec_Association] := Module[
            {<|
              "id" -> {topo["lines"][[e, "id"]], slot},
              "nu" -> topo["lines"][[e, "nu"]],
+             "formulaNu" -> topo["lines"][[e, "formulaNu"]],
               "momentumMagnitude" -> lineMomentumMagnitude[topo, e]
              |>},
            {}
@@ -6834,7 +6855,7 @@ treeVertexDLogData[vertex_Association] := Module[
       {row, Length[states]}
       ]];
    omegaEx = DiagonalMatrix[Table[
-     -Sum[states[[row, i]] (2 vertex["massiveLegs"][[i, "nu"]] + 1) Log[momentumMagnitudes[[i]]], {i, p}],
+     -Sum[states[[row, i]] (1 - 2 dsLineFormulaNu[vertex["massiveLegs"][[i]]]) Log[momentumMagnitudes[[i]]], {i, p}],
       {row, Length[states]}
       ]];
    tp = treeTp[vertex];

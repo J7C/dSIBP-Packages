@@ -1066,10 +1066,11 @@ dsDEResolveVariables[variable_, _Association] := {variable};
 
 
 dsConventionMetadata[topo_Association] := <|
+   "nuConvention" -> Lookup[topo, "nuConvention", "Positive"],
    "vertices" -> topo["vertices"],
    "lineOrder" -> Lookup[topo["lines"], "id"],
    "lineConventions" -> Map[
-      KeyTake[#, {"id", "massType", "packType", "state", "skType", "thetaConvention", "functionSystem", "compiledFunctionSystem"}] &,
+      KeyTake[#, {"id", "massType", "packType", "state", "skType", "thetaConvention", "functionSystem", "compiledFunctionSystem", "formulaNu"}] &,
      topo["lines"]
      ],
    "zeroPointRules" -> topo["zeroPointRules"],

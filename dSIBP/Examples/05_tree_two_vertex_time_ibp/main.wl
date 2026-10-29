@@ -118,7 +118,8 @@ treeReduction = repIterative[treeTarget, treeReductionEndpoint, treeContext];
    对同一批一步升幂对象必须逐项相等。二者是同一套 tree 约化规则的两个消费者，本检查
    捕获的是两个消费路径的实现分叉，不是整体符号约定。
    注意：它无法钉住符号约定本身——若两条路径共享同一符号错误，本检查仍会通过。
-   符号约定的绝对锚在 check_tree_normalization_closure（对角块 -(2 nu+1)/sE1）与
+   符号约定的绝对锚在 check_tree_normalization_closure（缺省 Positive 记法下对角块
+   -(1-2 nu1)/sE1）与
    independent-benchmark 对 arXiv:2411.03088 两顶点 DE 的数值复核（含 off-diagonal
    top-to-child col5）里，不在本 example。 *)
 treeRouteAgreement = And @@ Table[

@@ -525,7 +525,7 @@ makeSectorMetadata[topo_Association] := Module[
         ],
      "sectorPrefactorData" -> sectorPrefactorData018[topo],
      "builtInRelationData" -> If[Length[DownValues[masslessBuiltInRelationData018]] > 0,
-       masslessBuiltInRelationData018[topo],
+       Join[masslessBuiltInRelationData018[topo], masslessParallelFoldRelationData[topo]],
        {}
        ],
      "parityData" -> parityData,

@@ -82,6 +82,7 @@ caseInput = <|
 
 context = DSInit[
    caseInput,
+   NuConvention -> "Negative",(* 与 main.wl 一致：本例基准冻结在 025 记法。 *)
    WriteInitializationFiles -> False,
    GenerateDerivativeMetadata -> False,
    OverwriteInitialization -> False

@@ -176,6 +176,12 @@ A massive building block is described by a $2\times2$ first-order system. Its de
 matrix and Wronskian determine, respectively, derivative shifts and contact-shrink shifts.
 These two data channels are not interchangeable.
 
+The \texttt{DSInit} option \texttt{NuConvention} selects the writing of every baseline
+formula that involves \texttt{nu}. The default \texttt{NuConvention->"Positive"} uses the
+input Hankel order as supplied; \texttt{NuConvention->"Negative"} flips its sign per massive
+line and byte-reproduces the baseline equations of earlier releases. The setting is frozen
+per line at initialization, and no later command accepts a convention option.
+
 After a generator acts, any Hankel state of second order or higher is immediately reduced
 by the equation of motion. This happens before linear-system construction, so no symbolic
 $n\geq2$ state is passed to a backend. Contact shifts use the compiled Laurent coefficients
@@ -196,6 +202,14 @@ An odd subset of lines in a shared bundle determines the contact transition. Its
 and target-sector mapping are evaluated once, and duplicate transitions are removed by source,
 target, and selected-line identity. Massless fixed lines do not acquire a fictitious loop
 parity constraint.
+
+Parallel massless full lines joining the same vertex pair are additionally folded by a
+built-in canonical layer. In the original per-line index representation the product kernel of
+such a bundle depends only on the total parity $\sum_en_e\bmod 2$ of the endpoint states, so
+every member is mapped to the representative in which the first line in line order carries
+that parity and all remaining lines are zero; a member whose endpoint order is reversed
+contributes $(-1)^{n_e}$ per line. The fold sits after the single-line quotient and before
+symmetry in the canonical chain.
 
 The direct pure-time/tree path uses the same physical contact data but presents them in a
 sector-tagged public representation. Formula-based tree reduction is available only for
@@ -246,7 +260,8 @@ integrand for inspection; it does not integrate or generate a relation.
 
 \texttt{DSSeeds} enumerates the independent discrete templates before continuous sampling.
 Massive vertices use the four $0/1$ states; massless quotients use their proved canonical
-representatives. EOM, symmetry, and sector canonicalization are applied while continuous
+representatives, with parallel bundles folded to the first-line parity form. EOM, symmetry,
+and sector canonicalization are applied while continuous
 indices remain symbolic.
 
 \texttt{DSAllSeeds} returns the flat template list, while \texttt{DSSeedGroups} and

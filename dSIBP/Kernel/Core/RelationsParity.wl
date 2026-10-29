@@ -1,6 +1,7 @@
 (* ::Package:: *)
-(* 本模块统一 massless 双端点 relation、sector-aware canonical/求导和 parity seed 域。
-   parity 只筛选待作用生成元的 seed 点；生成后证书只报告错误，绝不把积分替换为零。 *)
+(* 本模块统一 massless 双端点 relation（单线商 + 共顶点对平行线 theta-fold）、
+   sector-aware canonical/求导和 parity seed 域。parity 只筛选待作用生成元的 seed 点；
+   生成后证书只报告错误，绝不把积分替换为零。 *)
 
 (* ::Chapter:: *)
 (*Massless 双端点 quotient*)
@@ -51,6 +52,103 @@ masslessCoincidentAntisymmetricIntegralQ[
 applyMasslessEndpointCanonical[expr_, topo_Association] := Module[{quotient},
    quotient = Expand[expr /. int_J :> canonicalizeMasslessIntegral018[topo, int]];
    Expand[quotient /. (int_J /; masslessCoincidentAntisymmetricIntegralQ[topo, int]) :> 0]
+   ];
+
+
+(* ::Section:: *)
+(*Massless 平行传播子 theta-fold*)
+
+(* 共用同一对原始顶点的 masslessFull 线构成一个 bundle（按线指标升序）。
+   fold 弱等式：J[...,{b_e,n_e,0},...] 相等当且仅当 Sum[n_e] mod 2 相等；
+   canonical 代表取首线带奇偶位、其余全零。 *)
+
+
+masslessParallelFoldBundles[topo_Association] := Module[{masslessFullLines, grouped},
+   masslessFullLines = Select[Range[Length[topo["lines"]]], masslessFullLineQ018[topo["lines"][[#]]] &];
+   grouped = GroupBy[masslessFullLines, vertexPairBundleKey[topo["lines"][[#]]] &];
+   Select[Values[grouped], Length[#] > 1 &]
+   ];
+
+
+(* 单个积分上的 fold 规范化。前置条件：整组成员的 active pack 均为 masslessFull
+   且状态落在 {0,1}x{0} 整数规范域；否则跳过该 bundle。
+   系数来源只有端点反向成员的交换宇称：F_e[n,0](x2,x1) = (-1)^n F_e[n,0](x1,x2)，
+   fold 本身（奇偶位在线间搬移）按内置关系不产生符号。 *)
+
+
+canonicalizeMasslessParallelFold018[
+   topo_Association,
+   int : J[aList_, linePacks_, ispList_]
+   ] := Module[
+   {bundles, newPacks = linePacks, coefficient = 1, positionsTable, states, n1s, parity,
+     firstLine, firstEndpoints, member, memberEndpoints, k},
+   bundles = masslessParallelFoldBundles[topo];
+   Do[
+    positionsTable = Table[linePackNPositions[topo["lines"][[bundle[[k]]]], "masslessFull"], {k, Length[bundle]}];
+    If[! AllTrue[Range[Length[bundle]],
+       Function[k,
+        actualLinePackType[topo, bundle[[k]], linePacks[[bundle[[k]]]]] === "masslessFull" &&
+         And @@ (IntegerQ /@ linePacks[[bundle[[k]], positionsTable[[k]]]]) &&
+         MemberQ[{0, 1}, linePacks[[bundle[[k]], positionsTable[[k, 1]]]]] &&
+         linePacks[[bundle[[k]], positionsTable[[k, 2]]]] === 0
+        ]
+       ],
+      Continue[]
+      ];
+    states = Table[linePacks[[bundle[[k]], positionsTable[[k]]]], {k, Length[bundle]}];
+    n1s = states[[All, 1]];
+    If[Total[n1s] === 0, Continue[]];
+    parity = Mod[Total[n1s], 2];
+    firstLine = First[bundle];
+    firstEndpoints = Lookup[topo["lines"][[firstLine]], "originalEndpoints", topo["lines"][[firstLine, "endpoints"]]];
+    Do[
+     If[n1s[[k]] === 1,
+      member = bundle[[k]];
+      newPacks[[member, positionsTable[[k, 1]]]] = 0;
+      memberEndpoints = Lookup[topo["lines"][[member]], "originalEndpoints", topo["lines"][[member, "endpoints"]]];
+      If[memberEndpoints === Reverse[firstEndpoints] && memberEndpoints =!= firstEndpoints,
+       coefficient = -coefficient
+       ]
+      ],
+     {k, 2, Length[bundle]}
+     ];
+    newPacks[[firstLine, positionsTable[[1, 1]]]] = parity,
+    {bundle, bundles}
+    ];
+   coefficient J[aList, newPacks, ispList]
+   ];
+
+
+applyMasslessParallelFoldCanonical[expr_, topo_Association] := Expand[
+   expr /. int_J :> canonicalizeMasslessParallelFold018[topo, int]
+   ];
+
+
+(* fold 关系按原指标逐对登记：奇偶位搬移不产生符号，反向端点成员另带交换宇称说明。
+   relations 呈现的是同向端点约定下的形式；重定向符号由 canonicalizer 在积分层面给出。 *)
+
+
+masslessParallelFoldRelationData[topo_Association] := Map[
+   Function[bundle,
+    With[{ids = Table[topo["lines"][[bundle[[k]], "id"]], {k, Length[bundle]}]},
+     With[{id1 = ids[[1]], id2 = ids[[2]]},
+      <|
+       "vertexPair" -> vertexPairBundleKey[topo["lines"][[First[bundle]]]],
+       "lineIndices" -> bundle,
+       "lineIds" -> ids,
+       "relations" -> Join[
+         Table[
+          With[{idk = ids[[k]]},
+           HoldForm[F[id1, 1, 0] F[idk, 0, 0] == F[id1, 0, 0] F[idk, 1, 0]]],
+          {k, 2, Length[bundle]}],
+         {HoldForm[F[id1, 1, 0] F[id2, 1, 0] == F[id1, 0, 0] F[id2, 0, 0]]}
+         ],
+       "canonicalDirection" -> "parityToFirstLine"
+       |>
+      ]
+     ]
+    ],
+   masslessParallelFoldBundles[topo]
    ];
 
 
@@ -527,10 +625,13 @@ applySeedCanonicalWithRules018[
    topo_Association,
    symmetryRules_List
    ] := Expand[
-   applyMasslessEndpointCanonical[
+   applyMasslessParallelFoldCanonical[
+     applyMasslessEndpointCanonical[
       applyMassiveCoincidentCanonical[applyEOM[expr, topo], topo],
       topo
-      ] /. symmetryRules
+      ],
+     topo
+     ] /. symmetryRules
    ];
 
 

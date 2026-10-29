@@ -10,13 +10,15 @@ Options[DSInit] = {
    OverwriteInitialization -> False,
    RegisterAsCurrent -> True,
    ProgressReporting -> Automatic,
-   KinematicRules -> Automatic
+   KinematicRules -> Automatic,
+   NuConvention -> "Positive"
    };
 
 DSInit::badinput = "DSInit 输入不是有效的 topology Association，或 ISP/动量坐标不闭合。";
 DSInit::sectorincomplete = "无法完整初始化 contact-reachable sectors：`1`。";
 DSInit::initconflict = "初始化目录 `1` 已含不同输入哈希或未知文件；如确认覆盖，请显式设置 OverwriteInitialization -> True。";
 DSInit::writefailed = "初始化 metadata 写入失败：`1`。";
+DSInit::badnuconvention = "NuConvention 只接受 \"Positive\" 或 \"Negative\"。";
 DSInfo::noinit = "当前没有已注册的 DSInit context。";
 DSInfo::badcontext = "给定对象不是有效的 DSInit context。";
 
@@ -226,17 +228,19 @@ dsProvablyIntegerQ[value_] := Module[{simplified = Quiet[FullSimplify[value]]},
    ];
 
 
-(* h/H 的两支领头幂次来自固定局部解；state=1 表示对函数自变量求一次导数。 *)
+(* h/H 的两支领头幂次来自固定局部解；state=1 表示对函数自变量求一次导数。
+   h 行按 formulaNu（+nu 基准形状）书写，Negative 下自动回到旧口径。 *)
 dsKnownSmallTLeadingPowerTable[line_Association] := Module[
-   {compiled, variable, p, q, nuValue, mode},
+   {compiled, variable, p, q, nuValue, formulaNuValue, mode},
    compiled = Lookup[line, "compiledFunctionSystem", <||>];
    variable = Lookup[compiled, "variable", Missing["Variable"]];
    p = Lookup[compiled, "P", Missing["P"]];
    q = Lookup[compiled, "Q", Missing["Q"]];
    nuValue = Lookup[line, "nu", nu];
+   formulaNuValue = dsLineFormulaNu[line];
    mode = Which[
      Head[variable] =!= Missing &&
-       functionSystemZeroQ[p - (2 nuValue + 1)/variable] &&
+       functionSystemZeroQ[p - (1 - 2 formulaNuValue)/variable] &&
        functionSystemZeroQ[q - 1],
        "h",
      Head[variable] =!= Missing &&
@@ -247,7 +251,7 @@ dsKnownSmallTLeadingPowerTable[line_Association] := Module[
        Missing["UnsupportedSmallTFunctionSystem"]
      ];
    Switch[mode,
-    "h", <|0 -> Simplify /@ {-2 nuValue, 0}, 1 -> Simplify /@ {-2 nuValue - 1, 1}|>,
+    "h", <|0 -> Simplify /@ {2 formulaNuValue, 0}, 1 -> Simplify /@ {2 formulaNuValue - 1, 1}|>,
     "H", <|0 -> Simplify /@ {-nuValue, nuValue}, 1 -> Simplify /@ {-nuValue - 1, nuValue - 1}|>,
     _, mode
     ]
@@ -395,11 +399,21 @@ DSInit[input_Association, OptionsPattern[]] := Module[
      inputHash, initDirectory, writeResult = <|"status" -> "notRequested"|>, warnings, errors,
      effectiveInput, kinematicAudit, declarationAudit, guide, guideText, parityDataList,
      parityRequestedQ, parityUsableQ, parityFailures, timeIBPDomainCertificate},
-   effectiveInput = If[
-     OptionValue[KinematicRules] === Automatic,
-     input,
-     Join[input, <|"kinematicRules" -> OptionValue[KinematicRules]|>]
-     ];
+   If[! MemberQ[{"Positive", "Negative"}, Quiet[OptionValue[NuConvention]]],
+    Message[DSInit::badnuconvention];
+    dsErrorPrint["NuConvention 只接受 \"Positive\" 或 \"Negative\"，收到：" <>
+      ToString[OptionValue[NuConvention], InputForm] <>
+      ". NuConvention accepts only \"Positive\" or \"Negative\", received: " <>
+      ToString[OptionValue[NuConvention], InputForm]];
+    Return[dsFailedInitializationData[
+      "invalidNuConvention",
+      <|"nuConvention" -> OptionValue[NuConvention]|>
+      ]]
+    ];
+   effectiveInput = Join[input, <|"nuConvention" -> OptionValue[NuConvention]|>];
+   If[OptionValue[KinematicRules] =!= Automatic,
+    effectiveInput = Join[effectiveInput, <|"kinematicRules" -> OptionValue[KinematicRules]|>]
+    ];
    inputHash = dsInputHash[effectiveInput];
    topologyData = dsStageRun[
      "初始化 topology、ISP 与完整 sector metadata / Initializing topology, ISP, and complete sector metadata",
