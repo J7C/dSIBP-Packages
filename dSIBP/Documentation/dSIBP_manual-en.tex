@@ -229,6 +229,22 @@ sums the provided constraints and the resulting subsystem may leave the original
 one; several parity subsystems may be selected simultaneously, and propagators without a
 parity selection are sampled over all parities.
 
+A massless full line whose two endpoints coincide is converted to the contracted single-slot
+pack $\{b_{S,e}\}$, sharing all bookkeeping with shrunk lines. This covers lines declared with
+equal \texttt{endpoints} and lines that become coincident when a contact merges their vertices.
+At $\Delta=0$ the kernel blocks take $M_0=2\theta(0)=1$ and $M_1=0$, so the undifferentiated
+block is the constant $1$, antisymmetric states vanish identically, and only the residual
+momentum-magnitude power survives. Declared self-loops convert at initialization with
+$b_{S0,e}=b_{0e}$ and no endpoint-state labels; the root graph audit still counts them as
+active cycle lines, since the residual $b$ power carries the line's own loop momentum. In
+sector construction, coincident survivors join the contracted set of the sector, and distinct
+contact routes that reach the same contracted set define a single sector entry, while contact
+routing still follows each individual selection. Odd-state integrals are zeroed in the massless
+endpoint canonicalization against the source topology, and even-state contact packs
+$\{b,0,0\}$ convert to the single slot automatically. A massive self-loop is not converted: it
+keeps its three-slot pack and the built-in reversal rule, and converted single-slot self-loops
+still enter the odd-ISP zeroing of that rule.
+
 The direct pure-time/tree path uses the same physical contact data but presents them in a
 sector-tagged public representation. Formula-based tree reduction is available only for
 massive-only quotients whose derivation has been certified. In all other cases, the package

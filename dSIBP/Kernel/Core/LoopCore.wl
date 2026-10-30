@@ -510,14 +510,16 @@ compileFunctionSystem[data_Association] /; KeyExistsQ[data, "endpoints"] := Modu
 
 (* 补齐每条线的默认 metadata。thetaConvention 固定为 mergedTwoTheta。
    endpoints 是有序输入；对 masslessFull，第一端点定义单 n=1 的反对称方向。
-   formulaNu 只在 massive 线上按 NuConvention 解析并冻结，下游一律读该字段。 *)
+   formulaNu 只在 massive 线上按 NuConvention 解析并冻结，下游一律读该字段。
+   声明式 massless 自环在初始化即转 contracted（shrunk）单槽：等时 massless
+   传播子只剩 J_e=1，n 态恒为零，公开 pack 直接写成 {bS_e}，不再靠撒点置零。 *)
 completeLineMetadata[line_, vertexSignAssoc_, nuConvention_: "Positive"] := Module[
    {endpoints, referenceEndpoints, massType, skType, state, packType, metadata, functionSpec, compiled},
    endpoints = line["endpoints"];
    referenceEndpoints = endpoints;
    massType = line["massType"];
    skType = inferSKType[endpoints, vertexSignAssoc];
-   state = "full";
+   state = If[massType === "massless" && SameQ @@ endpoints, "shrunk", "full"];
    packType = inferPackType[massType, skType, state];
    metadata = Join[
      line,
@@ -807,7 +809,15 @@ parseTopology[case_Association] := Module[
     "loopCoeffMatrix" -> loopCoeffMatrix,
     "externalCoeffMatrix" -> externalCoeffMatrix,
     "externalPartList" -> externalPartList,
-    "zeroPointRules" -> Lookup[case, "zeroPointRules", {}],
+    "zeroPointRules" -> Join[
+     Lookup[case, "zeroPointRules", {}],
+     (* 初始化即转 contracted 的声明式 massless 自环把 b0 声明随槽改写为 bS0；
+        massless 收缩零点移位为零，故 bS0 原样继承 b0 声明值。 *)
+     If[Lookup[#, "packType", ""] === "shrunk" && Lookup[#, "state", "full"] === "shrunk" && lineIndexedPowerQ[#],
+       bS0[#["id"]] -> zeroPointRuleValueFromRules[Lookup[case, "zeroPointRules", {}], b0[#["id"]], 0],
+       Nothing
+       ] & /@ lines
+     ],
     "rootZeroPointRules" -> Lookup[case, "zeroPointRules", {}],
     "symmetryRules" -> Lookup[case, "symmetryRules", {}],
     "parityConstraints" -> Lookup[case, "parityConstraints", {}],
@@ -1405,35 +1415,9 @@ integralTargetVertexRepresentativeMap[
    ];
 
 
-(* J 中的 shrunk packs 决定目标 sector；不能只读取 source topology 的当前 endpoints。 *)
-masslessCoincidentAntisymmetricIntegralQ[
-   topo_Association,
-   int : J[aList_, linePacks_, ispList_]
-   ] := Module[
-   {lines = topo["lines"], repMap},
-   repMap = integralTargetVertexRepresentativeMap[topo, int];
-   AnyTrue[
-    Range[Length[lines]],
-    Function[e,
-     Module[{originalEndpoints, targetEndpoints},
-      originalEndpoints = Lookup[
-        lines[[e]],
-        "originalEndpoints",
-        lines[[e]]["endpoints"]
-        ];
-      targetEndpoints = Lookup[repMap, originalEndpoints];
-      actualLinePackType[topo, e, linePacks[[e]]] === "masslessFull" &&
-       SameQ @@ targetEndpoints &&
-       linePacks[[e, First[linePackNPositions[lines[[e]], "masslessFull"]]]] === 1
-      ]
-     ]
-    ]
-   ];
-
-
-applyMasslessEndpointCanonical[expr_, topo_Association] := Expand[
-   expr /. (int_J /; masslessCoincidentAntisymmetricIntegralQ[topo, int]) :> 0
-   ];
+(* massless 重合零化/单槽转换的权威实现在 RelationsParity.wl
+   （masslessCoincidentAntisymmetricIntegralQ / applyMasslessEndpointCanonical /
+   applyCoincidentMasslessPackConversion），本文件不再保留遮蔽副本。 *)
 
 
 canonicalizeMassiveCoincidentIntegral[
@@ -1464,9 +1448,12 @@ applyMassiveCoincidentCanonical[expr_, topo_Association] := Expand[
 
 applySeedCanonical[expr_, topo_Association] :=
   symmetry[
-   applyMasslessParallelFoldCanonical[
-    applyMasslessEndpointCanonical[
-     applyMassiveCoincidentCanonical[applyEOM[expr, topo], topo],
+   applyCoincidentMasslessPackConversion[
+    applyMasslessParallelFoldCanonical[
+     applyMasslessEndpointCanonical[
+      applyMassiveCoincidentCanonical[applyEOM[expr, topo], topo],
+      topo
+      ],
      topo
      ],
     topo
@@ -1592,9 +1579,11 @@ tadpoleISPParity[topo_Association, loopIndex_Integer, ispIndex_Integer] := Modul
 
 
 tadpoleOddISPIntegralQ[topo_Association, J[_, _, ispList_]] := Module[{loopData, oddPowers},
+   (* shrunk（含初始化转换的 massless 自环）单槽不含态函数，但 loop-reversal
+      对 ISP 奇幂的零化同样成立，必须与 full 态 tadpole 一起参与筛选。 *)
    loopData = Select[
      tadpoleLoopReversalData[topo],
-     MemberQ[{"massiveFull", "masslessFull"}, #["packType"]] && TrueQ[#["exclusiveLoopQ"]] &
+     MemberQ[{"massiveFull", "masslessFull", "shrunk"}, #["packType"]] && TrueQ[#["exclusiveLoopQ"]] &
      ];
    AnyTrue[
     loopData,
@@ -1618,12 +1607,6 @@ tadpoleMassiveSwapNeededQ[topo_Association, lineIndex_Integer, J[_, linePacks_, 
     linePacks[[lineIndex, linePackNPositions[topo["lines"][[lineIndex]], "massiveFull"]]] === {1, 0};
 
 
-tadpoleMasslessZeroQ[topo_Association, lineIndex_Integer, J[_, linePacks_, _]] :=
-  lineIndex <= Length[linePacks] &&
-    Lookup[topo["lines"][[lineIndex]], "packType", Missing["packType"]] === "masslessFull" &&
-    linePacks[[lineIndex, First[linePackNPositions[topo["lines"][[lineIndex]], "masslessFull"]]]] === 1;
-
-
 tadpoleSwapLinePack[topo_Association, J[aList_, linePacks_, ispList_], lineIndex_Integer] := Module[
    {newPacks = linePacks, nPositions},
    nPositions = linePackNPositions[topo["lines"][[lineIndex]], "massiveFull"];
@@ -1644,12 +1627,6 @@ tadpoleSymmetryRules0[topo_Association] := Module[{data, rules = {}},
       AppendTo[rules,
        HoldPattern[(int_J /; tadpoleMassiveSwapNeededQ[topo, lineIndex, int])] :>
         tadpoleSwapLinePack[topo, int, lineIndex]
-       ]
-      ],
-     "masslessFull",
-     With[{lineIndex = dataItem["lineIndex"]},
-      AppendTo[rules,
-       HoldPattern[(int_J /; tadpoleMasslessZeroQ[topo, lineIndex, int])] :> 0
        ]
       ],
      _, Null
@@ -3491,16 +3468,30 @@ remapExternalLegEnergiesToRepresentatives[sectorEnergies_, repMap_Association] :
 
 
 shrinkSectorTopology[topo_Association, shrunkLines_List] := Module[
-   {pairs, repMap, activeVertices, fixedA, newLines, newExtLegs, newZeroPointRules,
-    newBMatrix, newVertexLines, sectorTopo},
-   pairs = topo["lines"][[#, "endpoints"]] & /@ shrunkLines;
+   {foldedShrunkLines, pairs, repMap, activeVertices, fixedA, newLines, newExtLegs, newZeroPointRules,
+    newBMatrix, newVertexLines, sectorTopo, initialRepMap, coincidentMasslessLines},
+   initialRepMap = vertexRepresentativeMap[
+      topo["vertexIds"],
+      topo["lines"][[#, "endpoints"]] & /@ shrunkLines
+      ];
+   (* 未被选中但在顶点合并后两端重合的 masslessFull 线一并转 contracted 单槽：
+      等时值 J_e=1、零点移位为零，与收缩线共用全部 bookkeeping（含 sector key）。
+      massiveFull 幸存线保持三槽加 swap 规则，不在此列。 *)
+   coincidentMasslessLines = Select[
+     Complement[Range[topo["nE"]], shrunkLines],
+     topo["lines"][[#, "packType"]] === "masslessFull" &&
+       SameQ @@ Lookup[initialRepMap, topo["lines"][[#, "endpoints"]]] &
+     ];
+   (* shrunkLines 是模式参数不能重赋值；折叠结果进 Module 局部量后统一使用。 *)
+   foldedShrunkLines = Sort @ Union[shrunkLines, coincidentMasslessLines];
+   pairs = topo["lines"][[#, "endpoints"]] & /@ foldedShrunkLines;
    repMap = vertexRepresentativeMap[topo["vertexIds"], pairs];
    activeVertices = DeleteDuplicates[Lookup[repMap, topo["vertexIds"]]];
    fixedA = Association[Thread[Complement[topo["vertexIds"], activeVertices] -> 0]];
    newLines = MapIndexed[
      Module[{line = #1, e = First[#2], endpoints},
        endpoints = Lookup[repMap, line["endpoints"]];
-       If[MemberQ[shrunkLines, e],
+       If[MemberQ[foldedShrunkLines, e],
         Join[line, <|"originalEndpoints" -> Lookup[line, "originalEndpoints", line["endpoints"]], "endpoints" -> endpoints, "state" -> "shrunk", "packType" -> "shrunk"|>],
         Join[line, <|"originalEndpoints" -> Lookup[line, "originalEndpoints", line["endpoints"]], "endpoints" -> endpoints|>]
         ]
@@ -3508,7 +3499,7 @@ shrinkSectorTopology[topo_Association, shrunkLines_List] := Module[
      topo["lines"]
      ];
    newExtLegs = remapExtLegsToRepresentatives[topo["extLegs"], repMap];
-   newZeroPointRules = sectorZeroPointRules[topo, shrunkLines, repMap, activeVertices];
+   newZeroPointRules = sectorZeroPointRules[topo, foldedShrunkLines, repMap, activeVertices];
    newBMatrix = Table[
      Which[
       newLines[[e, "endpoints", 1]] === topo["vertexIds"][[v]], 1,
@@ -3524,7 +3515,7 @@ shrinkSectorTopology[topo_Association, shrunkLines_List] := Module[
    (* sector 只消费已解析 root topology，并更新 contact 真正改变的内部字段。
       不重新构造用户 case，也不再次调用公开 parser。 *)
    sectorTopo = Join[topo, <|
-     "name" -> topo["name"] <> "_sector_" <> StringRiffle["e" <> ToString[#] & /@ shrunkLines, "_"],
+     "name" -> topo["name"] <> "_sector_" <> StringRiffle["e" <> ToString[#] & /@ foldedShrunkLines, "_"],
      "lines" -> newLines,
      "extLegs" -> newExtLegs,
      "sectorExternalLegEnergyByVertex" -> remapExternalLegEnergiesToRepresentatives[
@@ -3538,7 +3529,7 @@ shrinkSectorTopology[topo_Association, shrunkLines_List] := Module[
      "sectorVertexRepresentativeMap" -> repMap,
      "activeVertexIds" -> activeVertices,
      "fixedAVertexValues" -> fixedA,
-     "sectorShrunkLines" -> shrunkLines
+     "sectorShrunkLines" -> foldedShrunkLines
      |>];
    Join[sectorTopo, <|
     "sectorMetadata" -> makeSectorMetadata[sectorTopo],
@@ -3552,6 +3543,15 @@ massiveFullLineIndices[topo_Association] := Flatten@Position[Lookup[topo["lines"
 
 
 masslessFullLineIndices[topo_Association] := Flatten@Position[Lookup[topo["lines"], "packType"], "masslessFull"];
+
+
+(* 接触枚举按选择子集推进；coincident 折叠会让不同选择落到同一 shrunk 集（如纯
+   massless 多线 bubble 的 {e1}/{e2} 都折叠成全集）。sector 清单必须按折叠后的
+   sectorShrunkLines 去重，接触项路由仍按各自选择进行。 *)
+shrinkSectorTopologiesForSubsets[topo_Association, subsets_List] := DeleteDuplicatesBy[
+   shrinkSectorTopology[topo, #] & /@ subsets,
+   Lookup[#, "sectorShrunkLines"] &
+   ];
 
 
 thetaFullLineIndices[topo_Association] := Sort @ Join[
@@ -3960,7 +3960,7 @@ makeTopologyData[case_Association, OptionsPattern[]] := Module[
      <|"status" -> "skipped", "subsets" -> {}, "completeCoverageQ" -> False|>
      ];
    sectorTopos = If[Lookup[subsetData, "status", "skipped"] === "generated",
-     shrinkSectorTopology[topo, #] & /@ Lookup[subsetData, "subsets", {}],
+     shrinkSectorTopologiesForSubsets[topo, Lookup[subsetData, "subsets", {}]],
      {}
      ];
    sectorMetadataList = Join[{topMetadata}, Lookup[#, "sectorMetadata", makeSectorMetadata[#]] & /@ sectorTopos];
@@ -6696,7 +6696,7 @@ makeTreeSectorFamilies[topoSpec_Association] := Module[{topo, subsets, sectorTop
    topo = normalizeTopologySpec[topoSpec];
    If[topo === $Failed, Return[$Failed]];
    subsets = contactReachableShrinkSubsets[topo];
-   sectorTopos = Join[{topo}, shrinkSectorTopology[topo, #] & /@ subsets];
+   sectorTopos = Join[{topo}, shrinkSectorTopologiesForSubsets[topo, subsets]];
    families = makeTreeFamilyDataFromTopology /@ sectorTopos;
    If[MemberQ[families, $Failed], Return[$Failed]];
    <|

@@ -729,6 +729,26 @@ EOM $\to$ massive coincident $\to$ massless 单线商 $\to$ 平行 fold $\to$ sy
 \end{equation}
 撒点只枚举代表线（编号最小者）的奇偶位 $\{0,1\}$，其余成员奇偶位固定为 $0$；\texttt{DSInit} 以红字中英双语提示哪些束被合并、各束合并后的总奇偶目标，然后继续，不拒绝、不停下。用户只约束部分成员时按同一规则对已提供的约束求和，得到的子系统可能超出原选奇偶子系统；同时选用多个奇偶子系统没有限制，未选奇偶的传播子按全部奇偶撒点。
 
+\subsection{Massless 自环的 contracted 表示转换}
+\label{manualMasslessTadpole}
+
+两端点重合的 masslessFull 传播子一律转为 contracted 单槽表示，与 shrink 线共用全部
+bookkeeping。来源有两种：输入直接声明 \texttt{endpoints} 相同的自环，或接触缩并合并
+顶点后两端重合的幸存 masslessFull 线。物理原因在 $\Delta=0$ 处：两个块取
+$M_0=2\theta(0)=1$、$M_1=0$，未微分块是常数 $1$、反对称态恒为零，只剩残存动量模长幂。
+
+声明式自环在初始化即转换：\texttt{state/packType} 置 \texttt{"shrunk"}，pack 为
+\texttt{\{bS\}}，零点 \texttt{bS0} 直接继承 \texttt{b0}（无 massless 移位），不保留 $n$
+离散变量；root 图审计仍把它计为 cycle 活动线（残存 $b$ 幂携带该线自带动量），loop 计数
+与 routing 审计不受影响。收缩产生的重合线在 sector 构建时折入该 sector 的收缩集
+（\texttt{sectorShrunkLines} 取并集）；不同收缩选择折叠到同一收缩集时，sector 清单按折叠
+结果去重（例如纯 massless 双线 bubble 的 $\{e_1\}$ 与 $\{e_2\}$ 都折叠成全集），接触项
+路由仍按各自选择进行。奇态积分在 massless endpoint canonical（按 source topology）处
+归零；偶态接触项 pack \texttt{\{b,0,0\}} 自动转单槽。
+
+massive 自环不在此列：保持三槽 pack 与内置规范化规则，见``用户对称性规则''一节；
+转换后的单槽自环仍参与 loop-reversal 的奇 ISP 归零筛选。
+
 \section{Topology、标量积、ISP 与外腿能量}
 
 \subsection{输入骨架}
@@ -981,7 +1001,7 @@ repSymmetry0[topo_]
 effectiveSymmetryRules0[topo_]
 symmetry[expr_,topo_]
 \end{verbatim}
-\texttt{repSymmetry0} 只返回用户原始规则；\texttt{symmetry} 对并集只做一次替换。自动规则只识别原始顶点相同的 self-loop，不作用于 cross propagator 或 shrink 后才 coincident 的普通传播子；odd ISP 归零还要求对应 loop momentum 不被其它传播子共享。
+\texttt{repSymmetry0} 只返回用户原始规则；\texttt{symmetry} 对并集只做一次替换。自动规则只识别原始顶点相同的 self-loop，不作用于 cross propagator 或 shrink 后才 coincident 的普通传播子；odd ISP 归零还要求对应 loop momentum 不被其它传播子共享。声明式 massless 自环自 029 起在初始化即转 contracted 单槽（\ref{manualMasslessTadpole} 节），不再有 $n$ 态需要规范化；massive 自环的 $\{1,0\}\to\{0,1\}$ 规范化不受影响，转换后的单槽自环仍参与 odd ISP 归零。
 
 \section{IBP 生成元与公开接口状态}
 

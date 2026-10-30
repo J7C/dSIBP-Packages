@@ -124,6 +124,39 @@ applyMasslessParallelFoldCanonical[expr_, topo_Association] := Expand[
    ];
 
 
+(* 目标 sector 内两端重合的 masslessFull 输出包落成 contracted 单槽：偶态 {b,0,0}
+   去掉 n 槽只留第一槽，奇态已由 applyMasslessEndpointCanonical 清零。必须放在
+   theta-fold 之后——提前改槽形会让含重合成员的 bundle 失效 masslessFull 前置条件。
+   J 内自身的 shrunk packs 决定目标 sector，不能读 source topology 的当前 endpoints。 *)
+coincidentMasslessPackConvertIntegral[
+   topo_Association,
+   int : J[aList_, linePacks_, ispList_]
+   ] := Module[
+   {repMap, newPacks = linePacks, changedQ = False, originalEndpoints, targetEndpoints, positions},
+   repMap = integralTargetVertexRepresentativeMap[topo, int];
+   Do[
+    If[Length[linePacks[[e]]] =!= 3 || ! lineIndexedPowerQ[topo["lines"][[e]]] ||
+      Lookup[topo["lines"][[e]], "massType", "massive"] =!= "massless",
+     Continue[]
+     ];
+    originalEndpoints = Lookup[topo["lines"][[e]], "originalEndpoints", topo["lines"][[e, "endpoints"]]];
+    targetEndpoints = Lookup[repMap, originalEndpoints];
+    positions = linePackNPositions[topo["lines"][[e]], "masslessFull"];
+    If[TrueQ[SameQ @@ targetEndpoints] && linePacks[[e, positions]] === {0, 0},
+     newPacks[[e]] = {linePacks[[e, 1]]};
+     changedQ = True
+     ],
+    {e, Length[linePacks]}
+    ];
+   If[! changedQ, int, J[aList, newPacks, ispList]]
+   ];
+
+
+applyCoincidentMasslessPackConversion[expr_, topo_Association] := Expand[
+   expr /. int_J :> coincidentMasslessPackConvertIntegral[topo, int]
+   ];
+
+
 (* fold 关系按原指标逐对登记：奇偶位搬移不产生符号，反向端点成员另带交换宇称说明。
    relations 呈现的是同向端点约定下的形式；重定向符号由 canonicalizer 在积分层面给出。 *)
 
@@ -625,13 +658,16 @@ applySeedCanonicalWithRules[
    topo_Association,
    symmetryRules_List
    ] := Expand[
-   applyMasslessParallelFoldCanonical[
+   applyCoincidentMasslessPackConversion[
+    applyMasslessParallelFoldCanonical[
      applyMasslessEndpointCanonical[
       applyMassiveCoincidentCanonical[applyEOM[expr, topo], topo],
       topo
       ],
      topo
-     ] /. symmetryRules
+     ],
+    topo
+    ] /. symmetryRules
    ];
 
 

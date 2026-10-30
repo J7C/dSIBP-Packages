@@ -149,7 +149,7 @@ dsLoopSeedTemplateData[context_Association, seedData_Association] := Module[
    rootTopo = context["topology"];
    metadataList = Lookup[seedData, "sectorMetadataList", {makeSectorMetadata[rootTopo]}];
    shrunkLists = DeleteCases[Lookup[metadataList, "sectorShrunkLines", {}], {}];
-   topologies = Join[{rootTopo}, shrinkSectorTopology[rootTopo, #] & /@ shrunkLists];
+   topologies = Join[{rootTopo}, shrinkSectorTopologiesForSubsets[rootTopo, shrunkLists]];
    pieces = dsLoopTemplatesForTopology /@ topologies;
    bad = Select[pieces, Lookup[#, "status", "failed"] =!= "generated" &];
    If[bad =!= {}, Return[<|"status" -> "failed", "reason" -> "sectorTemplateFailed", "failures" -> bad|>]];

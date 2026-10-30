@@ -58,6 +58,13 @@ the first line's parity slot, and initialization prints a bilingual red notice l
 merged group and its total-parity target before continuing. Propagators without a parity
 selection are sampled over all their parities.
 
+A declared massless self-loop is converted at `DSInit` into a contracted single-slot pack
+`{bS}`: the coincident massless kernel degenerates to `M[0] = 2*theta(0) = 1` for even line
+powers and to zero for odd ones, so the pack keeps only the residual loop-momentum power.
+Massive self-loops keep the three-slot pack with the built-in `{1,0} -> {0,1}` normalization,
+and the same single-slot form appears when sub-topology enumeration contracts a banana
+sub-diagram.
+
 All sectors share one integral head, `J`. In full loop mode an integral is
 `J[aList, linePacks, ispList]`; the time-only mode exposes the compact
 `J[sectorKey, timeShifts, stateBits]`, where `sectorKey` is a fixed-length `0`/`1` string in
