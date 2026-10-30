@@ -720,7 +720,14 @@ $\theta(\Delta)\theta(-\Delta)=0$，交叉项全部消失，整个束的乘积�
 \begin{center}
 EOM $\to$ massive coincident $\to$ massless 单线商 $\to$ 平行 fold $\to$ symmetry。
 \end{center}
-每束最多保留 $2$ 个具体 full 态（parity $0/1$）。依赖该折叠的 preferred basis 同样按线编号顺序取第一条线承载 parity、其余取 $0$。撒点枚举仍逐线遍历 $00/10$：单边态（如 $\{1,0\}$ 与 $\{0,1\}$ 混排）包含被折叠子-sector 边界项的信息，只有双偶/双奇组合在折叠后成为 $(0,0;0,0)$ 方程的重复；它们按导数审计路径分别扫描，不在 seed 层预折叠。
+每束最多保留 $2$ 个具体 full 态（parity $0/1$）。依赖该折叠的 preferred basis 同样按线编号顺序取第一条线承载 parity、其余取 $0$。
+
+撒点枚举分两种情形。未给出显式奇偶约束、或约束未触及某束时，该束仍逐线遍历 $00/10$：单边态（如 $\{1,0\}$ 与 $\{0,1\}$ 混排）包含被折叠子-sector 边界项的信息，只有双偶/双奇组合在折叠后成为 $(0,0;0,0)$ 方程的重复；它们按导数审计路径分别扫描，不在 seed 层预折叠。用户在 \texttt{"parityConstraints"} 中给出的约束触及某束的成员时（banana 总奇偶撒点），初始化把触及该束的约束（含 $b$ 指标，模 $2$）求和为该束的总奇偶约束
+\begin{equation}
+ \sum_{e\in\mathcal B}\bigl(b_e+n_{e,1}+n_{e,2}\bigr)\equiv r_{\mathcal B}\pmod 2,
+ \label{bundleTotalParityManual}
+\end{equation}
+撒点只枚举代表线（编号最小者）的奇偶位 $\{0,1\}$，其余成员奇偶位固定为 $0$；\texttt{DSInit} 以红字中英双语提示哪些束被合并、各束合并后的总奇偶目标，然后继续，不拒绝、不停下。用户只约束部分成员时按同一规则对已提供的约束求和，得到的子系统可能超出原选奇偶子系统；同时选用多个奇偶子系统没有限制，未选奇偶的传播子按全部奇偶撒点。
 
 \section{Topology、标量积、ISP 与外腿能量}
 

@@ -420,6 +420,34 @@ dsParityFailureSentence[failure_Association] := Switch[
 dsParityFailureSentence[other_] := "该 sector 的 parity 数据无法构造。 The parity data of this sector could not be constructed.";
 
 
+(* banana 平行无质量束总奇偶合并的 DSInit 红字提示；只渲染已合并的 covered 束记录。 *)
+parityBundleMergeNoticeText[records_List] := Module[
+   {count = Length[records], zhGroups, enGroups},
+   zhGroups = StringRiffle[Table[
+      Module[{rec = records[[k]],
+        ids = StringRiffle[ToString[#, InputForm] & /@ Lookup[records[[k]], "lineIds", {}], ", "]},
+       "线 " <> ids <> "（总奇偶 " <>
+        ToString[Lookup[rec, "expression", ""], InputForm] <> " ≡ " <>
+        ToString[Lookup[rec, "remainder", 0], InputForm] <> " mod 2）"],
+      {k, count}], "；"];
+   enGroups = StringRiffle[Table[
+      Module[{rec = records[[k]],
+        ids = StringRiffle[ToString[#, InputForm] & /@ Lookup[records[[k]], "lineIds", {}], ", "]},
+       "lines " <> ids <> " (total parity " <>
+        ToString[Lookup[rec, "expression", ""], InputForm] <> " = " <>
+        ToString[Lookup[rec, "remainder", 0], InputForm] <> " mod 2)"],
+      {k, count}], "; "];
+   "检测到 " <> ToString[count] <> " 组 banana 平行无质量传播子束：" <> zhGroups <>
+    "。theta-fold 关系会把这些线各自的奇偶位合并为每组一个总奇偶位：触及该组的用户约束已按组求和（含 b 指标，模 2）作为该组的总奇偶目标；撒点只枚举每组首线的奇偶位，其余成员固定为 0；未选择奇偶的传播子仍按全部奇偶撒点。初始化继续，不停下。 " <>
+    "Detected " <> ToString[count] <>
+    " banana bundles of parallel massless propagators: " <> enGroups <>
+    ". The theta-fold relations merge the individual parity slots of these lines into one total parity slot per bundle: the user constraints touching each bundle have been summed (including b indices, mod 2) as its total-parity target; sampling enumerates only the first line's parity slot of each bundle, with the other members fixed to 0; propagators without a parity selection are still sampled over all parities. Initialization continues."
+   ];
+
+parityBundleMergeNoticeText[other_] :=
+  "检测到 banana 平行无质量传播子束并已按组合并总奇偶；请查看返回 context 的 parityBundleMerges 字段。 Detected banana bundles of parallel massless propagators with per-bundle merged total parity; inspect the parityBundleMerges field of the returned context.";
+
+
 dsMixedContactSentence[audit_List] := Module[{offending},
    offending = DeleteDuplicates[dsTreeFieldText[#, "lineId", "unknown"] & /@
       Select[audit, AssociationQ[#] && ! TrueQ[Lookup[#, "thetaAllowedQ", False]] &]];

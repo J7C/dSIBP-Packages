@@ -398,7 +398,7 @@ DSInit[input_Association, OptionsPattern[]] := Module[
    {progress = OptionValue[ProgressReporting], topologyData, validation, subsetSummary, derivatives, context,
      inputHash, initDirectory, writeResult = <|"status" -> "notRequested"|>, warnings, errors,
      effectiveInput, kinematicAudit, declarationAudit, guide, guideText, parityDataList,
-     parityRequestedQ, parityUsableQ, parityFailures, timeIBPDomainCertificate},
+     parityRequestedQ, parityUsableQ, parityFailures, parityBundleMerges, timeIBPDomainCertificate},
    If[! MemberQ[{"Positive", "Negative"}, Quiet[OptionValue[NuConvention]]],
     Message[DSInit::badnuconvention];
     dsErrorPrint["NuConvention 只接受 \"Positive\" 或 \"Negative\"，收到：" <>
@@ -555,6 +555,17 @@ DSInit[input_Association, OptionsPattern[]] := Module[
       progress
       ]
      ];
+    (* banana 平行无质量束：红字告知奇偶合并与总奇偶目标，然后继续，不拒绝不停下。 *)
+    parityBundleMerges = If[parityRequestedQ && parityUsableQ,
+      Lookup[
+       parityBundleMergeData[
+        topologyData, normalizeParityConstraints[Lookup[topologyData, "parityConstraints", {}]]],
+       "coveredBundleRecords", {}],
+      {}
+      ];
+    If[parityBundleMerges =!= {},
+     dsWarningPrint[parityBundleMergeNoticeText[parityBundleMerges], progress]
+     ];
     warnings = Select[Lookup[validation, "issues", {}], Lookup[#, "severity", ""] === "warning" &];
    Scan[dsWarningPrint[dsInitializationIssueText[#], progress] &, warnings];
    derivatives = If[
@@ -572,6 +583,7 @@ DSInit[input_Association, OptionsPattern[]] := Module[
      "topologyData" -> topologyData,
      "capabilities" -> Lookup[topologyData, "capabilities", <||>],
      "sectors" -> Lookup[topologyData, "sectorMetadataList", {}],
+     "parityBundleMerges" -> parityBundleMerges,
      "conventions" -> dsConventionMetadata[topologyData],
      "derivatives" -> derivatives,
      "validationReport" -> validation,

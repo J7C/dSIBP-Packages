@@ -64,15 +64,19 @@ discreteVarsForLine[line_Association] := If[
 
 
 (* 输入输出仍保留两个端点槽；这里只缩减 DSSeeds 的 source representatives。
-   massive 需要四态，masslessFull 只生成 00/10，cross 与 shrunk 不生成离散态。 *)
-discreteSeedRuleSetsForLine[line_Association] := Module[
+   massive 需要四态，masslessFull 只生成 00/10，cross 与 shrunk 不生成离散态。
+   显式 parity 约束触及的 banana 束成员只生成 00——奇偶位折到束首线，与
+   parityToFirstLine canonical 一致；无约束或未触及的束不折叠。 *)
+discreteSeedRuleSetsForLine[line_Association, parityFoldedQ_: False] := Module[
    {id = line["id"], variables = discreteVarsForLine[line]},
    Switch[Lookup[line, "packType", ""],
     "masslessFull" /; Lookup[line, "state", "full"] =!= "shrunk",
-    {
-     {n[id, 1] -> 0, n[id, 2] -> 0},
-     {n[id, 1] -> 1, n[id, 2] -> 0}
-     },
+    If[parityFoldedQ,
+     {{n[id, 1] -> 0, n[id, 2] -> 0}},
+     {
+      {n[id, 1] -> 0, n[id, 2] -> 0},
+      {n[id, 1] -> 1, n[id, 2] -> 0}
+      }],
     _, ruleSetsForVars[variables]
     ]
    ];
@@ -87,13 +91,17 @@ discreteStateCountForLine[line_Association] :=
 
 
 (* enumerateDiscreteStates 是所有普通 time/momentum seed 的共同入口。返回值同时保存
-   raw 双端点空间与 quotient representative 空间，供 release/audit 核对缩减边界。 *)
+   raw 双端点空间与 quotient representative 空间，供 release/audit 核对缩减边界；
+   parity 触及的 banana 束只枚举首线奇偶位（parityFoldedLineIndices）。 *)
 enumerateDiscreteStates[expr_, topo_Association] := Module[
-   {perLineRuleSets, allRuleSets, rawStateCount},
-   perLineRuleSets = discreteSeedRuleSetsForLine /@ topo["lines"];
+   {parityFoldedLines, perLineRuleSets, allRuleSets, rawStateCount, result},
+   parityFoldedLines = parityFoldedBundleMemberLineIndices[topo];
+   perLineRuleSets = MapIndexed[
+     discreteSeedRuleSetsForLine[#1, MemberQ[parityFoldedLines, First[#2]]] &,
+     topo["lines"]];
    allRuleSets = Flatten[#, 1] & /@ Tuples[perLineRuleSets];
    rawStateCount = Times @@ (rawBinaryDiscreteStateCountForLine /@ topo["lines"]);
-   <|
+   result = <|
     "rules" -> allRuleSets,
     "integrals" -> (expr /. # & /@ allRuleSets),
     "mode" -> "masslessQuotientRepresentatives",
@@ -101,7 +109,10 @@ enumerateDiscreteStates[expr_, topo_Association] := Module[
     "rawBinaryStateCount" -> rawStateCount,
     "representativeStateCount" -> Length[allRuleSets],
     "eliminatedAlgebraicStateCount" -> rawStateCount - Length[allRuleSets]
-    |>
+    |>;
+   If[parityFoldedLines =!= {},
+    result = Join[result, <|"parityFoldedLineIndices" -> parityFoldedLines|>]];
+   result
    ];
 
 

@@ -51,6 +51,13 @@ filters canonical equation support after equal terms have been combined and zero
 removed. These policies do not prove closure for a new target or basis. To reproduce an uncut
 relation system, explicitly use `SeedEnvelopeCut->None` and `TotalPowerLimit->None`.
 
+When explicit `parityConstraints` touch a group of parallel massless full propagators joining
+the same vertex pair (a banana sub-diagram), the constraints touching the group are summed
+(including the `b` indices, mod 2) into one total-parity constraint, sampling enumerates only
+the first line's parity slot, and initialization prints a bilingual red notice listing each
+merged group and its total-parity target before continuing. Propagators without a parity
+selection are sampled over all their parities.
+
 All sectors share one integral head, `J`. In full loop mode an integral is
 `J[aList, linePacks, ispList]`; the time-only mode exposes the compact
 `J[sectorKey, timeShifts, stateBits]`, where `sectorKey` is a fixed-length `0`/`1` string in

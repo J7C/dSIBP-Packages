@@ -890,6 +890,66 @@ parityLineVariables[line_Association] := {
    };
 
 
+(* banana 束的奇偶合并。同顶点对平行 masslessFull 束的 theta-fold 只保留每组一个总奇偶位，
+   因此用户触及该束成员的显式约束按组求和（表达式含 b 指标项、余数，均模 2 合并）成为该束
+   唯一的 fold 不变目标；未触及任何束成员的约束原样保留。合并在线性 transport 之前执行，
+   与逐约束 transport 可交换。未触及的束与未给约束的情形不改变任何行为。 *)
+
+parityConstraintTouchesLinesQ[constraint_Association, lines_List] := ! AllTrue[
+   lines,
+   Function[line, FreeQ[Lookup[constraint, "expression", None], Alternatives @@ parityLineVariables[line]]]
+   ];
+
+
+parityBundleMergeData[topo_Association, constraints_List] := Module[
+   {bundles, used, records, coveredRecords, effective},
+   bundles = masslessParallelFoldBundles[topo];
+   If[bundles === {},
+    Return[<|"bundleRecords" -> {}, "coveredBundleRecords" -> {},
+      "effectiveConstraints" -> constraints|>]];
+   used = ConstantArray[False, Length[constraints]];
+   records = Map[
+     Function[bundle,
+      Module[{lines = topo["lines"][[bundle]], ids, positions},
+       ids = Lookup[lines, "id"];
+       positions = Select[
+         Range[Length[constraints]],
+         parityConstraintTouchesLinesQ[constraints[[#]], lines] &
+         ];
+       If[positions === {},
+        <|"lineIndices" -> bundle, "lineIds" -> ids, "coveredQ" -> False|>,
+        Do[used[[p]] = True, {p, positions}];
+        <|"lineIndices" -> bundle, "lineIds" -> ids, "coveredQ" -> True,
+          "expression" -> Expand[Total[Lookup[constraints[[positions]], "expression"]]],
+          "remainder" -> Mod[Total[Lookup[constraints[[positions]], "remainder"]], 2]|>
+        ]
+       ]
+      ],
+     bundles];
+   coveredRecords = Select[records, TrueQ[Lookup[#, "coveredQ", False]] &];
+   effective = Join[
+     Function[rec,
+       <|"expression" -> Lookup[rec, "expression"], "remainder" -> Lookup[rec, "remainder"]|>
+       ] /@ coveredRecords,
+     Pick[constraints, used, False]
+     ];
+   <|"bundleRecords" -> records, "coveredBundleRecords" -> coveredRecords,
+     "effectiveConstraints" -> effective|>
+   ];
+
+
+(* 撒点折叠：用户给出显式 parity 约束且束被触及时，该束只枚举首线（线编号最小者）的
+   奇偶位，其余成员奇偶位固定 0，与 parityToFirstLine canonical 一致；无约束或未触及的
+   束保持逐线 00/10。 *)
+parityFoldedBundleMemberLineIndices[topo_Association] := Module[
+   {constraints, mergeData},
+   constraints = normalizeParityConstraints[Lookup[topo, "parityConstraints", {}]];
+   If[constraints === {}, Return[{}]];
+   mergeData = parityBundleMergeData[topo, constraints];
+   Flatten[Rest[Lookup[#, "lineIndices", {}]] & /@ Lookup[mergeData, "coveredBundleRecords", {}]]
+   ];
+
+
 transportParityConstraint[topo_Association, constraint_Association] := Module[
    {expr, remainder, rootRules, issues = {}, line, vars, coefficients, cb, c1, c2,
     integerShift, zeroShift, sourceZero, targetZero, delta, shrunkQ},
@@ -934,7 +994,7 @@ transportParityConstraint[topo_Association, constraint_Association] := Module[
 
 
 parityMetadataForSector[topo_Association] := Module[
-   {raw, normalized, transported, invalid, usableFunctionQ},
+   {raw, normalized, mergeData, effective, transported, invalid, usableFunctionQ},
    raw = Lookup[topo, "parityConstraints", {}];
    usableFunctionQ = parityFunctionSystemUsableQ[topo];
    If[raw === {} || raw === None,
@@ -946,18 +1006,25 @@ parityMetadataForSector[topo_Association] := Module[
       "parityUsableQ" -> False, "constraints" -> {}|>]
     ];
    normalized = normalizeParityConstraints[raw];
-   transported = transportParityConstraint[topo, #] & /@ normalized;
+   mergeData = parityBundleMergeData[topo, normalized];
+   effective = Lookup[mergeData, "effectiveConstraints", normalized];
+   transported = transportParityConstraint[topo, #] & /@ effective;
    invalid = Select[transported, Lookup[#, "status", "invalid"] =!= "transported" &];
    If[invalid =!= {},
     <|"status" -> "disabled", "reason" -> "constraintTransportFailed",
       "parityUsableQ" -> False, "constraints" -> {}, "issues" -> invalid|>,
-    <|"status" -> "enabled", "parityUsableQ" -> True,
-      "constraints" -> transported,
-      "masslessCycleFlipCount" -> Mod[Count[
-         Select[Range[topo["nE"]], MemberQ[Lookup[topo, "sectorShrunkLines", {}], #] &],
-         e_ /; lineIndexedPowerQ[topo["lines"][[e]]] && Lookup[topo["lines"][[e]], "massType", "massive"] === "massless"
-         ], 2]
-      |>
+    Join[
+     <|"status" -> "enabled", "parityUsableQ" -> True,
+       "constraints" -> transported,
+       "masslessCycleFlipCount" -> Mod[Count[
+          Select[Range[topo["nE"]], MemberQ[Lookup[topo, "sectorShrunkLines", {}], #] &],
+          e_ /; lineIndexedPowerQ[topo["lines"][[e]]] && Lookup[topo["lines"][[e]], "massType", "massive"] === "massless"
+          ], 2]
+       |>,
+     If[Lookup[mergeData, "coveredBundleRecords", {}] =!= {},
+      <|"bundleParityMerges" -> Lookup[mergeData, "coveredBundleRecords"]|>,
+      <||>]
+     ]
     ]
    ];
 

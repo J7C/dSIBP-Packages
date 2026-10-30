@@ -211,6 +211,24 @@ that parity and all remaining lines are zero; a member whose endpoint order is r
 contributes $(-1)^{n_e}$ per line. The fold sits after the single-line quotient and before
 symmetry in the canonical chain.
 
+Seed enumeration distinguishes two cases. Without explicit parity constraints, or for a
+bundle no constraint touches, every member of the bundle is still enumerated over $00/10$:
+one-sided states carry subsector boundary information that the fold only normalizes later.
+When a user constraint in \texttt{"parityConstraints"} touches a member of a bundle (banana
+total-parity sampling), initialization sums the constraints touching that bundle (including
+$b$ indices, mod $2$) into its total-parity constraint
+\begin{equation}
+ \sum_{e\in\mathcal B}\bigl(b_e+n_{e,1}+n_{e,2}\bigr)\equiv r_{\mathcal B}\pmod 2,
+ \label{bundleTotalParityManualEn}
+\end{equation}
+and sampling enumerates only the parity slot $\{0,1\}$ of the representative line (smallest
+line index), with the remaining members fixed to $0$. \texttt{DSInit} prints a bilingual red
+notice listing which bundles are merged and the resulting total-parity target of each, then
+continues: it neither rejects nor stops. If only some members are constrained, the same rule
+sums the provided constraints and the resulting subsystem may leave the originally selected
+one; several parity subsystems may be selected simultaneously, and propagators without a
+parity selection are sampled over all parities.
+
 The direct pure-time/tree path uses the same physical contact data but presents them in a
 sector-tagged public representation. Formula-based tree reduction is available only for
 massive-only quotients whose derivation has been certified. In all other cases, the package
