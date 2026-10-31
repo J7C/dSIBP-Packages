@@ -330,7 +330,7 @@ If[! And[
       loopScale, legScale1, legScale2, E1, E2, E3
       },
     summary["templateStatus"] === "generated",
-    ContainsAll[summary["templateSectorKeys"], {"top", "e1", "e2", "e3"}],
+    ContainsAll[summary["templateSectorKeys"], {"top", "e1_e2", "e2", "e3", "e1_e2_e3", "e2_e3"}],
     summary["boundEnergyStatus"] === "initialized",
     summary["boundEnergyVariables"] === {ss11, E0, sE2, E1, E2},
     summary["singleLegStatus"] === "initialized",
@@ -358,5 +358,5 @@ If[! And[
     summary["contextInfoAvailable"],
     summary["kiraInputSummaryCase"] === "mixBubbleTree",
     summary["kiraResultSummaryStatus"] === "passed",
-    summary["kiraResultMasterCount"] === 81
+    summary["kiraResultMasterCount"] === 84
     ], Exit[1]];

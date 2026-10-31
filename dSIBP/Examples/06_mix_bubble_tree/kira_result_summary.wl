@@ -1,8 +1,8 @@
 (* ::Package:: *)
 (***
 文件：kira_result_summary.wl
-用途：保存 mixed bubble+tree 的 fresh WSL Kira、DE 与 scaling 最终摘要。
-边界：本文件不保留 reduction table、日志、database 或 cache；正式证据见独立检验报告。
+用途：保存 mixed bubble+tree 在 dSIBP 029 上 fresh WSL Kira 的最终轻量摘要。
+边界：不保留 reduction table、日志、database 或 cache；完整台账见版本外 example-test-ledger/029_example6.md。
 ***)
 
 
@@ -14,31 +14,37 @@
   "status" -> "passed",
   "case" -> "mixBubbleTree",
   "packageVersion" -> "1.0",
+  "evidenceRelease" -> "029",
   "branch" -> "+++",
   "kira" -> <|
-    "version" -> "2.3 (Git: 2.3-7-geb541f9)",
+    "version" -> "2.3 (Git: 2.3)",
     "runtime" -> "WSL",
-    "parallelConfig" -> "w10*1",
-    "wallTimeSeconds" -> 160.11,
+    "parallelConfig" -> "10 jobs",
+    "stageWallTimeSeconds" -> 253.923,
     "exitStatus" -> 0
   |>,
-  "masterIDs" -> Range[81],
-  "masterCount" -> 81,
-  "targetCount" -> 676,
-  "selectedEquationCount" -> 63410,
+  "masterCount" -> 84,
+  "targetCount" -> 903,
+  "canonicalEquationCount" -> 68418,
+  "integralCount" -> 35412,
+  "selectedEquationCount" -> 15874,
   "unreducedCount" -> 0,
-  "deVariables" -> {loopScale, legScale1, legScale2, E1, E2, E3},
-  "deDimensions" -> ConstantArray[{81, 81}, 6],
-  "sourceIdentities" -> {81, 81},
-  "scalingCertificateScope" -> "exactPoint",
-  "scalingSymbolicQ" -> False,
-  "matrixResidualNonzeroCount" -> 0,
-  "sourceResidualNonzeroCount" -> 0,
-  "ordinaryExportedIntegralsCheckedForBridgePack" -> 310688,
-  "fixedTreeBridgeExcludedFromParity" -> True,
-  "formalValidationManifestSHA256" ->
-    "B3C9ED791EB2C0247A114FA2AC29B526A860DB77FD9B1C6921E8AA412A7A7106",
-  "formalValidationReductionSHA256" ->
-    "7D66B032E78EB724B7EA643092CEAA1DCACA81AA3A6C2968D362E8127FD9C5BD",
+  "mastersBySector" -> <|
+    "top" -> 44, "e3" -> 22, "e2" -> 8,
+    "e1_e2" -> 4, "e2_e3" -> 4, "e1_e2_e3" -> 2
+  |>,
+  "mastersByTotalAbsolutePower" -> <|"0" -> 9, "1" -> 33, "2" -> 42|>,
+  "masterListFile" -> "master_integrals.wl",
+  "a3SeedExpansionKeepsSameMasters" -> True,
+  "a3TargetExtension" -> <|
+    "targetCount" -> 1332,
+    "reducedTargetCount" -> 1248,
+    "masterCount" -> 84,
+    "sameMasterIntegralsAsA3ZeroTarget" -> True
+  |>,
+  "deStatus" -> "notRun",
+  "scalingStatus" -> "notRun",
+  "reductionSHA256" -> "2D9DB31CF05FA483781181373BDA9DBFDC7121B0E2C2672D2917596EED823871",
+  "mastersSHA256" -> "87B39955410DDE0A28A0A805645722A9E00E37D4B701B9378C357FCAAD60224B",
   "intermediateArtifactsRetainedInRepository" -> False
 |>

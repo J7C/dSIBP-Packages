@@ -8,6 +8,6 @@
 
 本例不增加第二条 massive 传播子，避免把 compound topology 的角色、massless convention 和 bridge/cycle contraction 演示混入不必要的 massive function-system 组合。
 
-本例同时保留 Kira 检验的两份轻量记录：`kira_input_summary.wl` 给出 `+++` 分支、两条 cycle-even parity、formal envelope、精确点和输入规模；`kira_result_summary.wl` 给出 81 masters、676 targets、六张 `81x81` DE、exact-point scaling、Kira 版本、并行配置和墙钟时间。两份摘要的证据基线是 024.0，不冒充当前版的 fresh reduction；在当前包复现同一未截断关系集时，应显式使用 `SeedEnvelopeCut->None` 与 `TotalPowerLimit->None`。
+本例保留 029 fresh Kira 检验的轻量记录：`kira_input_summary.wl` 给出 `+++` 分支、两条 cycle-even parity、双侧稳定包络、精确规则与输入规模；`kira_result_summary.wl` 给出 903 targets、84 个稳定候选主积分及其 sector/总幂次分布；`master_integrals.wl` 保存机器可读 J 清单。a₃撒点扩到 `[−1,1]` 以及 target 扩到 a₃=0/1 的补测均保持同一 84 个。旧 024 的 81-master DE 摘要不再作为当前证据；本轮没有 fresh ex06 DE 或 scaling 运行。完整边界台账见版本外 `example-test-ledger/029_example6.md`。
 
 完整 Kira 输入由 Windows Wolfram 在仓库外验证工作区生成，reduction 在 WSL 中运行，并未在本 example 目录执行。发布前已删除 `init/`、`kira/`、database、save、日志、reduction table、cache 和 DE 运行目录。两份摘要只用于把本例输入与正式结果对应起来，不作为程序包或 importer 输入；实际证明保存在独立检验报告中。
