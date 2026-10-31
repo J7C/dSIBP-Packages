@@ -41,7 +41,7 @@ Needs["MadStree`"];
 首次成功加载会显示一次引用提醒。在 Notebook 中 arXiv 号为可点击链接；headless kernel
 保留完整 URL。MadStree 只列出 [arXiv:2401.00129](https://arxiv.org/abs/2401.00129)、
 [arXiv:2411.03088](https://arxiv.org/abs/2411.03088) 和 MadStree package paper
-（arXiv identifier pending）。
+（[arXiv:2610.28526](https://arxiv.org/abs/2610.28526)）。
 
 ## 最小流程
 

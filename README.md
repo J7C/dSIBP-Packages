@@ -140,5 +140,8 @@ Please cite the underlying papers when you use these packages:
   parity-split IBP system and d log-form differential equations*,
   [arXiv:2604.14549](https://arxiv.org/abs/2604.14549).
 
-The dSIBP, MadStree and FlintNDE package papers are in preparation and their arXiv identifiers
-are not yet assigned.
+- Jiaqi Chen, Yi-Xiao Tao, Xinyi Wang and Dong Zhang, *MadStree: automated evaluation of
+  tree-level de Sitter correlators*, [arXiv:2610.28526](https://arxiv.org/abs/2610.28526).
+
+The dSIBP and FlintNDE package papers are in preparation and their arXiv identifiers are not
+yet assigned.
