@@ -43,7 +43,7 @@ The first successful load prints one citation reminder. arXiv identifiers are cl
 in notebooks, while a headless kernel prints full URLs. MadStree lists only
 [arXiv:2401.00129](https://arxiv.org/abs/2401.00129),
 [arXiv:2411.03088](https://arxiv.org/abs/2411.03088), and the MadStree package paper
-(arXiv identifier pending).
+([arXiv:2610.28526](https://arxiv.org/abs/2610.28526)).
 
 ## Minimal workflow
 

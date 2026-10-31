@@ -181,6 +181,12 @@ $MadStreeCitationEntries = {
     "title" -> "Multivariate hypergeometric solutions of cosmological (dS) correlators by d log-form differential equations",
     "arXiv" -> "2411.03088",
     "url" -> "https://arxiv.org/abs/2411.03088"
+  |>,
+  <|
+    "authors" -> "Jiaqi Chen, Yi-Xiao Tao, Xinyi Wang and Dong Zhang",
+    "title" -> "MadStree: automated evaluation of tree-level de Sitter correlators",
+    "arXiv" -> "2610.28526",
+    "url" -> "https://arxiv.org/abs/2610.28526"
   |>
 };
 
@@ -199,12 +205,10 @@ If[! TrueQ[$MadStreeCitationReminderShown],
   If[TrueQ[$Notebooks],
     Print@Column@Join[
       {"To support MadStree, please acknowledge our work when you use MadStree in your research. You can do so by citing the following papers:"},
-      MapIndexed[msCitationNotebookLine[First[#2], #1] &, $MadStreeCitationEntries],
-      {"3. MadStree package paper, arXiv identifier pending."}
+      MapIndexed[msCitationNotebookLine[First[#2], #1] &, $MadStreeCitationEntries]
     ],
     Print["To support MadStree, please acknowledge our work when you use MadStree in your research. You can do so by citing the following papers:"];
-    MapIndexed[Print[msCitationTextLine[First[#2], #1]] &, $MadStreeCitationEntries];
-    Print["3. MadStree package paper, arXiv identifier pending."]
+    MapIndexed[Print[msCitationTextLine[First[#2], #1]] &, $MadStreeCitationEntries]
   ]
 ];
 
