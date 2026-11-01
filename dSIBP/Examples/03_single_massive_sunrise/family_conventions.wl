@@ -1,6 +1,6 @@
 (* ::Package:: *)
 (* Single-massive sunrise 的离散对称性与 odd/odd parity convention。顶点交换
-   反转每条 full 传播子的顶点指标；两条 massless 平行传播子交换时，同时交换对应传播子
+   反转每条 time-ordered 传播子的顶点指标；两条 massless 平行传播子交换时，同时交换对应传播子
    pack 与成对 ISP 指标。本例只构造 general seeds 和 general 参数微分算符。 *)
 
 

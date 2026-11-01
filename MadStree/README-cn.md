@@ -41,7 +41,7 @@ Needs["MadStree`"];
 首次成功加载会显示一次引用提醒。在 Notebook 中 arXiv 号为可点击链接；headless kernel
 保留完整 URL。MadStree 只列出 [arXiv:2401.00129](https://arxiv.org/abs/2401.00129)、
 [arXiv:2411.03088](https://arxiv.org/abs/2411.03088) 和 MadStree package paper
-（arXiv identifier pending）。
+（[arXiv:2610.28526](https://arxiv.org/abs/2610.28526)）。
 
 ## 最小流程
 
@@ -81,9 +81,9 @@ $J_s(\mathbf n;\mathbf a)$；同一组三项也唯一标识裸积分 $I_s(\mathb
 `MSMasterIntegrals` 直接给出每个 master 的精确 `normalization` 和
 `J_s=normalization I_s`；单个 shifted integral 可用
 `MSIntegralDefinition[MSIntegral[sectorKey,timeShifts,stateBits],context]` 查询。
-massive Full 传播子收缩时，该 normalization 含唯一的 contour 因子：省略共同动量幂后，
+massive (anti-)time-ordered 传播子收缩时，该 normalization 含唯一的 contour 因子：省略共同动量幂后，
 `++` subsector 为 `-4 I/Pi`，`--` subsector 为 `+4 I/Pi`；该符号不重复进入 dlog contact block。
-二态因子要么是 massive 传播子在其中一个顶点上的二维态，要么是整条 massless Full 传播子
+二态因子要么是 massive 传播子在其中一个顶点上的二维态，要么是整条 massless (anti-)time-ordered 传播子
 共享的 quotient 二态；其逐位顺序由 `MSSlotRegistry` 给出。`++/--` 的 h 组合只在手册统一定义，
 不在每条输出中展开。`MSSectors[context]` 返回 contact-reachable sectors 的确定顺序（键、
 被收缩传播子与 master 数），与 `context["sectorOrder"]` 一致；`MSContextQ[obj]` 判定对象
@@ -91,9 +91,14 @@ massive Full 传播子收缩时，该 normalization 含唯一的 contour 因子�
 
 `"vertexType" -> "+"|"-"` 是顶点的 Schwinger--Keldysh 轮廓支，必须在每个顶点上
 显式给出。传播子不再输入 `skType`、`sigma` 或顶点符号；程序从 `"endpoints"` 指向的
-顶点自动推导 Full/Cross/External、`++/--/+-/-+`、整体符号和缺省 Hankel branches。
+顶点自动推导 T/W/External、`++/--/+-/-+`、整体符号和缺省 Hankel branches。
 公开传播子 `"type"` 只接受 `"massive"` 或 `"massless"`。传播子不输入 ID；程序始终按
 `"lines"` 输入顺序在内部编号。只有显式 `thetaBundles` 需要引用传播子时，才使用这一位置编号。
+
+这里 T 表示同支分量：`G++` 为编时（Feynman）传播子，`G--` 为反编时
+（anti-Feynman）传播子，合称 (anti-)time-ordered propagators；W 表示
+`G+-`、`G-+` 两个 Wightman 传播子。派生内部类型为 `massiveT`、
+`masslessT`、`massiveW`、`masslessW`，不是公开输入类型。
 
 `"externalLegEnergy"` 不是“顶点自身具有的能量”，而是附着在该顶点的外腿无 theta
 指数参数。`vertexType="+"` 唯一给出 `Exp[-I externalLegEnergy tau]`，`"-"` 唯一给出
@@ -192,18 +197,18 @@ Gaussian-rational 后再求值。上述选项缺省均为 `Automatic`，因此�
 
 通用入口不按图 id、顶点数、master 数或论文数值点分派。只有 dlog 未闭合、rank/chart 未通过 normal-crossing 证书、late-time 指数不衰减、拉回系统不是 exact regular singular，或目标/anchor 落在 DE letter 上时才结构化 fail closed。
 
-一条传播子的两个顶点同属一个轮廓支时，公开 `"massless"` 传播子在内部派生为 `masslessFull`，
+一条传播子的两个顶点同属一个轮廓支时，公开 `"massless"` 传播子在内部派生为 `masslessT`，
 并且唯一使用整条传播子共享的 quotient 二态 slot。两个顶点各自的二维态构成的四态乘积只用于
 手册推导 quotient，不是程序输入或第二套生产表示；当前接口没有表示选择选项。
 
-每个 sector 的 `sectorKey` 是按初始化时 root `lines` 顺序排列的定长字符串：`0` 表示对应传播子已收缩，`1` 表示未收缩；不能 contact shrink 的传播子位始终为 `1`。top 是全 `1` 字符串。前导零是身份的一部分，禁止把 key 当整数。`context["sectorKeySchema"]` 给出 `rootLineOrder`、位宽和位语义；例如 `{e1,e2,e3,e4}` 中收缩 `{e1,e2,e4}` 得到 `"0010"`。master 的完整身份是 `MSIntegral[sectorKey,timeShifts,stateBits]`，所以不同 subsector 即使局部 shifts/bits 相同也不是同一积分。`MSInitTree` 的 `sectorIdentityCertificate` 会一次性检查 contraction set、sector key、完整 master、global index 和按完整 master 顺序计算的 SHA-256 digest；碰撞时拒绝初始化。massless top-to-sub dlog 的 contact 原子按 event 中实际被收缩的 massless 传播子数乘 `(-1)^N`，simultaneous contact 不使用图专用符号表。
+每个 sector 的 `sectorKey` 是按初始化时 root `lines` 顺序排列的定长字符串：`0` 表示对应传播子已收缩，`1` 表示未收缩；不能 pinch 的传播子位始终为 `1`。top 是全 `1` 字符串。前导零是身份的一部分，禁止把 key 当整数。`context["sectorKeySchema"]` 给出 `rootLineOrder`、位宽和位语义；例如 `{e1,e2,e3,e4}` 中收缩 `{e1,e2,e4}` 得到 `"0010"`。master 的完整身份是 `MSIntegral[sectorKey,timeShifts,stateBits]`，所以不同 subsector 即使局部 shifts/bits 相同也不是同一积分。`MSInitTree` 的 `sectorIdentityCertificate` 会一次性检查 pinch set、sector key、完整 master、global index 和按完整 master 顺序计算的 SHA-256 digest；碰撞时拒绝初始化。massless top-to-sub dlog 的 contact 原子按 event 中实际被收缩的 massless 传播子数乘 `(-1)^N`，simultaneous contact 不使用图专用符号表。
 
 `MSBoundaryChartCertificate[context,targetRules]` 在边界计算前构造
 `1/K[sigma[j]]=Product[x[r],{r,j,V}]` 的 nested blow-up，逐 sector 固化所有 theta，并检查完整 dlog letters、normalization、坐标 Jacobian 与 shifted-contact 新分母都是 coordinate monomial 乘边界非零 unit。`RankOrder -> All` 检查全部 root-time strict charts；证书不通过时 `MSBoundaryData` 返回 `BoundaryChartNotCertified`。证书与边界记录中的局部量使用两个公开符号：`MSBlowupCoordinate[i]` 是嵌套 blow-up 的第 `i` 个局部坐标，`MSDampingEnergy[v]` 是顶点 `v` 的正阻尼能量 `K_v`。
 
 ## 共同 theta 与 time-only 圈图
 
-同一当前 component pair 上的 Full 传播子自动组成共同-theta bundle。程序只生成非空奇数子集 event，系数为 `2^(1-Length[selected])`；一个 event 同时删除所选传播子并只合并一次顶点。sector 由 event BFS 生成，不是 Full 传播子的幂集。合并后未选的 massless Full 传播子只保留 even state，massive Full 传播子使用 `10 -> 01` equal-time canonical；raw tensor matrix 通过保存的 projection/embedding 投到真实 master space。
+同一当前 component pair 上的 (anti-)time-ordered 传播子自动组成共同-theta bundle。程序只生成非空奇数子集 event，系数为 `2^(1-Length[selected])`；一个 event 同时删除所选传播子并只合并一次顶点。sector 由 event BFS 生成，不是 (anti-)time-ordered 传播子的幂集。合并后未选的 massless (anti-)time-ordered 传播子只保留 even state，massive (anti-)time-ordered 传播子使用 `10 -> 01` equal-time canonical；raw tensor matrix 通过保存的 projection/embedding 投到真实 master space。
 
 纯 time-only 圈图使用专用入口：
 
@@ -214,7 +219,7 @@ cycleContext = MSInitTimeGraph[<|
 |>];
 ```
 
-它只允许固定传播子动量的时间积分，不读取或生成 loop momenta、ISP、Landau/threshold 数据。active 的自环传播子不再触发 contact；多条收缩路径到同一 vertex partition/contracted set 被 canonical 成一个 sector。
+它只允许固定传播子动量的时间积分，不读取或生成 loop momenta、ISP、Landau/threshold 数据。active 的自环传播子不再触发 contact；多条收缩路径到同一 vertex partition/pinch set 被 canonical 成一个 sector。
 
 ## 单顶点函数族
 
@@ -272,7 +277,7 @@ reduction = MSReduce[
 若 top-to-sub 的 `R^(1)` 落在 subsector 非零 shift，`MSDLogDE` 会逐列调用同一公式递推，生成 shifted subsector 到全局同序 masters 的 reduction matrix，再右复合 contact block。每个 contact block 保存 `shiftReductionRecords`、residual、remaining shifts 和 singular layers；任何一列未闭合时 dlog 状态为 `contactShiftReductionFailed`，不会输出伪闭合 connection。
 
 公式层不构造一般大矩阵逆。massive 顶点态的固定 `sigma2` 使用论文的 `2x2` 变换及其
-显式逆，massless Full 传播子共享 quotient slot 的固定 `sigma1` 使用自逆 Hadamard；全 sector 只作这些
+显式逆，massless (anti-)time-ordered 传播子共享 quotient slot 的固定 `sigma1` 使用自逆 Hadamard；全 sector 只作这些
 局部矩阵的 Kronecker 积。`M1` 在 state-bit basis 逐对角元取倒数，`M0` 在对应局部张量基逐
 energy letter 取倒数。若未来同一个 slot 出现多个不能由同一局部变换对角化的组分，这条快速
 路径必须 fail closed。
@@ -343,7 +348,7 @@ MSExportEvaluationData[
 
 ## Examples
 
-- [01_massless_full_edge.wl](Examples/01_massless_full_edge.wl)：massless quotient、主积分、递推、dlog 和自动边界/数值入口（含用户自定义有限边界与批量多点求值、CSV/JSON 导出）。
+- [01_massless_time_ordered_edge.wl](Examples/01_massless_time_ordered_edge.wl)：massless quotient、主积分、递推、dlog 和自动边界/数值入口（含用户自定义有限边界与批量多点求值、CSV/JSON 导出）。
 - [02_single_vertex_family.wl](Examples/02_single_vertex_family.wl)：单顶点函数族的紧凑/显式定义、主积分、约化，以及统一 `pointSequence` 下的单点与多点数值互检。
 - [03_time_only_cycle_chart.wl](Examples/03_time_only_cycle_chart.wl)：time-only 圈图、共同 theta、contact sector 与全部 strict-rank chart。
 - [04_three_vertex_tree.wl](Examples/04_three_vertex_tree.wl)：三顶点 massless 树图（+++ 顶点结构），后接批量多点求值与 CSV/JSON 导出。
@@ -387,7 +392,7 @@ Example 06 自适应检查为 `17/17`，使用 4 个生产点、2 个独立验�
 - 已支持共同-theta odd-subset simultaneous contact、coincident massless/massive quotient、event-reachable sector BFS 与纯 time-only 圈图；这不等于支持 loop-momentum integration。
 - 生产边界不按图名或 master 数分派。单顶点 massiveExternal 也走同一通用路线（2411.03088 Sec.3.3 显式级数仅保留为测试对照基准）；已闭合的 tree/time-only context 统一由 sector DAG、component/slot metadata、normalization 和 strict time rank 生成 nested curve、完整 dlog pullback residue 与 ancestor-sector leading system。公式/dlog/chart 未闭合、late-time 指数不衰减或拉回系统不是 exact regular singular 时结构化 fail closed；有限点定义积分只用于独立验证。
 - FlintNDE 输运要求拉回 connection 属于 exact `Q(i)(s)` 或 `Q(i)(t)`。本轮 fresh 开发检查
-  覆盖单顶点、pure massless、massive Full 和 mixed 三顶点，并统一使用当前 generic boundary producer。
+  覆盖单顶点、pure massless、massive (anti-)time-ordered 和 mixed 三顶点，并统一使用当前 generic boundary producer。
 - FlintNDE 保留 exact Lee--Moser、高阶 pole 与奇点折跃能力，并增加按节点覆盖桶的 fast multipoint evaluation 和公开严格用户节点入口。未认证 high-pole、需要 ramification、代数扩域或一般 Stokes connection 的内部点与终点继续 fail closed。
 
 当前 fresh 回归包括 core `54/54`、公式 artifact `23/23`、点序列/规划 `29/29`、

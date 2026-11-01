@@ -6,8 +6,8 @@
 (* ::Chapter:: *)
 (*Massless 双端点 quotient*)
 
-masslessFullLineQ[line_Association] := Lookup[line, "packType", ""] === "masslessFull" &&
-   Lookup[line, "state", "full"] =!= "shrunk";
+masslessTLineQ[line_Association] := Lookup[line, "packType", ""] === "masslessT" &&
+   Lookup[line, "state", "full"] =!= "pinched";
 
 
 canonicalizeMasslessIntegral[
@@ -15,8 +15,8 @@ canonicalizeMasslessIntegral[
    int : J[aList_, linePacks_, ispList_]
    ] := Module[{newPacks = linePacks, coefficient = 1, positions, n1, n2},
    Do[
-    If[actualLinePackType[topo, e, newPacks[[e]]] =!= "masslessFull", Continue[]];
-    positions = linePackNPositions[topo["lines"][[e]], "masslessFull"];
+    If[actualLinePackType[topo, e, newPacks[[e]]] =!= "masslessT", Continue[]];
+    positions = linePackNPositions[topo["lines"][[e]], "masslessT"];
     {n1, n2} = newPacks[[e, positions]];
     If[MemberQ[{0, 1}, n1] && MemberQ[{0, 1}, n2] && n2 === 1,
      coefficient = -coefficient;
@@ -36,11 +36,11 @@ masslessCoincidentAntisymmetricIntegralQ[
    AnyTrue[
     Range[Length[topo["lines"]]],
     Function[e,
-     If[actualLinePackType[topo, e, linePacks[[e]]] =!= "masslessFull",
+     If[actualLinePackType[topo, e, linePacks[[e]]] =!= "masslessT",
       False,
       originalEndpoints = Lookup[topo["lines"][[e]], "originalEndpoints", topo["lines"][[e, "endpoints"]]];
       targetEndpoints = Lookup[repMap, originalEndpoints];
-      positions = linePackNPositions[topo["lines"][[e]], "masslessFull"];
+      positions = linePackNPositions[topo["lines"][[e]], "masslessT"];
       states = linePacks[[e, positions]];
       TrueQ[SameQ @@ targetEndpoints && And @@ (IntegerQ /@ states) && OddQ[Total[states]]]
       ]
@@ -58,19 +58,19 @@ applyMasslessEndpointCanonical[expr_, topo_Association] := Module[{quotient},
 (* ::Section:: *)
 (*Massless 平行传播子 theta-fold*)
 
-(* 共用同一对原始顶点的 masslessFull 线构成一个 bundle（按线指标升序）。
+(* 共用同一对原始顶点的 masslessT 线构成一个 bundle（按线指标升序）。
    fold 弱等式：J[...,{b_e,n_e,0},...] 相等当且仅当 Sum[n_e] mod 2 相等；
    canonical 代表取首线带奇偶位、其余全零。 *)
 
 
-masslessParallelFoldBundles[topo_Association] := Module[{masslessFullLines, grouped},
-   masslessFullLines = Select[Range[Length[topo["lines"]]], masslessFullLineQ[topo["lines"][[#]]] &];
-   grouped = GroupBy[masslessFullLines, vertexPairBundleKey[topo["lines"][[#]]] &];
+masslessParallelFoldBundles[topo_Association] := Module[{masslessTLines, grouped},
+   masslessTLines = Select[Range[Length[topo["lines"]]], masslessTLineQ[topo["lines"][[#]]] &];
+   grouped = GroupBy[masslessTLines, vertexPairBundleKey[topo["lines"][[#]]] &];
    Select[Values[grouped], Length[#] > 1 &]
    ];
 
 
-(* 单个积分上的 fold 规范化。前置条件：整组成员的 active pack 均为 masslessFull
+(* 单个积分上的 fold 规范化。前置条件：整组成员的 active pack 均为 masslessT
    且状态落在 {0,1}x{0} 整数规范域；否则跳过该 bundle。
    系数来源只有端点反向成员的交换宇称：F_e[n,0](x2,x1) = (-1)^n F_e[n,0](x1,x2)，
    fold 本身（奇偶位在线间搬移）按内置关系不产生符号。 *)
@@ -84,10 +84,10 @@ canonicalizeMasslessParallelFold[
      firstLine, firstEndpoints, member, memberEndpoints, k},
    bundles = masslessParallelFoldBundles[topo];
    Do[
-    positionsTable = Table[linePackNPositions[topo["lines"][[bundle[[k]]]], "masslessFull"], {k, Length[bundle]}];
+    positionsTable = Table[linePackNPositions[topo["lines"][[bundle[[k]]]], "masslessT"], {k, Length[bundle]}];
     If[! AllTrue[Range[Length[bundle]],
        Function[k,
-        actualLinePackType[topo, bundle[[k]], linePacks[[bundle[[k]]]]] === "masslessFull" &&
+        actualLinePackType[topo, bundle[[k]], linePacks[[bundle[[k]]]]] === "masslessT" &&
          And @@ (IntegerQ /@ linePacks[[bundle[[k]], positionsTable[[k]]]]) &&
          MemberQ[{0, 1}, linePacks[[bundle[[k]], positionsTable[[k, 1]]]]] &&
          linePacks[[bundle[[k]], positionsTable[[k, 2]]]] === 0
@@ -124,10 +124,10 @@ applyMasslessParallelFoldCanonical[expr_, topo_Association] := Expand[
    ];
 
 
-(* 目标 sector 内两端重合的 masslessFull 输出包落成 contracted 单槽：偶态 {b,0,0}
+(* 目标 sector 内两端重合的 masslessT 输出包落成 pinched 单槽：偶态 {b,0,0}
    去掉 n 槽只留第一槽，奇态已由 applyMasslessEndpointCanonical 清零。必须放在
-   theta-fold 之后——提前改槽形会让含重合成员的 bundle 失效 masslessFull 前置条件。
-   J 内自身的 shrunk packs 决定目标 sector，不能读 source topology 的当前 endpoints。 *)
+   theta-fold 之后——提前改槽形会让含重合成员的 bundle 失效 masslessT 前置条件。
+   J 内自身的 pinched packs 决定目标 sector，不能读 source topology 的当前 endpoints。 *)
 coincidentMasslessPackConvertIntegral[
    topo_Association,
    int : J[aList_, linePacks_, ispList_]
@@ -141,7 +141,7 @@ coincidentMasslessPackConvertIntegral[
      ];
     originalEndpoints = Lookup[topo["lines"][[e]], "originalEndpoints", topo["lines"][[e, "endpoints"]]];
     targetEndpoints = Lookup[repMap, originalEndpoints];
-    positions = linePackNPositions[topo["lines"][[e]], "masslessFull"];
+    positions = linePackNPositions[topo["lines"][[e]], "masslessT"];
     If[TrueQ[SameQ @@ targetEndpoints] && linePacks[[e, positions]] === {0, 0},
      newPacks[[e]] = {linePacks[[e, 1]]};
      changedQ = True
@@ -199,7 +199,7 @@ masslessBuiltInRelationData[topo_Association] := Map[
       |>
      ]
     ],
-   Select[Range[topo["nE"]], masslessFullLineQ[topo["lines"][[#]]] &]
+   Select[Range[topo["nE"]], masslessTLineQ[topo["lines"][[#]]] &]
    ];
 
 
@@ -210,7 +210,7 @@ forbiddenNDataForIntegral[topo_Association, J[_, linePacks_, _]] := Module[
     positions = linePackNPositions[topo["lines"][[e]], packType];
     values = If[positions === {}, {}, linePacks[[e, positions]]];
     Switch[packType,
-     "massiveFull" | "massiveCross",
+     "massiveT" | "massiveW",
      Do[
       If[IntegerQ[values[[endpointSlot]]] && values[[endpointSlot]] >= 2,
        AppendTo[issues, <|"lineIndex" -> e, "packType" -> packType,
@@ -218,7 +218,7 @@ forbiddenNDataForIntegral[topo_Association, J[_, linePacks_, _]] := Module[
        ],
       {endpointSlot, Length[values]}
       ],
-     "masslessFull",
+     "masslessT",
      Do[
       If[IntegerQ[values[[endpointSlot]]] && ! MemberQ[{0, 1}, values[[endpointSlot]]],
        AppendTo[issues, <|"lineIndex" -> e, "packType" -> packType,
@@ -235,7 +235,7 @@ forbiddenNDataForIntegral[topo_Association, J[_, linePacks_, _]] := Module[
 
 
 (* ::Chapter:: *)
-(*Massless regular 与 contact 原子*)
+(*Massless regular 与 pinched 原子*)
 
 toggleMasslessEndpointState[
    J[aList_, linePacks_, ispList_], e_Integer, endpointSlot_Integer
@@ -262,7 +262,7 @@ timeMasslessEndpointDerivativeTerms[
      line = topo["lines"][[e]];
      endpointSlots = lineEndpointSlotsAtVertex[line, vertexId];
      Switch[actualLinePackType[topo, e, linePacks[[e]]],
-      "masslessFull",
+      "masslessT",
       sigma = sameBranchSKSign[line];
       Total@Table[
         shiftedIntegral = shiftLinePower[
@@ -271,7 +271,7 @@ timeMasslessEndpointDerivativeTerms[
         I sigma shiftedIntegral,
         {endpointSlot, endpointSlots}
         ],
-      "masslessCross",
+      "masslessW",
       Total@Table[
         I skEndpointPhaseSign[line, endpointSlot] shiftLinePower[topo, int, e, -1],
         {endpointSlot, endpointSlots}
@@ -297,12 +297,12 @@ momentumBuildingBlockDerivativeTerms[
       vDotQ = Expand[expandDotExpr[vector, lineMomenta[[e]], topo] /. repSP2ZRules];
       packType = actualLinePackType[topo, e, int[[2, e]]];
       Switch[packType,
-       "massiveFull" | "massiveCross",
+       "massiveT" | "massiveW",
        Total@Table[
          loopCoeff compiledMomentumEndpointDerivativeTerms[topo, int, e, endpointSlot, vDotQ],
          {endpointSlot, 2}
          ],
-       "masslessFull",
+       "masslessT",
        sigma = sameBranchSKSign[line];
        loopCoeff Total@Table[
         (* bridge 的 fixed-line 幂移会产生显式模长系数；先对裸 J 做顶点移位，
@@ -318,7 +318,7 @@ momentumBuildingBlockDerivativeTerms[
           ],
          {endpointSlot, 2}
          ],
-       "masslessCross",
+       "masslessW",
        loopCoeff Total@Table[
          shiftedInt = shiftVertexA[int, topo, line["endpoints"][[endpointSlot]], 1];
          -I skEndpointPhaseSign[line, endpointSlot]
@@ -347,12 +347,12 @@ externalVectorBuildingBlockDerivativeTerms[
       vDotQ = Expand[expandDotExpr[vector, lineMomenta[[e]], topo] /. repSP2ZRules];
       packType = actualLinePackType[topo, e, int[[2, e]]];
       Switch[packType,
-       "massiveFull" | "massiveCross",
+       "massiveT" | "massiveW",
        Total@Table[
          extCoeff compiledMomentumEndpointDerivativeTerms[topo, int, e, endpointSlot, vDotQ],
          {endpointSlot, 2}
          ],
-       "masslessFull",
+       "masslessT",
        sigma = sameBranchSKSign[line];
        extCoeff Total@Table[
         (* 与 loop-momentum 路线使用同一顺序：裸 J 顶点移位先于 fixed-line 系数生成。 *)
@@ -367,7 +367,7 @@ externalVectorBuildingBlockDerivativeTerms[
           ],
          {endpointSlot, 2}
          ],
-       "masslessCross",
+       "masslessW",
        extCoeff Total@Table[
          shiftedInt = shiftVertexA[int, topo, line["endpoints"][[endpointSlot]], 1];
          -I skEndpointPhaseSign[line, endpointSlot]
@@ -386,9 +386,9 @@ scalarMomentumBuildingBlockDerivativeTerms[topo_Association, int_J, e_Integer] :
    {line = topo["lines"][[e]], packType, sigma},
    packType = actualLinePackType[topo, e, int[[2, e]]];
    Switch[packType,
-    "massiveFull" | "massiveCross",
+    "massiveT" | "massiveW",
     Total[compiledScalarMomentumEndpointDerivativeTerms[topo, int, e, #] & /@ {1, 2}],
-    "masslessFull",
+    "masslessT",
      sigma = sameBranchSKSign[line];
     Total@Table[
       -I sigma shiftVertexA[
@@ -397,7 +397,7 @@ scalarMomentumBuildingBlockDerivativeTerms[topo_Association, int_J, e_Integer] :
         ],
       {endpointSlot, 2}
       ],
-    "masslessCross",
+    "masslessW",
     Total@Table[
       -I skEndpointPhaseSign[line, endpointSlot] shiftVertexA[
         int, topo, line["endpoints"][[endpointSlot]], 1
@@ -416,26 +416,26 @@ thetaBoundaryAtomicTerms[
    vertexId_
    ] := Module[
    {line = topo["lines"][[e]], endpointSlots, endpointSlot, endpointOrientation,
-    pack = linePacks[[e]], packType, positions, coeff, shrinkTerms},
+    pack = linePacks[[e]], packType, positions, coeff, pinchTerms},
    endpointSlots = lineEndpointSlotsAtVertex[line, vertexId];
    If[Length[endpointSlots] =!= 1, Return[{}]];
    endpointSlot = First[endpointSlots];
    endpointOrientation = If[endpointSlot === 1, 1, -1];
    packType = actualLinePackType[topo, e, pack];
    Switch[packType,
-    "massiveFull",
+    "massiveT",
     positions = linePackNPositions[line, packType];
       coeff = -sameBranchSKSign[line] KroneckerDelta[Total[pack[[positions]]], 1]
         (-1)^pack[[positions[[endpointSlot]]]];
-    shrinkTerms = lineCompiledShrinkTerms[line];
+    pinchTerms = lineCompiledPinchTerms[line];
     (<|
         "lineIndex" -> e,
         "coefficient" -> coeff Lookup[#, "coefficient", 0],
         "bShift" -> Lookup[#, "bShift", 1],
-        "zeroPointShift" -> Lookup[#, "zeroPointShift", lineShrinkZeroPointShift[line]],
+        "zeroPointShift" -> Lookup[#, "zeroPointShift", linePinchZeroPointShift[line]],
         "aShift" -> Lookup[#, "bShift", 1]
-        |> &) /@ shrinkTerms,
-    "masslessFull",
+        |> &) /@ pinchTerms,
+    "masslessT",
     positions = linePackNPositions[line, packType];
     {<|
       "lineIndex" -> e,
@@ -451,9 +451,9 @@ thetaBoundaryAtomicTerms[
 
 
 (* ::Chapter:: *)
-(*Fixed-line shrink 与 normalized coefficient*)
+(*Fixed-line pinch 与 normalized coefficient*)
 
-shrinkLinesIntegral[
+pinchLinesIntegral[
    topo_Association,
    int : J[aList_, linePacks_, ispList_],
    specs_List
@@ -485,7 +485,7 @@ shrinkLinesIntegral[
         },
       powerCoefficient *= fixedLineMomentumMagnitude[topo, spec["lineIndex"]]^(
         -spec["bShift"] -
-         Lookup[spec, "zeroPointShift", lineShrinkZeroPointShift[topo["lines"][[spec["lineIndex"]]]]]
+         Lookup[spec, "zeroPointShift", linePinchZeroPointShift[topo["lines"][[spec["lineIndex"]]]]]
         );
       newLinePacks[[spec["lineIndex"]]] = {fixedLineSentinel[]}
       ]
@@ -582,7 +582,7 @@ buildSectorTopologyCache[rootTopo_Association, metadataList_List] := Module[
        ];
       tadpoleData = Select[
         tadpoleLoopReversalData[sectorTopo],
-        MemberQ[{"massiveFull", "masslessFull"}, Lookup[#, "packType", None]] &&
+        MemberQ[{"massiveT", "masslessT"}, Lookup[#, "packType", None]] &&
           TrueQ[Lookup[#, "exclusiveLoopQ", False]] &
         ];
       (* EOM 与端点 canonical 已在 general template 层完成。只有用户规则可能依赖
@@ -813,18 +813,18 @@ integrandBuildingBlock[line_Association, pack_List, momentumMagnitude_] := Modul
    {lineId = line["id"], endpoints = line["endpoints"], packType = line["packType"], positions},
    positions = linePackNPositions[line, packType];
    Switch[packType,
-    "massiveFull" | "massiveCross",
+    "massiveT" | "massiveW",
     Hh[MassiveBlock[
        lineFunctionPreset[line], Lookup[line, "nu", nu], Lookup[line, "skType", "++"],
       lineId, endpoints, momentumMagnitude, pack[[positions[[1]]]], pack[[positions[[2]]]]
       ]],
-    "masslessFull",
+    "masslessT",
     Hh[MasslessBlock[
       Lookup[line, "skType", "++"], lineId, endpoints, momentumMagnitude,
       pack[[positions[[1]]]], pack[[positions[[2]]]]
       ]],
-    "masslessCross",
-    Hh[MasslessCrossBlock[Lookup[line, "skType", "+-"], lineId, endpoints, momentumMagnitude]],
+    "masslessW",
+    Hh[MasslessWBlock[Lookup[line, "skType", "+-"], lineId, endpoints, momentumMagnitude]],
     _, 1
     ]
    ];
@@ -842,7 +842,7 @@ integrandLineBareFactor[topo_Association, int_J, e_Integer] := Module[
      1
      ];
    If[
-    packType === "shrunk",
+    packType === "pinched",
     denominator,
     denominator integrandBuildingBlock[Join[line, <|"packType" -> packType|>], pack, momentumMagnitude]
     ]
@@ -926,7 +926,7 @@ parityLineVariables[line_Association] := {
    };
 
 
-(* banana 束的奇偶合并。同顶点对平行 masslessFull 束的 theta-fold 只保留每组一个总奇偶位，
+(* banana 束的奇偶合并。同顶点对平行 masslessT 束的 theta-fold 只保留每组一个总奇偶位，
    因此用户触及该束成员的显式约束按组求和（表达式含 b 指标项、余数，均模 2 合并）成为该束
    唯一的 fold 不变目标；未触及任何束成员的约束原样保留。合并在线性 transport 之前执行，
    与逐约束 transport 可交换。未触及的束与未给约束的情形不改变任何行为。 *)
@@ -988,7 +988,7 @@ parityFoldedBundleMemberLineIndices[topo_Association] := Module[
 
 transportParityConstraint[topo_Association, constraint_Association] := Module[
    {expr, remainder, rootRules, issues = {}, line, vars, coefficients, cb, c1, c2,
-    integerShift, zeroShift, sourceZero, targetZero, delta, shrunkQ},
+    integerShift, zeroShift, sourceZero, targetZero, delta, pinchedQ},
    If[Lookup[constraint, "status", "valid"] === "invalid", Return[constraint]];
    expr = Expand[constraint["expression"]];
    remainder = constraint["remainder"];
@@ -1002,12 +1002,12 @@ transportParityConstraint[topo_Association, constraint_Association] := Module[
     If[! lineIndexedPowerQ[line] && ! And @@ (zeroQ /@ coefficients),
      AppendTo[issues, <|"reason" -> "fixedLineInParity", "lineIndex" -> e, "coefficients" -> coefficients|>]
      ];
-    shrunkQ = Lookup[line, "state", "full"] === "shrunk" || Lookup[line, "packType", ""] === "shrunk";
-    If[shrunkQ && lineIndexedPowerQ[line],
+    pinchedQ = Lookup[line, "state", "full"] === "pinched" || Lookup[line, "packType", ""] === "pinched";
+    If[pinchedQ && lineIndexedPowerQ[line],
      If[! TrueQ[Expand[c1 - c2] === 0],
       AppendTo[issues, <|"reason" -> "endpointWeightsNotTransportable", "lineIndex" -> e, "coefficients" -> coefficients|>],
-      integerShift = lineShrinkBShift[line];
-      zeroShift = lineShrinkZeroPointShift[line];
+      integerShift = linePinchBShift[line];
+      zeroShift = linePinchZeroPointShift[line];
       sourceZero = zeroPointRuleValueFromRules[rootRules, b0[line["id"]], 0];
       targetZero = lineBSZeroPoint[topo, e];
       delta = Simplify[Expand[(targetZero - sourceZero) - zeroShift]];
@@ -1053,7 +1053,7 @@ parityMetadataForSector[topo_Association] := Module[
      <|"status" -> "enabled", "parityUsableQ" -> True,
        "constraints" -> transported,
        "masslessCycleFlipCount" -> Mod[Count[
-          Select[Range[topo["nE"]], MemberQ[Lookup[topo, "sectorShrunkLines", {}], #] &],
+          Select[Range[topo["nE"]], MemberQ[Lookup[topo, "sectorPinchedLines", {}], #] &],
           e_ /; lineIndexedPowerQ[topo["lines"][[e]]] && Lookup[topo["lines"][[e]], "massType", "massive"] === "massless"
           ], 2]
        |>,

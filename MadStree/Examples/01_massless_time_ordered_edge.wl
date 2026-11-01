@@ -1,8 +1,8 @@
 (* ::Package:: *)
 
 (***
-File: 01_massless_full_edge.wl
-Purpose: Demonstrates a single theta-carrying massless full edge from topology initialization to master integrals, recurrence and the dlog DE, followed by the unique two-phase single-point and multipoint numerical workflow.
+File: 01_massless_time_ordered_edge.wl
+Purpose: Demonstrates a single theta-carrying massless (anti-)time-ordered edge from topology initialization to master integrals, recurrence and the dlog DE, followed by the unique two-phase single-point and multipoint numerical workflow.
 Run: execute section by section in the Mathematica front end, or run the whole file with wolframscript -file.
 ***)
 

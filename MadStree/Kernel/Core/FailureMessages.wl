@@ -245,13 +245,13 @@ msFailureDefaultText[tag_String] := Switch[tag,
     },
   "InvalidContactBundleLines",
     {
-      "The explicit thetaBundles must list each full-line id at most once and may only use ids of actual full lines. Correct the attached explicit line-id list against the reported full-line ids and initialize the tree again",
-      "显式 thetaBundles 中每个 full 线 id 至多出现一次，且只能使用实际 full 线的 id。请对照所报告的 full 线 id 修正附带的显式线 id 列表后重新初始化树图"
+      "The explicit thetaBundles must list each (anti-)time-ordered-line id at most once and may only use ids of actual (anti-)time-ordered lines. Correct the attached explicit line-id list against the reported (anti-)time-ordered-line ids and initialize the tree again",
+      "显式 thetaBundles 中每个 (anti-)time-ordered 线 id 至多出现一次，且只能使用实际 (anti-)time-ordered 线的 id。请对照所报告的 (anti-)time-ordered 线 id 修正附带的显式线 id 列表后重新初始化树图"
     },
   "ContactBundleMustShareThetaArgument",
     {
-      "Every explicit theta bundle must be nonempty and its full lines must share one common pair of endpoints, which fixes their shared theta argument. Correct the attached bundle groups and initialize the tree again",
-      "每个显式 theta 束必须非空，且束内 full 线必须共享同一对端点，以固定其共享的 theta 参数。请修正所附的束分组后重新初始化树图"
+      "Every explicit theta bundle must be nonempty and its (anti-)time-ordered lines must share one common pair of endpoints, which fixes their shared theta argument. Correct the attached bundle groups and initialize the tree again",
+      "每个显式 theta 束必须非空，且束内 (anti-)time-ordered 线必须共享同一对端点，以固定其共享的 theta 参数。请修正所附的束分组后重新初始化树图"
     },
   _,
     {

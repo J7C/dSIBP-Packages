@@ -12,14 +12,14 @@
 (***
 File: Sectors.wl
 Purpose: Builds the sector DAG, the graph-wide slot registry and the ordered master integrals from common-theta simultaneous contact events.
-Key convention: one event produces exactly one delta; a multi-edge event contracts the selected lines simultaneously and merges the vertices only once.
-Sector keys are fixed-length strings encoding the root propagator input order, with 0 for contracted and 1 for uncontracted.
+Key convention: one event produces exactly one delta; a multi-edge event pinches the selected lines simultaneously and merges the vertices only once.
+Sector keys are fixed-length strings encoding the root propagator input order, with 0 for pinched and 1 for unpinched.
 ***)
 
 (* ::Chapter:: *)
 (* Sectors and components *)
 
-(* Input is the complete root line table and the canonical contraction set. Never convert the result to an integer; sectors starting with contracted propagators would lose leading zeros and break their identity. *)
+(* Input is the complete root line table and the canonical pinch set. Never convert the result to an integer; sectors starting with pinched propagators would lose leading zeros and break their identity. *)
 msSectorKey[{}, contractedIds_List] := "";
 
 
@@ -64,12 +64,12 @@ msLinePositionAssociation[lines_List] := If[
 ];
 
 
-(* Each round allows contact only from full lines connecting two different current components. Unselected bundle lines whose endpoints coincide are kept as coincident lines and handled by the sector quotient. *)
+(* Each round allows contact only from (anti-)time-ordered lines connecting two different current components. Unselected bundle lines whose endpoints coincide are kept as coincident lines and handled by the sector quotient. *)
 msReachableContactData[vertices_List, lines_List] := Module[
-  {fullLines, linePositions, queue = {{}}, seen = <|ToString[{}, InputForm] -> True|>,
+  {timeOrderedLines, linePositions, queue = {{}}, seen = <|ToString[{}, InputForm] -> True|>,
    states = {}, transitions = {}, state, components, rootToComponent, eligible, bundles,
    bundle, oddSubsets, selected, selectedIds, target, targetKey, sourceKey},
-  fullLines = Select[lines, msFullLineQ];
+  timeOrderedLines = Select[lines, msTimeOrderedLineQ];
   linePositions = msLinePositionAssociation[lines];
   While[queue =!= {},
     state = First[queue];
@@ -78,7 +78,7 @@ msReachableContactData[vertices_List, lines_List] := Module[
     components = msComponentsForContractions[vertices, lines, state];
     rootToComponent = msRootToComponent[components];
     eligible = Select[
-      fullLines,
+      timeOrderedLines,
       ! MemberQ[state, #["id"]] && ! SameQ @@ (rootToComponent /@ #["endpoints"]) &
     ];
     bundles = GatherBy[eligible, Sort[rootToComponent /@ #["endpoints"]] &];
@@ -127,7 +127,7 @@ msSectorSlots[lines_List, contractedIds_List] := Flatten@Map[
       {},
       Switch[
         line["type"],
-        "massiveFull" | "massiveCross",
+        "massiveT" | "massiveW",
           MapIndexed[
             <|"key" -> {line["id"], First[#2]}, "kind" -> "massiveEndpoint", "lineId" -> line["id"],
               "linePosition" -> line["position"], "endpointIndex" -> First[#2], "rootVertex" -> #1,
@@ -140,10 +140,10 @@ msSectorSlots[lines_List, contractedIds_List] := Flatten@Map[
              "linePosition" -> line["position"], "endpointIndex" -> 1, "rootVertex" -> First[line["endpoints"]],
              "momentum" -> line["momentum"], "nu" -> line["nu"], "formulaNu" -> line["formulaNu"],
              "hankelOrder" -> line["hankelOrder"], "hPrefactorPower" -> line["hPrefactorPower"]|>},
-        "masslessFull",
+        "masslessT",
           {<|"key" -> {line["id"], "shared"}, "kind" -> "masslessShared", "lineId" -> line["id"],
              "linePosition" -> line["position"], "endpoints" -> line["endpoints"],
-             "momentum" -> line["momentum"], "fullContourSign" -> line["fullContourSign"]|>},
+             "momentum" -> line["momentum"], "timeOrderedContourSign" -> line["timeOrderedContourSign"]|>},
         _, {}
       ]
     ]
@@ -154,7 +154,7 @@ msSectorSlots[lines_List, contractedIds_List] := Flatten@Map[
 
 (* coincidence quotient 在 raw binary 空间构造 embedding S 与 projection P：
    rawVector=S.canonicalVector，canonicalVector=P.rawVector。massless shared 奇态为零；
-   massive Full 的 10 依现行约定 canonicalize 为 01。 *)
+   massive (anti-)time-ordered 的 10 依现行约定 canonicalize 为 01。 *)
 msSectorCanonicalStateData[sector_Association] := Module[
   {rawStates, slots, activeLines, rootToComponent, constraints, canonicalize,
    images, canonicalStates, canonicalIndex, embedding, projection, mapped, row, column},
@@ -164,19 +164,19 @@ msSectorCanonicalStateData[sector_Association] := Module[
   rootToComponent = sector["rootToComponent"];
   constraints = Select[
     activeLines,
-    msFullLineQ[#] && SameQ @@ (rootToComponent /@ #["endpoints"]) &
+    msTimeOrderedLineQ[#] && SameQ @@ (rootToComponent /@ #["endpoints"]) &
   ];
   canonicalize[bits_List] := Module[{result = bits, positions, zeroQ = False, invalidQ = False},
     Do[
       Switch[line["type"],
-        "masslessFull",
+        "masslessT",
           positions = msSlotPositionByKey[sector, {line["id"], "shared"}];
           If[
             Head[positions] === Missing,
             invalidQ = True,
             If[result[[First[positions]]] === 1, zeroQ = True]
           ],
-        "massiveFull",
+        "massiveT",
           positions = (msSlotPositionByKey[sector, {line["id"], #}] &) /@ {1, 2};
           If[
             MemberQ[positions, _Missing, Infinity],
@@ -225,7 +225,7 @@ msComponentEnergy[component_List, vertices_List, lines_List] := Module[{energy, 
       Select[vertices, MemberQ[component, #["id"]] &]
   ];
   Do[
-    If[MemberQ[{"masslessCross", "masslessExternal"}, line["type"]],
+    If[MemberQ[{"masslessW", "masslessExternal"}, line["type"]],
       Do[
         If[MemberQ[component, line["endpoints"][[endpointPosition]]],
           energy += I line["endpointSigns"][[endpointPosition]] line["momentum"]/I
@@ -262,7 +262,7 @@ msBuildSector[vertices_List, lines_List, contractedIds_List, rootNormalization_]
     "sectorKey" -> msSectorKey[lines, contractedIds],
     "sectorBits" -> Characters[msSectorKey[lines, contractedIds]],
     "contractedLineIds" -> contractedIds,
-    "remainingFullLineCount" -> Count[activeLines, line_ /; msFullLineQ[line]],
+    "remainingTimeOrderedLineCount" -> Count[activeLines, line_ /; msTimeOrderedLineQ[line]],
     "vertexComponents" -> components,
     "vertexOrder" -> Range[Length[components]],
     "rootToComponent" -> rootToComponent,
@@ -327,7 +327,7 @@ msBuildMasters[sectors_List] := Module[{offset = 1, records},
 (* Sector and master identity certificates *)
 
 (*
-Validates once the bijection between canonical contraction sets, sector keys and the global master table.
+Validates once the bijection between canonical pinch sets, sector keys and the global master table.
 Consumers then only read the same-origin certificate and masterDigest, without rescanning the full context.
 *)
 msSectorIdentityCertificate[sectors_List, masters_List, rootLines_List] := Module[

@@ -19,8 +19,8 @@ hankelSystem = <|
    "T" -> IdentityMatrix[2],
    "W" -> -prefactor/x,
    "WT" -> Automatic,
-   "shrinkBShift" -> 1,
-   "shrinkZeroPointShift" -> 0
+   "pinchBShift" -> 1,
+   "pinchZeroPointShift" -> 0
    |>;
 
 case = <|

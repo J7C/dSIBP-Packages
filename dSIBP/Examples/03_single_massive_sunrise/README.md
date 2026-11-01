@@ -4,7 +4,7 @@
 
 脚本把两个顶点的外腿能量统一为 `kE`，并保留独立圈外模长 `kL`，因此是两标度输入。两个 ISP 选成在两条 massless 平行传播子交换下互换的一对；`symmetryRules` 同时实现顶点交换和 massless 传播子/ISP 交换。
 
-脚本只执行 `DSKinematics`、`DSInit`、`DSSeeds/DSAllSeeds`，构造全部 contact-reachable sectors 的 general IBP 模板；连续指标始终保持符号。它同时读取初始化产生的 `{ss11,kE}` general 参数微分算符，并用一个 general top integral 展示两个公开 `ds` 结果。`ss11` 通过 `2 ss11 d/d sp[kL,kL]` 链式法则实现，`kE` 同时作用于两个顶点的共同能量。
+脚本只执行 `DSKinematics`、`DSInit`、`DSSeeds/DSAllSeeds`，构造全部 pinched-reachable sectors 的 general IBP 模板；连续指标始终保持符号。它同时读取初始化产生的 `{ss11,kE}` general 参数微分算符，并用一个 general top integral 展示两个公开 `ds` 结果。`ss11` 通过 `2 ss11 d/d sp[kL,kL]` 链式法则实现，`kE` 同时作用于两个顶点的共同能量。
 
 本例不调用 `DSMetaSeedRange`、`DSGenerateIBP`、`DSLinear`、Kira、DE 或 scaling，也不选择数值点、target 或 master，不写任何运行产物。
 

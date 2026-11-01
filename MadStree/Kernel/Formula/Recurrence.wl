@@ -56,14 +56,14 @@ msEventAtomicCoefficient[
 ] := Module[{endpointIndex, positions, endpointBits, sharedPosition},
   endpointIndex = msEventEndpointIndex[line, sourceSector, componentPosition];
   Switch[line["type"],
-    "massiveFull",
+    "massiveT",
       positions = (First@msSlotPositionByKey[sourceSector, {line["id"], #}] &) /@ {1, 2};
       endpointBits = sourceBits[[positions]];
       If[Total[endpointBits] =!= 1,
         0,
         If[endpointIndex === 1, (-1)^endpointBits[[2]], (-1)^endpointBits[[1]]]
       ],
-    "masslessFull",
+    "masslessT",
       sharedPosition = First@msSlotPositionByKey[sourceSector, {line["id"], "shared"}];
       If[sourceBits[[sharedPosition]] =!= 1, 0, If[endpointIndex === 1, -2, 2]],
     _, 0
@@ -83,7 +83,7 @@ msNormalizedEventAbsorption[
 (* 纯 massive contact 不再乘轮廓号；轮廓只进入有符号能量、链式因子和最终 SK branch 权重。
    massless quotient 相对 h/Wronskian 原子仍为每条收缩线一个负号。 *)
 msContactEventSign[contactMap_Association] :=
-  (-1)^Count[contactMap["lineTypes"], "masslessFull"];
+  (-1)^Count[contactMap["lineTypes"], "masslessT"];
 
 
 msEventContactMatrix[

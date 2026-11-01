@@ -33,7 +33,7 @@ treeCaseInput = <|
    "symmetryRules" -> {}
    |>;
 
-(* masslessFull 在 Private relation 层约到二维物理基；公开 stateBits 中整边共享一位。
+(* masslessT 在 Private relation 层约到二维物理基；公开 stateBits 中整边共享一位。
    DSSeeds 与 tree 结果都使用同一个 time-only J，不需要私有状态选项。 *)
 atomicMasslessInput = <|
    "name" -> "atomicMasslessTimeOnly",

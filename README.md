@@ -102,8 +102,8 @@ User manuals and formula references are compiled PDFs next to their editable `.t
   interface and a worked walk-through of every example.
 - `dSIBP/Documentation/dSIBP_manual-en.pdf` — the English “dSIBP Handbook” covering the same
   material.
-- `MadStree/Documentation/tree_formula_en_full.pdf` — the MadStree handbook in English;
-  `tree_formula.pdf` is the same handbook in Chinese.
+- `MadStree/Documentation/handbook.pdf` — the MadStree handbook in English;
+  `用户手册.pdf` is the same handbook in Chinese.
 - `FlintNDE/Documentation/FlintNDE_manual-en.pdf` — the FlintNDE paper: the numerical method,
   the public interface and its documented limits; `FlintNDE_manual-cn.pdf` is the Chinese edition.
 
@@ -113,7 +113,7 @@ Every example resolves its own package directory from `$InputFileName` or from a
 variable at the top of the file, so all of them run directly from a clone of this repository:
 
 ```powershell
-wolframscript -file MadStree/Examples/01_massless_full_edge.wl
+wolframscript -file MadStree/Examples/01_massless_time_ordered_edge.wl
 wolframscript -file dSIBP/Examples/01_mixed_bubble_workflow.wl
 python FlintNDE/examples/qnm_2x2.py
 ```
@@ -139,6 +139,8 @@ Please cite the underlying papers when you use these packages:
 - Jiaqi Chen, Bo Feng, Zhehan Qin and Yi-Xiao Tao, *Loop integrals in de Sitter spacetime: The
   parity-split IBP system and d log-form differential equations*,
   [arXiv:2604.14549](https://arxiv.org/abs/2604.14549).
+- Jiaqi Chen, Yi-Xiao Tao, Xinyi Wang and Dong Zhang, *MadStree: automated evaluation of
+  tree-level de Sitter correlators*, [arXiv:2610.28526](https://arxiv.org/abs/2610.28526).
 
-The dSIBP, MadStree and FlintNDE package papers are in preparation and their arXiv identifiers
-are not yet assigned.
+The dSIBP and FlintNDE package papers are in preparation and their arXiv identifiers are not yet
+assigned.

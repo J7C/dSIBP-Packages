@@ -96,12 +96,12 @@ ds016TopologyGraphAudit[vertexIds_List, lines_List] := Module[
    {endpoints, activeLineIndices, activeEndpoints, malformed, unknown, componentCount, loopCount,
     bridgeLines, cycleLines, incidence},
    endpoints = Lookup[lines, "endpoints", Missing["endpoints"]];
-   (* 声明式 massless 自环虽在初始化即转 contracted 单槽，残存 b 幂仍携带该线自带动量，
-      圈空间与路由审计必须计为活动线；收缩产生的 shrunk 线维持排除。本审计只在 root
-      parse 时运行，root 层的 shrunk 线只可能是前者。 *)
+   (* 声明式 massless 自环虽在初始化即转 pinched 单槽，残存 b 幂仍携带该线自带动量，
+      圈空间与路由审计必须计为活动线；收缩产生的 pinched 线维持排除。本审计只在 root
+      parse 时运行，root 层的 pinched 线只可能是前者。 *)
    activeLineIndices = Select[
      Range[Length[lines]],
-     (Lookup[lines[[#]], "state", "full"] =!= "shrunk" && Lookup[lines[[#]], "packType", Automatic] =!= "shrunk") ||
+     (Lookup[lines[[#]], "state", "full"] =!= "pinched" && Lookup[lines[[#]], "packType", Automatic] =!= "pinched") ||
        (Lookup[lines[[#]], "massType", "massive"] === "massless" &&
           SameQ @@ Lookup[lines[[#]], "endpoints", {$Failed, $Failed}]) &
      ];
@@ -141,7 +141,7 @@ ds016TopologyGraphAudit[vertexIds_List, lines_List] := Module[
     "inputLineCount" -> Length[lines],
     "internalLineCount" -> Length[activeLineIndices],
     "activeLineIndices" -> activeLineIndices,
-    "shrunkLineIndices" -> Complement[Range[Length[lines]], activeLineIndices],
+    "pinchedLineIndices" -> Complement[Range[Length[lines]], activeLineIndices],
     "connectedComponentCount" -> componentCount,
     "graphLoopCount" -> loopCount,
     "bridgeLineIndices" -> bridgeLines,

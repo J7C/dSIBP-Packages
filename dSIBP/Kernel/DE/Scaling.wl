@@ -27,7 +27,7 @@ dsIntegralPhysicalPowers[int : J[aList_List, linePacks_List, _List], context_Ass
    aPowers = MapThread[#1 + vertexZeroPoint[sectorTopo, #2] &, {aList, activeVertices}];
    bPowers = Table[linePowerIndex[sectorTopo, int, e], {e, sectorTopo["nE"]}];
    <|"aPowers" -> aPowers, "bPowers" -> bPowers,
-    "sectorKey" -> sectorKeyFromShrunkLines[sectorTopo, Lookup[sectorTopo, "sectorShrunkLines", {}]]|>
+    "sectorKey" -> sectorKeyFromPinchedLines[sectorTopo, Lookup[sectorTopo, "sectorPinchedLines", {}]]|>
    ];
 
 dsPureMassiveBubbleDegree[int_J, context_Association] := Module[{powers, vertexCount, offset},

@@ -84,7 +84,7 @@ msM0Matrix[sector_Association, componentPosition_Integer] := Module[
         incidence = msMasslessSharedIncidence[slot, sector, componentPosition];
         If[incidence =!= 0,
           matrix += msEmbedMatrix[
-            I incidence slot["fullContourSign"] slot["momentum"] msSigma1,
+            I incidence slot["timeOrderedContourSign"] slot["momentum"] msSigma1,
             slotPosition,
             sector["slotCount"]
           ]

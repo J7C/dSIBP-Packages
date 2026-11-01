@@ -155,7 +155,7 @@ msSectorThetaFixing[sector_Association, rank_Association] := Module[{componentDo
         ]
       ]
     ],
-    Select[sector["activeLines"], msFullLineQ]
+    Select[sector["activeLines"], msTimeOrderedLineQ]
   ]
 ];
 
@@ -262,9 +262,9 @@ msVertexEndpointCoefficient["Positive", 2, 1, nu_] := -2 nu Exp[I Pi nu] msPaper
 (* ::Chapter:: *)
 (* Frobenius leading system of an arbitrary sector DAG *)
 
-(* The Hankel branches of a full propagator are determined only by the SK type and the strict time rank. *)
-msBoundaryFullBranches["++", firstDominantQ_] := If[firstDominantQ, {1, 2}, {2, 1}];
-msBoundaryFullBranches["--", firstDominantQ_] := If[firstDominantQ, {2, 1}, {1, 2}];
+(* The Hankel branches of a (anti-)time-ordered propagator are determined only by the SK type and the strict time rank. *)
+msBoundaryTimeOrderedBranches["++", firstDominantQ_] := If[firstDominantQ, {1, 2}, {2, 1}];
+msBoundaryTimeOrderedBranches["--", firstDominantQ_] := If[firstDominantQ, {2, 1}, {1, 2}];
 
 
 msBoundaryComponentRank[sector_Association, componentPosition_Integer, rank_Association] := Min[
@@ -283,9 +283,9 @@ msBoundaryHankelBranch[
   Switch[line["type"],
     "massiveExternal",
       First[line["hankelBranches"]],
-    "massiveCross",
+    "massiveW",
       line["hankelBranches"][[slot["endpointIndex"]]],
-    "massiveFull" | "masslessFull",
+    "massiveT" | "masslessT",
       endpointComponents = sector["rootToComponent"] /@ line["endpoints"];
       firstDominantQ = If[
         SameQ @@ endpointComponents,
@@ -293,7 +293,7 @@ msBoundaryHankelBranch[
         msBoundaryComponentRank[sector, First[endpointComponents], rank] <
           msBoundaryComponentRank[sector, Last[endpointComponents], rank]
       ];
-      branches = msBoundaryFullBranches[line["contourType"], firstDominantQ];
+      branches = msBoundaryTimeOrderedBranches[line["contourType"], firstDominantQ];
       branches[[slot["endpointIndex"]]],
     _,
       Missing["NoHankelBranch", slot["key"]]
@@ -301,15 +301,15 @@ msBoundaryHankelBranch[
 ];
 
 
-(* A full line whose two endpoints already merged into one component carries no time ordering:
+(* A (anti-)time-ordered line whose two endpoints already merged into one component carries no time ordering:
    the two Hankel arrangements are the two sides of the same equal-time fibre, so a boundary
    coefficient that keeps only one of them is not constant along the fibre. *)
-msBoundaryCoincidentFullLineQ[sector_Association, line_Association] :=
-  line["type"] === "massiveFull" &&
+msBoundaryCoincidentTimeOrderedLineQ[sector_Association, line_Association] :=
+  line["type"] === "massiveT" &&
     SameQ @@ (sector["rootToComponent"] /@ line["endpoints"]);
 
 
-(* Fibre-symmetric endpoint coefficient of one coincident full line, m = (alpha + beta)/2.
+(* Fibre-symmetric endpoint coefficient of one coincident (anti-)time-ordered line, m = (alpha + beta)/2.
    Swapping the two bits gives the same pair of products, so the slot order is irrelevant.
    Averaging rescales coefficients only; it never moves the Frobenius power. *)
 msBoundaryCoincidentEndpointCoefficient[
@@ -325,7 +325,7 @@ msBoundaryCoincidentEndpointCoefficient[
 
 
 (* Endpoint factor of one component, built line by line. A strictly ordered line keeps the
-   branches fixed by the component rank, while every coincident full line contributes exactly
+   branches fixed by the component rank, while every coincident (anti-)time-ordered line contributes exactly
    one averaged factor; with several spectator lines the result is therefore the product of
    their m factors, which is what the odd-subset theta bundle algebra requires. *)
 msBoundaryComponentEndpointFactor[
@@ -350,7 +350,7 @@ msBoundaryComponentEndpointFactor[
           bits
         ];
         branchFactor = If[
-          msBoundaryCoincidentFullLineQ[sector, line],
+          msBoundaryCoincidentTimeOrderedLineQ[sector, line],
           msBoundaryCoincidentEndpointCoefficient[convention, bits, physicalNu],
           Times @@ Map[
             Function[slot,

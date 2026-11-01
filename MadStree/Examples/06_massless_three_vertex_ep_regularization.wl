@@ -165,7 +165,7 @@ checks = <|
   "threeVertices" -> Length[treeSpec["vertices"]] === 3,
   "twoMasslessPropagators" -> Length[treeSpec["lines"]] === 2 &&
     AllTrue[treeSpec["lines"], #["type"] === "massless" &] &&
-    AllTrue[context["lines"], #["type"] === "masslessFull" &],
+    AllTrue[context["lines"], #["type"] === "masslessT" &],
   "oneVertexLoweredEpRegularization" ->
     ({a1, a2, a3} /. parameterRules) === {-1 + ep, 1 + ep, 1 + ep},
   "analyticFormulaWritten" -> Lookup[formulaArtifacts, "status", None] === "generated" &&

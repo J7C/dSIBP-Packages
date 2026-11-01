@@ -43,7 +43,7 @@ The first successful load prints one citation reminder. arXiv identifiers are cl
 in notebooks, while a headless kernel prints full URLs. MadStree lists only
 [arXiv:2401.00129](https://arxiv.org/abs/2401.00129),
 [arXiv:2411.03088](https://arxiv.org/abs/2411.03088), and the MadStree package paper
-(arXiv identifier pending).
+([arXiv:2610.28526](https://arxiv.org/abs/2610.28526)).
 
 ## Minimal workflow
 
@@ -83,18 +83,24 @@ $J_s(\mathbf n;\mathbf a)$; the same three entries uniquely identify the bare in
 $I_s(\mathbf n;\mathbf a)$. `MSMasterIntegrals` directly reports the exact `normalization`
 and $J_s=\text{normalization}\,I_s$ for every master. Use
 `MSIntegralDefinition[MSIntegral[sectorKey,timeShifts,stateBits],context]` for one shifted integral.
-For a contracted massive Full propagator, this normalization contains its one contour factor: after
+For a pinched massive (anti-)time-ordered propagator, this normalization contains its one contour factor: after
 suppressing the common momentum power, a `++` subsector is `-4 I/Pi` and a `--` subsector is `+4 I/Pi`.
 This sign is not multiplied again into the dlog contact block.
-A two-state factor is either the two-dimensional state of one vertex of a massive propagator, or the quotient state shared by a whole massless Full propagator; `MSSlotRegistry` gives their bit order. The $++/--$ h combinations are defined once in the manual and are not expanded in every record. `MSSectors[context]` returns the deterministic order of contact-reachable sectors with their keys, contracted propagators and master counts, consistent with `context["sectorOrder"]`; `MSContextQ[obj]` tests whether an object is a valid MadStree context and is the shared input gate of every public entry.
+A two-state factor is either the two-dimensional state of one vertex of a massive propagator, or the quotient state shared by a whole massless (anti-)time-ordered propagator; `MSSlotRegistry` gives their bit order. The $++/--$ h combinations are defined once in the manual and are not expanded in every record. `MSSectors[context]` returns the deterministic order of contact-reachable sectors with their keys, pinched propagators and master counts, consistent with `context["sectorOrder"]`; `MSContextQ[obj]` tests whether an object is a valid MadStree context and is the shared input gate of every public entry.
 
 `"vertexType" -> "+"|"-"` is the vertex's Schwinger--Keldysh contour branch and is
 required explicitly on every vertex. A propagator no longer accepts `skType`, `sigma`, or
-vertex-sign input. Its Full/Cross/External class, contour label, overall sign, the signs of
+vertex-sign input. Its T/W/External class, contour label, overall sign, the signs of
 its two vertices, and default Hankel branches are derived from the vertices listed in `"endpoints"`.
 The public `"type"` of a propagator accepts only `"massive"` or `"massless"`. Propagators have no
 public ID field; MadStree always assigns `1,2,...` internally in the exact `"lines"` input order.
 Only an explicit `thetaBundles` declaration refers to propagators through these position numbers.
+
+Here T denotes the same-contour components: the time-ordered (Feynman) propagator
+`G++` and the anti-time-ordered (anti-Feynman) propagator `G--`, collectively called
+(anti-)time-ordered propagators. W denotes the Wightman propagators `G+-` and `G-+`.
+The derived internal types are `massiveT`, `masslessT`, `massiveW` and `masslessW`;
+they are not public input types.
 
 `"externalLegEnergy"` does not mean that a vertex itself carries an energy. It is the
 parameter of the theta-free external-leg exponential attached to the vertex.
@@ -200,18 +206,18 @@ Any multipoint transport through intermediate nodes is a jump; only a crossing o
 Generic entries never dispatch on graph ids, vertex counts, master counts or paper numerical points. They fail closed in a structured way only when the dlog is not closed, the rank/chart does not pass the normal-crossing certificate, the late-time exponents do not decay, the pullback system is not an exact regular singularity, or the target/anchor lies on a DE letter.
 
 When both vertices of a propagator lie on the same contour branch, a public `"massless"`
-propagator is internally derived as `masslessFull` and uniquely contributes one quotient
+propagator is internally derived as `masslessT` and uniquely contributes one quotient
 two-state slot shared by the whole propagator. The product of the four vertex states is used
 only to derive the quotient in the manual; it is neither a program input nor a second
 production representation. The current interface has no representation selection option.
 
-The `sectorKey` of every sector is a fixed-length string in the root `lines` order: `0` means the propagator is contracted and `1` means it is not; propagators that cannot undergo contact shrink keep bit `1`. The top is the all-`1` string. Leading zeros are part of the identity and the key must never be treated as an integer. `context["sectorKeySchema"]` gives `rootLineOrder`, the width and the bit semantics; for example, contracting `{e1,e2,e4}` in `{e1,e2,e3,e4}` gives `"0010"`. The full identity of a master is `MSIntegral[sectorKey,timeShifts,stateBits]`, so different subsectors are never the same integral even if their local shifts/bits coincide. The `sectorIdentityCertificate` of `MSInitTree` checks at once the contraction sets, sector keys, full masters, global indices and an SHA-256 digest over the full master order; collisions reject initialization. The massless top-to-sub dlog contact atoms multiply by `(-1)^N` for the actual number of massless propagators contracted in the event; simultaneous contacts use no graph-specific symbol table.
+The `sectorKey` of every sector is a fixed-length string in the root `lines` order: `0` means the propagator is pinched and `1` means it is not; propagators that cannot be pinched keep bit `1`. The top is the all-`1` string. Leading zeros are part of the identity and the key must never be treated as an integer. `context["sectorKeySchema"]` gives `rootLineOrder`, the width and the bit semantics; for example, pinching `{e1,e2,e4}` in `{e1,e2,e3,e4}` gives `"0010"`. The full identity of a master is `MSIntegral[sectorKey,timeShifts,stateBits]`, so different subsectors are never the same integral even if their local shifts/bits coincide. The `sectorIdentityCertificate` of `MSInitTree` checks at once the pinch sets, sector keys, full masters, global indices and an SHA-256 digest over the full master order; collisions reject initialization. The massless top-to-sub dlog contact atoms multiply by `(-1)^N` for the actual number of massless propagators pinched in the event; simultaneous contacts use no graph-specific symbol table.
 
 `MSBoundaryChartCertificate[context,targetRules]` builds the nested blow-up `1/K[sigma[j]]=Product[x[r],{r,j,V}]` before the boundary computation, fixes all thetas sector by sector, and checks that the complete dlog letters, normalization, coordinate Jacobian and the new denominators from shifted contacts are coordinate monomials times a nonzero boundary unit. `RankOrder -> All` checks all root-time strict charts; `MSBoundaryData` returns `BoundaryChartNotCertified` when the certificate fails. Local quantities in certificates and boundary records use two public symbols: `MSBlowupCoordinate[i]` is the `i`-th local coordinate of the nested blow-up, and `MSDampingEnergy[v]` is the positive damping energy `K_v` of vertex `v`.
 
 ## Common theta and time-only cycles
 
-Full propagators on the same current component pair automatically form a common-theta bundle. The program generates only nonempty odd-subset events with coefficient `2^(1-Length[selected])`; one event deletes the selected propagators and merges the vertices exactly once. Sectors come from an event BFS, not the power set of Full propagators. After merging, an unselected massless Full propagator keeps only the even state, a massive Full propagator uses the `10 -> 01` equal-time canonical form, and the raw tensor matrix is projected onto the true master space with the stored projection/embedding.
+(anti-)time-ordered propagators on the same current component pair automatically form a common-theta bundle. The program generates only nonempty odd-subset events with coefficient `2^(1-Length[selected])`; one event deletes the selected propagators and merges the vertices exactly once. Sectors come from an event BFS, not the power set of (anti-)time-ordered propagators. After merging, an unselected massless (anti-)time-ordered propagator keeps only the even state, a massive (anti-)time-ordered propagator uses the `10 -> 01` equal-time canonical form, and the raw tensor matrix is projected onto the true master space with the stored projection/embedding.
 
 Pure time-only cycles use the dedicated entry:
 
@@ -222,7 +228,7 @@ cycleContext = MSInitTimeGraph[<|
 |>];
 ```
 
-It allows only time integrals over fixed propagator momenta and neither reads nor generates loop momenta, ISPs, Landau or threshold data. Active self-loop propagators no longer trigger contacts; multiple paths to the same vertex partition/contracted set are canonicalized to one sector.
+It allows only time integrals over fixed propagator momenta and neither reads nor generates loop momenta, ISPs, Landau or threshold data. Active self-loop propagators no longer trigger contacts; multiple paths to the same vertex partition/pinched set are canonicalized to one sector.
 
 ## Single-vertex function families
 
@@ -265,7 +271,7 @@ reduction = MSReduce[
 
 `MSReduce` handles only valid `MSIntegral[sectorKey,timeShifts,stateBits]` objects in a fixed initialized context: `sectorKey` must belong to the contact-reachable sector DAG, `timeShifts` are integer shifts per component of that sector, and `stateBits` traverse all two-dimensional slots of the sector in the binary order of 2401.00129. It also accepts `List`, regular `Table`, empty lists and ragged nested lists; `result`, per-element `coefficientVector/masterRules`, residuals and remaining shifts preserve the input shape and share one recursion memo. A failed element reports its exact position. It does not support new propagator powers, new discrete indices, sectors outside the context, or another function family. Reduction recurses along the shift/contact DAG to the zero-shift masters and caches repeated subproblems. For scalar input, the returned `masterBasis`, `coefficientVector` and `masterRules` are strictly ordered; `result` is an explicit linear combination of master integrals; `nonMasterResidual` and `remainingShiftedIntegrals` must both be empty for a complete reduction. `MasterBasis` may be any permutation of all context masters, but missing, duplicated or extra objects are rejected. `singularLayers` records stepwise the direction, component and denominators: raising toward zero reports only the `M0` energy letters, and lowering toward zero reports only the `M1` eigenvalues. The reduction runs on the vertex time powers fixed at initialization: to substitute numerical or regulated powers (e.g. `a1=-1+ep`), re-initialize the context with these values as `timePower` and reduce there (Example 06 demonstrates this), or substitute into the symbolic result afterwards; `MSReduce` itself carries no substitution option.
 
-The single-step entry is `MSRecurrenceStep[integral, component, context]`: it moves one nonzero shift of the chosen component one step toward zero, takes the first nonzero shift when the component is omitted, and returns `reducedOneStep`, `nearerShift` and the denominators actually inverted in that step; `MSReduce` is its memoized complete entry. The contact injection structure is available separately through `MSContactMaps[context, sectorKey]`: one record per contact event, with the per-component injection matrices (`matricesByComponent`), the target sector and the zero/raised target time shifts (`R0TargetShift`, `R1TargetShiftsByComponent`), the normalization ratio and the list of contracted propagators; omitting the sector key, or passing `All`, returns every sector keyed by `context["sectorOrder"]`.
+The single-step entry is `MSRecurrenceStep[integral, component, context]`: it moves one nonzero shift of the chosen component one step toward zero, takes the first nonzero shift when the component is omitted, and returns `reducedOneStep`, `nearerShift` and the denominators actually inverted in that step; `MSReduce` is its memoized complete entry. The contact injection structure is available separately through `MSContactMaps[context, sectorKey]`: one record per contact event, with the per-component injection matrices (`matricesByComponent`), the target sector and the zero/raised target time shifts (`R0TargetShift`, `R1TargetShiftsByComponent`), the normalization ratio and the list of pinched propagators; omitting the sector key, or passing `All`, returns every sector keyed by `context["sectorOrder"]`.
 
 Initialization uses the known two leading small-time powers of h to store a safe time-IBP shift
 lower bound for every reachable component. A zero-shift master whose Gamma argument is already a
@@ -276,7 +282,7 @@ regulator leaves that parameter symbolic and permits the family to proceed.
 
 If the top-to-sub `R^(1)` lands on a subsector with a nonzero shift, `MSDLogDE` calls the same formula recurrence column by column, builds the reduction matrix from the shifted subsector to the global ordered masters, and right-composes it with the contact block. Each contact block keeps `shiftReductionRecords`, the residual, remaining shifts and singular layers; if any column does not close, the dlog status is `contactShiftReductionFailed` and no falsely closed connection is emitted.
 
-The formula layer never constructs a generic large matrix inverse. The fixed `sigma2` of the two-dimensional state at one vertex of a massive propagator uses the paper's `2x2` transform and its explicit inverse, while the fixed `sigma1` of the quotient slot shared by a whole massless Full propagator uses the self-inverse Hadamard; an all-sector matrix is only the Kronecker product of these local matrices. `M1` takes reciprocals of diagonal entries in the state-bit basis and `M0` takes reciprocals letter by letter in the corresponding local tensor basis. If a future slot contains multiple components that cannot be diagonalized by the same local transform, this fast path must fail closed.
+The formula layer never constructs a generic large matrix inverse. The fixed `sigma2` of the two-dimensional state at one vertex of a massive propagator uses the paper's `2x2` transform and its explicit inverse, while the fixed `sigma1` of the quotient slot shared by a whole massless (anti-)time-ordered propagator uses the self-inverse Hadamard; an all-sector matrix is only the Kronecker product of these local matrices. `M1` takes reciprocals of diagonal entries in the state-bit basis and `M0` takes reciprocals letter by letter in the corresponding local tensor basis. If a future slot contains multiple components that cannot be diagonalized by the same local transform, this fast path must fail closed.
 
 The FlintNDE numerical backend ships as a bundled copy inside this version directory, independent
 of later standalone releases; its default location is defined in a single relative-path variable:
@@ -330,7 +336,7 @@ The full formulas, the massless `4 -> 2` quotient, contact shifts and the top-to
 
 ## Examples
 
-- [01_massless_full_edge.wl](Examples/01_massless_full_edge.wl): massless quotient, master integrals, recurrence, dlog and the automatic boundary/numerical entry (including a user custom finite boundary and batch multi-point evaluation with CSV/JSON export).
+- [01_massless_time_ordered_edge.wl](Examples/01_massless_time_ordered_edge.wl): massless quotient, master integrals, recurrence, dlog and the automatic boundary/numerical entry (including a user custom finite boundary and batch multi-point evaluation with CSV/JSON export).
 - [02_single_vertex_family.wl](Examples/02_single_vertex_family.wl): compact and explicit single-vertex-family definitions, masters, reduction, and a single/multipoint cross-check through the same `pointSequence` interface.
 - [03_time_only_cycle_chart.wl](Examples/03_time_only_cycle_chart.wl): time-only cycle, common theta, contact sector and all strict-rank chart certificates.
 - [04_three_vertex_tree.wl](Examples/04_three_vertex_tree.wl): three-vertex massless tree with the `+++` vertex structure, followed by a batch multi-point evaluation with CSV/JSON export.
@@ -377,7 +383,7 @@ listed here, together with the source of the reference data in each case.
 - Common-theta odd-subset simultaneous contacts, coincident massless/massive quotients, event-reachable sector BFS and pure time-only cycles are supported; this does not mean loop-momentum integration is supported.
 - Production boundaries never dispatch on graph names or master counts. The single-vertex massiveExternal case follows the same general route (the explicit 2411.03088 Sec.3.3 series is kept only as a test reference baseline); closed tree/time-only contexts build the nested curve, complete dlog pullback residue and ancestor-sector leading system from the sector DAG, component/slot metadata, normalization and strict time rank. When the formula/dlog/chart is not closed, the late-time exponents do not decay, or the pullback system is not an exact regular singularity, the package fails closed and never falls back to finite-point defining integrals.
 - FlintNDE transport requires the pulled-back connection to be in exact `Q(i)(s)` or `Q(i)(t)`.
-  This fresh development run covers single-vertex, pure-massless, massive-Full, and mixed
+  This fresh development run covers single-vertex, pure-massless, massive (anti-)time-ordered, and mixed
   three-vertex systems through the current generic boundary producer.
 - FlintNDE retains exact Lee--Moser, high-pole, and singularity-jump capabilities, and adds node-bucket fast multipoint evaluation plus the public strict user-node route. Uncertified high poles and internal/final points requiring ramification, algebraic extensions, or general Stokes connections continue to fail closed.
 

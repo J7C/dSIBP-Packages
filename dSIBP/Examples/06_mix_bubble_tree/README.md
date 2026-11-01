@@ -4,7 +4,7 @@
 
 两条 cycle propagator 分别取全偶，即对各自完整的 `{b,n1,n2}` 指标施加偶性约束。第三条传播子是 fixed tree/bridge，不属于圈积分，没有连续 `b` 指标，也不施加 parity。
 
-`loopExternalMomenta={k1+k2}` 定义 loop 外方向，`independentExternalMomenta={k1,k2}` 定义两个无圈模长；脚本展示缺省 `ss11/sE1/sE2`、自定义 `loopScale/legScale1/legScale2`、顶点独立相位，以及 cycle/fixed 传播子 pack 和 contact/shrink 后的 sector 数据。
+`loopExternalMomenta={k1+k2}` 定义 loop 外方向，`independentExternalMomenta={k1,k2}` 定义两个无圈模长；脚本展示缺省 `ss11/sE1/sE2`、自定义 `loopScale/legScale1/legScale2`、顶点独立相位，以及 cycle/fixed 传播子 pack 和 pinched/pinch 后的 sector 数据。
 
 本例不增加第二条 massive 传播子，避免把 compound topology 的角色、massless convention 和 bridge/cycle contraction 演示混入不必要的 massive function-system 组合。
 

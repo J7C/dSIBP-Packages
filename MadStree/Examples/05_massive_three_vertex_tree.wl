@@ -19,7 +19,7 @@ Needs["MadStree`"];
 
 
 (* ::Chapter:: *)
-(* Define ordered tree topology (+++ contour vertices; internal type is derived as massiveFull) *)
+(* Define ordered tree topology (+++ contour vertices; internal type is derived as massiveT) *)
 
 treeSpec = <|
   "vertices" -> {

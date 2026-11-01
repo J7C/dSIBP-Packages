@@ -78,7 +78,7 @@ dsDEMasterDecomposition[expr_, masterTokens_List] := Module[
     |>
    ];
 
-(* active basis 可同时含 top 与 lower-sector J。公开 ds 已按每个 J 的 shrunk pack 选择一次
+(* active basis 可同时含 top 与 lower-sector J。公开 ds 已按每个 J 的 pinched pack 选择一次
    sector topology，并同时处理显式系数、sector prefactor 与 canonical；这里不得预先再缩一次。 *)
 dsSectorAwareDerivative[expr_, variable_, context_Association] := Module[
    {rootTopology, result},
@@ -255,7 +255,7 @@ DSDE[reductionData_, variables_: Automatic, OptionsPattern[]] := (Message[DSDE::
 (* tree 原生导数直接作用于 Exp[I k0_v tau_v] 与 h building block。
    tree J 使用统一的 (-tau)^a convention：顶点相位导数给 -I D[k0_v,x] J[...,a_v+1,...]，
    massive line 的 |k| 导数把 state 翻转并抬 a+1（state0:+J[a+1,1]，
-   state1:-J[a+1,0]-(1-2 formulaNu)/|k| J[a,1]）；contact 合并不再另乘 (-1)^Delta a。
+   state1:-J[a+1,0]-(1-2 formulaNu)/|k| J[a,1]）；pinched 合并不再另乘 (-1)^Delta a。
    sector master 的 normalization N 最后另按乘积法则求导。 *)
 
 Options[DSTreeNaiveDE] = {AuditLevel -> "standard", ProgressReporting -> Automatic};

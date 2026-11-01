@@ -60,6 +60,6 @@ referenceTopTargetEnvelope = {
    {b[2], -3, 5}
    };
 
-(* DSMetaSeedRange 的声明集合包含 top 与 shrink sector 实际出现的全部连续指标；
+(* DSMetaSeedRange 的声明集合包含 top 与 pinch sector 实际出现的全部连续指标；
    bS[e] 的目标包络在 DSGenerateIBP 中自动继承同一 root line 的 b[e]。 *)
 referenceSeedIndices = {a[v1], a[v2], b[1], b[2], bS[1], bS[2]};

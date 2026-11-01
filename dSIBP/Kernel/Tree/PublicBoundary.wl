@@ -21,7 +21,7 @@ dsTreeFormulaIntegralToPublic[int : J[_List], sectorKey_String, context_Associat
    linePacks = Table[
      line = topo["lines"][[e]];
      Switch[
-      Lookup[line, "state", "full"] === "shrunk" || Lookup[line, "packType", ""] === "shrunk",
+      Lookup[line, "state", "full"] === "pinched" || Lookup[line, "packType", ""] === "pinched",
       True,
       If[lineIndexedPowerQ[line], {Lookup[baseline, line["id"], 0]}, {fixedLineSentinel[]}],
       False,
@@ -371,8 +371,8 @@ dsTreePublicResult[result_Association, context_Association, auditLevel_: "standa
      public = Join[public, <|"bareMasters" -> Lookup[masters, "integral", {}]|>]
      ]
     ];
-   If[ListQ[Lookup[public, "contactMaps", None]],
-    public = Join[public, <|"sourceEquations" -> Lookup[public["contactMaps"], "rowsByVertex", {}]|>]
+   If[ListQ[Lookup[public, "pinchedMaps", None]],
+    public = Join[public, <|"sourceEquations" -> Lookup[public["pinchedMaps"], "rowsByVertex", {}]|>]
     ];
    representationAudit = If[
       auditLevel === "full",

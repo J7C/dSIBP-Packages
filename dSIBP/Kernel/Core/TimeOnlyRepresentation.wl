@@ -45,11 +45,11 @@ dsTimeOnlyStateSlots[topo_Association, metadata_Association] := Module[
    {lines = Lookup[topo, "lines", {}], lineSlots = Lookup[metadata, "lineSlots", {}]},
    Flatten@MapThread[
      Function[{line, lineSlot, linePosition},
-      If[TrueQ[Lookup[lineSlot, "shrunkQ", False]],
+      If[TrueQ[Lookup[lineSlot, "pinchedQ", False]],
        {},
        Switch[
         Lookup[line, "packType", ""],
-        "massiveFull" | "massiveCross",
+        "massiveT" | "massiveW",
         Table[
          <|
           "lineId" -> Lookup[line, "id", linePosition],
@@ -60,7 +60,7 @@ dsTimeOnlyStateSlots[topo_Association, metadata_Association] := Module[
           |>,
          {endpointSlot, 2}
          ],
-        "masslessFull",
+        "masslessT",
         {<|
           "lineId" -> Lookup[line, "id", linePosition],
           "rootLinePosition" -> linePosition,
@@ -144,11 +144,11 @@ dsTimeOnlyPublicIntegralToInternal[
       ],
     {slotPosition, Length[slots]}
     ];
-   (* quotient massless 的被消去端点槽固定为 0；cross/收缩占位由 sector packTemplate 恢复。 *)
+   (* quotient massless 的被消去端点槽固定为 0；W/收缩占位由 sector packTemplate 恢复。 *)
    Do[
     If[
-     ! TrueQ[Lookup[lineSlots[[linePosition]], "shrunkQ", False]] &&
-      Lookup[lines[[linePosition]], "packType", ""] === "masslessFull",
+     ! TrueQ[Lookup[lineSlots[[linePosition]], "pinchedQ", False]] &&
+      Lookup[lines[[linePosition]], "packType", ""] === "masslessT",
      linePacks = ReplacePart[linePacks, {linePosition, 3} -> 0]
      ],
     {linePosition, Length[lines]}

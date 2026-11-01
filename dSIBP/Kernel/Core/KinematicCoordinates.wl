@@ -840,13 +840,13 @@ scalarMomentumBuildingBlockDerivativeTerms[topo_Association, int_J, e_Integer] :
    {line = topo["lines"][[e]], packType, sigma},
    packType = actualLinePackType[topo, e, int[[2, e]]];
    Switch[packType,
-    "massiveFull" | "massiveCross",
+    "massiveT" | "massiveW",
     Total[compiledScalarMomentumEndpointDerivativeTerms[topo, int, e, #] & /@ {1, 2}],
-    "masslessFull",
+    "masslessT",
      sigma = sameBranchSKSign[line];
     -I sigma shiftVertexA[toggleMasslessLineState[topo, int, e], topo, line["endpoints"][[1]], 1] +
      I sigma shiftVertexA[toggleMasslessLineState[topo, int, e], topo, line["endpoints"][[2]], 1],
-    "masslessCross",
+    "masslessW",
     Total@Table[
       -I skEndpointPhaseSign[line, endpointSlot] shiftVertexA[
         int, topo, line["endpoints"][[endpointSlot]], 1

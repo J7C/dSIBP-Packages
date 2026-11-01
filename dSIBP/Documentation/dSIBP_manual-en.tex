@@ -50,7 +50,7 @@ reduction internally. External reducers such as Kira or Rational Tracer remain s
 steps controlled by the user.
 
 The package supports arbitrary loop numbers and topologies, mixed massive and massless
-propagators, exact contact-sector construction, EOM and symmetry canonicalization,
+propagators, exact pinched-sector construction, EOM and symmetry canonicalization,
 user-defined master bases, and differential-equation and scaling checks. The public
 topology schema is deliberately strict: package metadata is derived from the input
 graph rather than inferred from symbol names.
@@ -85,7 +85,7 @@ The bundled examples cover six complementary workflows:
   \item \texttt{05\_tree\_two\_vertex\_time\_ibp}: direct pure-time/tree relations and
   naive versus dlog differential equations;
   \item \texttt{06\_mix\_bubble\_tree}: mixed cycle/bridge propagators, custom coordinates,
-  contact sectors, and an 81-master reference summary.
+  pinched sectors, and an 81-master reference summary.
 \end{itemize}
 
 \section{A complete mixed bubble-tree example}
@@ -101,7 +101,7 @@ specifies the magnitudes of momenta that remain outside it. The package construc
 required Gram coordinates and checks whether these declarations are complete, overcomplete,
 or undercomplete. It never infers a role from a symbol's name.
 
-Initialization returns the parsed topology, contact-reachable sectors, canonical packs,
+Initialization returns the parsed topology, pinched-reachable sectors, canonical packs,
 zero points, normalization data, and capability reports. A typical high-level sequence is
 \begin{verbatim}
 context = DSInit[caseInput];
@@ -112,7 +112,7 @@ generated = DSGenerateIBP[allSeeds,
 linearData = DSLinear[generated,context];
 \end{verbatim}
 The same example also demonstrates custom coordinates through
-\texttt{DSRedefineParameters}, fixed-bridge magnitudes, sector contact maps, and exact
+\texttt{DSRedefineParameters}, fixed-bridge magnitudes, sector pinched maps, and exact
 round trips between user and internal scalar products.
 
 \section{From SK rules to integral families}
@@ -122,29 +122,30 @@ round trips between user and internal scalar products.
 Each vertex is an association containing \texttt{id}, \texttt{vertexType}, and
 \texttt{externalLegEnergy}. The vertex type fixes the sign of the external phase, and the
 energy is the independent phase variable. The parser normalizes these signs once; all
-subsequent time derivatives and contact rules use the same convention.
+subsequent time derivatives and pinched rules use the same convention.
 
 \subsection{Propagator types}
 
-The propagator classes are massive full, massless full, massive cross, and massless
-cross or fixed lines. Massive full lines have a two-theta contact system and a Hankel-type
-function space, while massless full lines use a two-vertex quotient representation. Cross
-lines have no ordinary two-theta shrink channel. Fixed tree lines carry external magnitudes
-but no continuous loop-integral power.
+The propagator classes are massive time-ordered, massless time-ordered, massive Wightman,
+and massless Wightman, together with fixed lines. Massive time-ordered lines have a
+two-theta pinched system and a Hankel-type function space, while massless time-ordered
+lines use a two-vertex quotient representation. Wightman lines have no ordinary two-theta
+pinch channel. Fixed tree lines carry external magnitudes but no continuous loop-integral
+power.
 
 A standard line uses \texttt{id}, \texttt{endpoints}, \texttt{momentum}, and
 \texttt{massType}. Massive lines additionally require \texttt{nu}. A custom massive
 function system may be supplied through \texttt{functionSystem}; no physical type is
 inferred from a mass parameter alone.
 
-\subsection{Contact-reachable sectors}
+\subsection{Pinched-reachable sectors}
 
 The root topology determines loop number, cycle/bridge roles, and propagator schemas.
-Contact operations only shrink lines, merge vertex representatives, and update zero points
+Pinched operations only pinch lines, merge vertex representatives, and update zero points
 and normalization. They do not create a new unrelated family or silently reduce the
 structural loop number.
 
-Massive contact terms are compiled from the Wronskian system. Simultaneous contacts merge
+Massive pinched terms are compiled from the Wronskian system. Simultaneous pinched terms merge
 a vertex only once, while integer shifts from all selected lines are accumulated. Uncut
 propagators are canonicalized in the target sector. Every reachable sector retains the
 metadata required by seeds, derivatives, and serializers.
@@ -155,9 +156,9 @@ In full mode the public integral head is
 \begin{verbatim}
 J[aList,linePacks,ispList]
 \end{verbatim}
-The first slot contains compact vertex-time powers. Each full-line pack has the form
+The first slot contains compact vertex-time powers. Each unpinched-line pack has the form
 $\{b_e,n_{e,1},n_{e,2}\}$, where $b_e$ is a continuous denominator power and the two
-entries are discrete building-block states. A shrunk line uses the corresponding compact
+entries are discrete building-block states. A pinched line uses the corresponding compact
 $bS$ representation. ISP powers are collected in the third slot and are measured from zero.
 Positive ISP powers are numerators; explicitly requested negative powers are also allowed.
 
@@ -165,7 +166,7 @@ In \texttt{ibpMode->"timeOnly"}, the public representation is instead
 \begin{verbatim}
 J[sectorKey,timeShifts,stateBits]
 \end{verbatim}
-Here \texttt{sectorKey} is a fixed-width string of full/shrunk bits in root-line order.
+Here \texttt{sectorKey} is a fixed-width string of unpinched/pinched bits in root-line order.
 The other two slots contain compact time shifts and the sector-local discrete-state registry.
 The two schemas are intentionally distinct; no adapter silently rewrites full-loop Kira
 artifacts into the time-only representation.
@@ -173,7 +174,7 @@ artifacts into the time-only representation.
 \section{Massive function systems, derivatives, and EOM}
 
 A massive building block is described by a $2\times2$ first-order system. Its derivative
-matrix and Wronskian determine, respectively, derivative shifts and contact-shrink shifts.
+matrix and Wronskian determine, respectively, derivative shifts and pinched-pinch shifts.
 These two data channels are not interchangeable.
 
 The \texttt{DSInit} option \texttt{NuConvention} selects the writing of every baseline
@@ -184,26 +185,26 @@ per line at initialization, and no later command accepts a convention option.
 
 After a generator acts, any Hankel state of second order or higher is immediately reduced
 by the equation of motion. This happens before linear-system construction, so no symbolic
-$n\geq2$ state is passed to a backend. Contact shifts use the compiled Laurent coefficients
+$n\geq2$ state is passed to a backend. Pinched shifts use the compiled Laurent coefficients
 and preserve the associated zero-point and prefactor changes.
 
 Parameter derivatives act on both the integral and its explicit coefficients. The package
 also accounts for sector normalization, so a derivative of $J_s=N_s I_s$ includes the
-$D(\log N_s)$ term and, across a contact, the appropriate $N_s/N_t$ ratio.
+$D(\log N_s)$ term and, across a pinched, the appropriate $N_s/N_t$ ratio.
 
 \section{Massless quotients and time IBP}
 
-Massless full propagators retain an ordered two-vertex three-slot pack. Regular and delta
-terms are handled in that same representation, including contact shrink and coincident
-cancellation. Several full lines joining one vertex pair are treated by a common-theta
-construction rather than by independently duplicated contact rules.
+Massless time-ordered propagators retain an ordered two-vertex three-slot pack. Regular and delta
+terms are handled in that same representation, including pinched pinch and coincident
+cancellation. Several time-ordered lines joining one vertex pair are treated by a common-theta
+construction rather than by independently duplicated pinched rules.
 
-An odd subset of lines in a shared bundle determines the contact transition. Its coefficient
+An odd subset of lines in a shared bundle determines the pinched transition. Its coefficient
 and target-sector mapping are evaluated once, and duplicate transitions are removed by source,
 target, and selected-line identity. Massless fixed lines do not acquire a fictitious loop
 parity constraint.
 
-Parallel massless full lines joining the same vertex pair are additionally folded by a
+Parallel massless time-ordered lines joining the same vertex pair are additionally folded by a
 built-in canonical layer. In the original per-line index representation the product kernel of
 such a bundle depends only on the total parity $\sum_en_e\bmod 2$ of the endpoint states, so
 every member is mapped to the representative in which the first line in line order carries
@@ -229,23 +230,23 @@ sums the provided constraints and the resulting subsystem may leave the original
 one; several parity subsystems may be selected simultaneously, and propagators without a
 parity selection are sampled over all parities.
 
-A massless full line whose two endpoints coincide is converted to the contracted single-slot
-pack $\{b_{S,e}\}$, sharing all bookkeeping with shrunk lines. This covers lines declared with
-equal \texttt{endpoints} and lines that become coincident when a contact merges their vertices.
+A massless time-ordered line whose two endpoints coincide is converted to the pinched single-slot
+pack $\{b_{S,e}\}$, sharing all bookkeeping with pinched lines. This covers lines declared with
+equal \texttt{endpoints} and lines that become coincident when a pinched merges their vertices.
 At $\Delta=0$ the kernel blocks take $M_0=2\theta(0)=1$ and $M_1=0$, so the undifferentiated
 block is the constant $1$, antisymmetric states vanish identically, and only the residual
 momentum-magnitude power survives. Declared self-loops convert at initialization with
 $b_{S0,e}=b_{0e}$ and no endpoint-state labels; the root graph audit still counts them as
 active cycle lines, since the residual $b$ power carries the line's own loop momentum. In
-sector construction, coincident survivors join the contracted set of the sector, and distinct
-contact routes that reach the same contracted set define a single sector entry, while contact
+sector construction, coincident survivors join the pinched set of the sector, and distinct
+pinched routes that reach the same pinched set define a single sector entry, while pinched
 routing still follows each individual selection. Odd-state integrals are zeroed in the massless
-endpoint canonicalization against the source topology, and even-state contact packs
+endpoint canonicalization against the source topology, and even-state pinched packs
 $\{b,0,0\}$ convert to the single slot automatically. A massive self-loop is not converted: it
 keeps its three-slot pack and the built-in reversal rule, and converted single-slot self-loops
 still enter the odd-ISP zeroing of that rule.
 
-The direct pure-time/tree path uses the same physical contact data but presents them in a
+The direct pure-time/tree path uses the same physical pinched data but presents them in a
 sector-tagged public representation. Formula-based tree reduction is available only for
 massive-only quotients whose derivation has been certified. In all other cases, the package
 returns a structured \texttt{PendingRederivation} result.
@@ -427,11 +428,11 @@ reduction tables, caches, or runtime logs.
 The direct tree workflow exposes \texttt{DSTreeSeeds}, \texttt{repIterative},
 \texttt{DSTreeNaiveIBP}, \texttt{DSTreeNaiveDE}, and \texttt{DSTreeDLogDE}. It constructs
 sector-tagged relations, ordered masters, normalized differential equations, and scaling
-checks from the same contact and normalization metadata.
+checks from the same pinched and normalization metadata.
 
 \texttt{DSTreeNaiveIBP} solves one-step raising relations in a specified basis.
 \texttt{DSTreeNaiveDE} uses that reduction to construct the naive connection, while
-\texttt{DSTreeDLogDE} constructs the block-structured dlog connection. For massless full
+\texttt{DSTreeDLogDE} constructs the block-structured dlog connection. For massless time-ordered
 quotients, formula-based reduction is available only after the required identities have
 been rederived.
 

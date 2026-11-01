@@ -51,18 +51,18 @@ filters canonical equation support after equal terms have been combined and zero
 removed. These policies do not prove closure for a new target or basis. To reproduce an uncut
 relation system, explicitly use `SeedEnvelopeCut->None` and `TotalPowerLimit->None`.
 
-When explicit `parityConstraints` touch a group of parallel massless full propagators joining
+When explicit `parityConstraints` touch a group of parallel massless time-ordered propagators joining
 the same vertex pair (a banana sub-diagram), the constraints touching the group are summed
 (including the `b` indices, mod 2) into one total-parity constraint, sampling enumerates only
 the first line's parity slot, and initialization prints a bilingual red notice listing each
 merged group and its total-parity target before continuing. Propagators without a parity
 selection are sampled over all their parities.
 
-A declared massless self-loop is converted at `DSInit` into a contracted single-slot pack
+A declared massless self-loop is converted at `DSInit` into a pinched single-slot pack
 `{bS}`: the coincident massless kernel degenerates to `M[0] = 2*theta(0) = 1` for even line
 powers and to zero for odd ones, so the pack keeps only the residual loop-momentum power.
 Massive self-loops keep the three-slot pack with the built-in `{1,0} -> {0,1}` normalization,
-and the same single-slot form appears when sub-topology enumeration contracts a banana
+and the same single-slot form appears when sub-topology enumeration pinches a banana
 sub-diagram.
 
 All sectors share one integral head, `J`. In full loop mode an integral is
@@ -96,7 +96,7 @@ directory is part of the package.
 | `03_single_massive_sunrise/` | Two-loop single-massive sunrise: general seeds and the `{ss11, kE}` parameter-derivative operators. |
 | `04_pure_massive_bubble_closed_loop/` | Pure massive bubble with target envelope `a in [0,3]`, `b in [-3,5]`: formal Kira input, external reduction, readback, the 19-dimensional DE and scaling. Other parameters use exact rational values while `dsc2` and `ip0` remain symbolic during reconstruction. |
 | `05_tree_two_vertex_time_ibp/` | Two-vertex tree time IBP, the naive DE and the formula route. |
-| `06_mix_bubble_tree/` | Mixed cycle/bridge topology: momentum roles, massless convention, contact contraction, and the 81-master Kira/DE record. |
+| `06_mix_bubble_tree/` | Mixed cycle/bridge topology: momentum roles, massless convention, pinch terms, and the 84-master Kira/DE record. |
 
 ```powershell
 wolframscript -file Examples/01_mixed_bubble_workflow.wl

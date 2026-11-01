@@ -2,11 +2,11 @@
 (* 本文件是 dS IBP package 的通用生成器骨架。
    目标是先把 topology-driven 的结构层做实：拓扑解析、传播子 metadata、统一 J 指标包、
    离散态枚举、完整圈动量 IBP 生成元列表、标量积/ISP 覆盖性验证。
-   当前文件生成 momentum seed、time-core seed 与受保护的自动 shrink-sector seed；EOM、有方向的 per-line massless 单 n 规则与 massive/massless theta boundary shrink 已作为 seed 门禁接入，并提供 backend-neutral linear-system 与 Kira serializer。
+   当前文件生成 momentum seed、time-core seed 与受保护的自动 pinch-sector seed；EOM、有方向的 per-line massless 单 n 规则与 massive/massless theta boundary pinch 已作为 seed 门禁接入，并提供 backend-neutral linear-system 与 Kira serializer。
    公开原子 API 为 dtau/dqq/dqk 与 rep2innerform/rep2outform/rep2Integrand；函数系统编译层提供
    P,Q,T,W，缺省 h 取 T=IdentityMatrix[2]、WT=W_h，Hankel 作为独立 preset。massive ++ Wronskian
-   theta-boundary 的 Vpm 符号、按每个 J 的 shrunk packs 重建的目标顶点映射、跨 sector 的 massless
-   coincident n=1 canonical、共同-theta odd-subset contact 与 contact 可达 sector、massless shrink
+   theta-boundary 的 Vpm 符号、按每个 J 的 pinched packs 重建的目标顶点映射、跨 sector 的 massless
+   coincident n=1 canonical、共同-theta odd-subset pinched 与 pinched 可达 sector、massless pinch
    幂次修正和 massive coincidence canonical 都在本模块内实现。pure time-IBP/tree 表示、loop-time
    投影、通用迭代矩阵与直接 dlog DE 由本模块与后面的 Tree 章节共同提供。
    性能原则：默认只定义函数和示例输入，不自动运行检查；验证必须是 seed/metadata 层或代数赋值后的小检查。 *)
@@ -49,7 +49,7 @@ normalizeVertex[vertex_Association] := KeyTake[
    ];
 
 
-(* line 的 SK、pack 和 contact state 都由端点与 sector producer 派生，不能从用户输入读取。 *)
+(* line 的 SK、pack 和 pinched state 都由端点与 sector producer 派生，不能从用户输入读取。 *)
 normalizeLine[line_Association] := Module[{massType, allowed},
    massType = Lookup[line, "massType", Missing["massType"]];
    allowed = If[
@@ -307,11 +307,11 @@ inferSKType[endpoints_, vertexSignAssoc_] := StringJoin[
 
 (* packType 是后续统一 J 表示的核心分派键。massless 统一走双 theta 合并路线。 *)
 inferPackType[massType_, skType_, state_] := Which[
-   state === "shrunk", "shrunk",
-   massType === "massive" && MemberQ[{"+-", "-+"}, skType], "massiveCross",
-   massType === "massless" && MemberQ[{"++", "--"}, skType], "masslessFull",
-   massType === "massless" && MemberQ[{"+-", "-+"}, skType], "masslessCross",
-   True, "massiveFull"
+   state === "pinched", "pinched",
+   massType === "massive" && MemberQ[{"+-", "-+"}, skType], "massiveW",
+   massType === "massless" && MemberQ[{"++", "--"}, skType], "masslessT",
+   massType === "massless" && MemberQ[{"+-", "-+"}, skType], "masslessW",
+   True, "massiveT"
    ];
 
 
@@ -379,17 +379,17 @@ compileDerivativeTerms[at_, variable_] := Catch[
    ];
 
 
-compileShrinkTerms[wt_, variable_, spec_Association] := Module[
+compilePinchTerms[wt_, variable_, spec_Association] := Module[
    {rawTerms, data, powers, integerPowers, bShifts, zeroPointShifts, commonZeroPointShift},
    rawTerms = functionSystemAdditiveTerms[wt];
    If[rawTerms === {}, Return[$Failed]];
    data = functionSystemMonomialData[#, variable] & /@ rawTerms;
    If[AnyTrue[data, Head[#] === Missing &], Return[$Failed]];
    powers = Lookup[data, "xPower"];
-   If[KeyExistsQ[spec, "shrinkBShift"] || KeyExistsQ[spec, "shrinkZeroPointShift"],
-    If[Length[data] =!= 1 || ! KeyExistsQ[spec, "shrinkBShift"] || ! KeyExistsQ[spec, "shrinkZeroPointShift"], Return[$Failed]];
-    bShifts = {spec["shrinkBShift"]};
-    zeroPointShifts = {spec["shrinkZeroPointShift"]},
+   If[KeyExistsQ[spec, "pinchBShift"] || KeyExistsQ[spec, "pinchZeroPointShift"],
+    If[Length[data] =!= 1 || ! KeyExistsQ[spec, "pinchBShift"] || ! KeyExistsQ[spec, "pinchZeroPointShift"], Return[$Failed]];
+    bShifts = {spec["pinchBShift"]};
+    zeroPointShifts = {spec["pinchZeroPointShift"]},
     integerPowers = Quiet[FullSimplify[# /. Thread[Variables[{#}] -> 0]]] & /@ powers;
     If[AnyTrue[integerPowers, ! IntegerQ[#] &], Return[$Failed]];
     bShifts = -integerPowers;
@@ -423,7 +423,7 @@ functionSystemPreset[preset_String, line_Association] := Module[
      "P" -> (1 - 2 formulaNuValue)/variable, "Q" -> 1,
      "T" -> IdentityMatrix[2],
      "W" -> -prefactor variable^(2 formulaNuValue - 1), "WT" -> Automatic,
-     "shrinkBShift" -> 1, "shrinkZeroPointShift" -> -2 formulaNuValue
+     "pinchBShift" -> 1, "pinchZeroPointShift" -> -2 formulaNuValue
      |>,
     "H",
     <|
@@ -431,7 +431,7 @@ functionSystemPreset[preset_String, line_Association] := Module[
      "P" -> 1/variable, "Q" -> 1 - nuValue^2/variable^2,
      "T" -> IdentityMatrix[2],
      "W" -> -prefactor/variable, "WT" -> Automatic,
-     "shrinkBShift" -> 1, "shrinkZeroPointShift" -> 0
+     "pinchBShift" -> 1, "pinchZeroPointShift" -> 0
      |>,
     _,
     Missing["UnknownFunctionSystemPreset", preset]
@@ -452,7 +452,7 @@ normalizeLineFunctionSystem[line_Association] := Module[{explicit},
 
 compileFunctionSystem[spec_Association] := Module[
    {required = {"P", "Q", "W"}, missing, variable, p, q, t, w, explicitWT, a0, at, wt,
-    detT, derivativeTerms, shrinkData, issues = {}},
+    detT, derivativeTerms, pinchData, issues = {}},
    missing = Complement[required, Keys[spec]];
    If[missing =!= {}, Return[<|"status" -> "invalid", "issues" -> {<|"code" -> "missingFunctionSystemKeys", "missingKeys" -> missing|>}|>]];
    variable = Lookup[spec, "variable", x];
@@ -484,8 +484,8 @@ compileFunctionSystem[spec_Association] := Module[
    If[derivativeTerms === $Failed,
     AppendTo[issues, <|"code" -> "functionSystemDerivativeNotFiniteLaurent", "AT" -> at|>]
     ];
-   shrinkData = compileShrinkTerms[wt, variable, spec];
-   If[shrinkData === $Failed,
+   pinchData = compilePinchTerms[wt, variable, spec];
+   If[pinchData === $Failed,
     AppendTo[issues, <|"code" -> "functionSystemWTNotFiniteCompatibleLaurent", "WT" -> wt|>]
     ];
    If[issues =!= {}, Return[<|"status" -> "invalid", "issues" -> issues|>]];
@@ -494,8 +494,8 @@ compileFunctionSystem[spec_Association] := Module[
     "variable" -> variable, "P" -> p, "Q" -> q, "T" -> t, "W" -> w,
     "A0" -> a0, "AT" -> at, "WT" -> wt,
     "derivativeTerms" -> derivativeTerms,
-    "shrinkTerms" -> shrinkData["terms"],
-    "shrinkZeroPointShift" -> shrinkData["zeroPointShift"]
+    "pinchTerms" -> pinchData["terms"],
+    "pinchZeroPointShift" -> pinchData["zeroPointShift"]
     |>
    ];
 
@@ -509,9 +509,9 @@ compileFunctionSystem[data_Association] /; KeyExistsQ[data, "endpoints"] := Modu
 
 
 (* 补齐每条线的默认 metadata。thetaConvention 固定为 mergedTwoTheta。
-   endpoints 是有序输入；对 masslessFull，第一端点定义单 n=1 的反对称方向。
+   endpoints 是有序输入；对 masslessT，第一端点定义单 n=1 的反对称方向。
    formulaNu 只在 massive 线上按 NuConvention 解析并冻结，下游一律读该字段。
-   声明式 massless 自环在初始化即转 contracted（shrunk）单槽：等时 massless
+   声明式 massless 自环在初始化即转 pinched 单槽：等时 massless
    传播子只剩 J_e=1，n 态恒为零，公开 pack 直接写成 {bS_e}，不再靠撒点置零。 *)
 completeLineMetadata[line_, vertexSignAssoc_, nuConvention_: "Positive"] := Module[
    {endpoints, referenceEndpoints, massType, skType, state, packType, metadata, functionSpec, compiled},
@@ -519,7 +519,7 @@ completeLineMetadata[line_, vertexSignAssoc_, nuConvention_: "Positive"] := Modu
    referenceEndpoints = endpoints;
    massType = line["massType"];
    skType = inferSKType[endpoints, vertexSignAssoc];
-   state = If[massType === "massless" && SameQ @@ endpoints, "shrunk", "full"];
+   state = If[massType === "massless" && SameQ @@ endpoints, "pinched", "full"];
    packType = inferPackType[massType, skType, state];
    metadata = Join[
      line,
@@ -529,8 +529,8 @@ completeLineMetadata[line_, vertexSignAssoc_, nuConvention_: "Positive"] := Modu
      "state" -> state,
      "thetaConvention" -> "mergedTwoTheta",
      "packType" -> packType,
-     "masslessN1ReferenceEndpoint" -> If[packType === "masslessFull", referenceEndpoints[[1]], Missing["NotApplicable"]],
-     "masslessN1OppositeEndpoint" -> If[packType === "masslessFull", referenceEndpoints[[2]], Missing["NotApplicable"]]
+     "masslessN1ReferenceEndpoint" -> If[packType === "masslessT", referenceEndpoints[[1]], Missing["NotApplicable"]],
+     "masslessN1OppositeEndpoint" -> If[packType === "masslessT", referenceEndpoints[[2]], Missing["NotApplicable"]]
       |>
      ];
    If[massType === "massive",
@@ -811,9 +811,9 @@ parseTopology[case_Association] := Module[
     "externalPartList" -> externalPartList,
     "zeroPointRules" -> Join[
      Lookup[case, "zeroPointRules", {}],
-     (* 初始化即转 contracted 的声明式 massless 自环把 b0 声明随槽改写为 bS0；
+     (* 初始化即转 pinched 的声明式 massless 自环把 b0 声明随槽改写为 bS0；
         massless 收缩零点移位为零，故 bS0 原样继承 b0 声明值。 *)
-     If[Lookup[#, "packType", ""] === "shrunk" && Lookup[#, "state", "full"] === "shrunk" && lineIndexedPowerQ[#],
+     If[Lookup[#, "packType", ""] === "pinched" && Lookup[#, "state", "full"] === "pinched" && lineIndexedPowerQ[#],
        bS0[#["id"]] -> zeroPointRuleValueFromRules[Lookup[case, "zeroPointRules", {}], b0[#["id"]], 0],
        Nothing
        ] & /@ lines
@@ -910,8 +910,8 @@ makeSectorMetadataBase[topo_Association] := Module[
      ];
    <|
     "caseName" -> topo["name"],
-    "sectorShrunkLines" -> Lookup[topo, "sectorShrunkLines", {}],
-    "sectorKey" -> sectorKeyFromShrunkLines[topo, Lookup[topo, "sectorShrunkLines", {}]],
+    "sectorPinchedLines" -> Lookup[topo, "sectorPinchedLines", {}],
+    "sectorKey" -> sectorKeyFromPinchedLines[topo, Lookup[topo, "sectorPinchedLines", {}]],
     "aSlotMode" -> "compactActiveSlots",
     "sectorVertexRepresentativeMap" -> repMap,
     "vertexIdToOriginalASlot" -> originalSlotByVertex,
@@ -935,30 +935,30 @@ makeSectorMetadataBase[topo_Association] := Module[
 
 (* sector key 的位序严格等于 root propagator 顺序。结果必须保留为字符串，
    因为前导零编码了排在最前的传播子已经收缩。 *)
-sectorKeyFromShrunkLines[rootLineCount_Integer?NonNegative, shrunkLines_List] := StringJoin[
-   If[MemberQ[shrunkLines, #], "0", "1"] & /@ Range[rootLineCount]
+sectorKeyFromPinchedLines[rootLineCount_Integer?NonNegative, pinchedLines_List] := StringJoin[
+   If[MemberQ[pinchedLines, #], "0", "1"] & /@ Range[rootLineCount]
    ];
 
 
-sectorKeyFromShrunkLines[topo_Association, shrunkLines_List] := sectorKeyFromShrunkLines[
+sectorKeyFromPinchedLines[topo_Association, pinchedLines_List] := sectorKeyFromPinchedLines[
    Length[Lookup[topo, "lines", {}]],
-   shrunkLines,
+   pinchedLines,
    Lookup[topo, "ibpMode", "full"]
    ];
 
 
-sectorKeyFromShrunkLines[
+sectorKeyFromPinchedLines[
    rootLineCount_Integer?NonNegative,
-   shrunkLines_List,
+   pinchedLines_List,
    "timeOnly"
-   ] := sectorKeyFromShrunkLines[rootLineCount, shrunkLines];
+   ] := sectorKeyFromPinchedLines[rootLineCount, pinchedLines];
 
 
-sectorKeyFromShrunkLines[
+sectorKeyFromPinchedLines[
    _Integer?NonNegative,
-   shrunkLines_List,
+   pinchedLines_List,
    _
-   ] := If[shrunkLines === {}, "top", StringRiffle["e" <> ToString[#] & /@ shrunkLines, "_"]];
+   ] := If[pinchedLines === {}, "top", StringRiffle["e" <> ToString[#] & /@ pinchedLines, "_"]];
 
 
 sectorKeyForModeQ[key_, "timeOnly", rootLineCount_Integer?NonNegative] :=
@@ -984,20 +984,20 @@ sectorKeySchemaFromTopology[topo_Association] := If[
     "type" -> "rootPropagatorBitString",
     "rootLineOrder" -> Lookup[Lookup[topo, "lines", {}], "id", Range[Length[Lookup[topo, "lines", {}]]]],
     "width" -> Length[Lookup[topo, "lines", {}]],
-    "contractedBit" -> "0",
-    "uncontractedBit" -> "1",
+    "pinchedBit" -> "0",
+    "unpinchedBit" -> "1",
     "storageType" -> "String"
     |>,
-   <|"type" -> "legacyContractedLineList", "storageType" -> "String"|>
+   <|"type" -> "legacyPinchedLineList", "storageType" -> "String"|>
    ];
 
 
 sectorMetadataKey[metadata_Association] := Lookup[
    metadata,
    "sectorKey",
-   sectorKeyFromShrunkLines[
+   sectorKeyFromPinchedLines[
     Lookup[metadata, "rootLineCount", Length[Lookup[metadata, "lineSlots", {}]]],
-    Lookup[metadata, "sectorShrunkLines", {}],
+    Lookup[metadata, "sectorPinchedLines", {}],
     Lookup[metadata, "ibpMode", "full"]
     ]
    ];
@@ -1115,7 +1115,7 @@ automaticSectorRank[sectorKey_, metadataList_List] := Module[{metadata},
      ];
    If[
     AssociationQ[metadata],
-    -Length[Lookup[metadata, "sectorShrunkLines", {}]],
+    -Length[Lookup[metadata, "sectorPinchedLines", {}]],
     0
     ]
    ];
@@ -1255,7 +1255,7 @@ discreteStateCount[topo_Association] := Times @@ (discreteStateCountForLine /@ t
 (*EOM canonical 与 forbidden-n 扫描*)
 
 (* 本章只处理已经出现在 J 指标中的 Hankel 二阶导数态。
-   seed 生成时应先枚举 n=0/1；若生成元把 massiveFull 的端点 n 推到 2 或更高，
+   seed 生成时应先枚举 n=0/1；若生成元把 massiveT 的端点 n 推到 2 或更高，
    这里立即用 EOM 递推回 n=0/1。massless 的 {b,n} 只有两个状态，不用 Hankel EOM。 *)
 
 vertexPosition[topo_Association, vertexId_] := Module[{pos},
@@ -1310,13 +1310,13 @@ setLinePackEntry[J[aList_, linePacks_, ispList_], e_Integer, packPos_Integer, va
 
 
 actualLinePackType[topo_Association, e_Integer, pack_List] := Module[
-   {line = topo["lines"][[e]], declared, fullLength, shrunkLength},
+   {line = topo["lines"][[e]], declared, fullLength, pinchedLength},
    declared = line["packType"];
-   If[declared === "shrunk", Return["shrunk"]];
+   If[declared === "pinched", Return["pinched"]];
    fullLength = Length[makeLinePack[line]];
-   shrunkLength = If[lineIndexedPowerQ[line], 1, 0];
-   If[Length[pack] === shrunkLength && fullLength =!= shrunkLength,
-    "shrunk",
+   pinchedLength = If[lineIndexedPowerQ[line], 1, 0];
+   If[Length[pack] === pinchedLength && fullLength =!= pinchedLength,
+    "pinched",
     declared
     ]
    ];
@@ -1348,7 +1348,7 @@ massiveEOMTarget[topo_Association, J[aList_, linePacks_, ispList_]] := Module[
    Do[
     pack = linePacks[[e]];
     packType = actualLinePackType[topo, e, pack];
-    If[MemberQ[{"massiveFull", "massiveCross"}, packType],
+    If[MemberQ[{"massiveT", "massiveW"}, packType],
      Do[
       nValue = pack[[linePackNPositions[lines[[e]], packType][[endpointSlot]]]];
       If[IntegerQ[nValue] && nValue >= 2 && Head[target] === Missing,
@@ -1388,15 +1388,15 @@ applyEOMToIntegral[topo_Association, int_J] := Module[{target},
 applyEOM[expr_, topo_Association] := Expand[expr /. int_J :> applyEOMToIntegral[topo, int]];
 
 
-(* masslessFull 的单 n 只允许 0/1。它以 line endpoints 的第一端点定义方向，
+(* masslessT 的单 n 只允许 0/1。它以 line endpoints 的第一端点定义方向，
    所有导数直接在 0/1 间翻转；不再用有歧义的临时 n=2 混写 {20} 与 {11}。
-   若其它缩并使该线两端点重合，反对称态 n=1 在等时点恒为零。 *)
-integralShrunkLineIndices[
+   若其它收缩使该线两端点重合，反对称态 n=1 在等时点恒为零。 *)
+integralPinchedLineIndices[
    topo_Association,
    J[aList_, linePacks_, ispList_]
    ] := Select[
    Range[Length[topo["lines"]]],
-   actualLinePackType[topo, #, linePacks[[#]]] === "shrunk" &
+   actualLinePackType[topo, #, linePacks[[#]]] === "pinched" &
    ];
 
 
@@ -1404,13 +1404,13 @@ integralTargetVertexRepresentativeMap[
    topo_Association,
    int_J
    ] := Module[
-   {shrunkLines, originalPairs},
-   shrunkLines = integralShrunkLineIndices[topo, int];
+   {pinchedLines, originalPairs},
+   pinchedLines = integralPinchedLineIndices[topo, int];
    originalPairs = Lookup[
        topo["lines"][[#]],
        "originalEndpoints",
        topo["lines"][[#, "endpoints"]]
-       ] & /@ shrunkLines;
+       ] & /@ pinchedLines;
    vertexRepresentativeMap[topo["vertexIds"], originalPairs]
    ];
 
@@ -1429,11 +1429,11 @@ canonicalizeMassiveCoincidentIntegral[
     originalEndpoints = Lookup[lines[[e]], "originalEndpoints", lines[[e]]["endpoints"]];
     targetEndpoints = Lookup[repMap, originalEndpoints];
     If[
-     actualLinePackType[topo, e, linePacks[[e]]] === "massiveFull" &&
+     actualLinePackType[topo, e, linePacks[[e]]] === "massiveT" &&
       SameQ @@ targetEndpoints &&
-      linePacks[[e, linePackNPositions[lines[[e]], "massiveFull"]]] === {1, 0},
-     newPacks[[e, linePackNPositions[lines[[e]], "massiveFull"]]] =
-       Reverse[linePacks[[e, linePackNPositions[lines[[e]], "massiveFull"]]]]
+      linePacks[[e, linePackNPositions[lines[[e]], "massiveT"]]] === {1, 0},
+     newPacks[[e, linePackNPositions[lines[[e]], "massiveT"]]] =
+       Reverse[linePacks[[e, linePackNPositions[lines[[e]], "massiveT"]]]]
      ],
     {e, Length[lines]}
     ];
@@ -1468,7 +1468,7 @@ forbiddenNDataForIntegral[topo_Association, J[aList_, linePacks_, ispList_]] := 
     pack = linePacks[[e]];
     packType = actualLinePackType[topo, e, pack];
     Switch[packType,
-     "massiveFull",
+     "massiveT",
      Do[
       If[IntegerQ[pack[[linePackNPositions[lines[[e]], packType][[endpointSlot]]]]] &&
         pack[[linePackNPositions[lines[[e]], packType][[endpointSlot]]]] >= 2,
@@ -1477,13 +1477,13 @@ forbiddenNDataForIntegral[topo_Association, J[aList_, linePacks_, ispList_]] := 
        ],
      {endpointSlot, 2}
      ],
-     "masslessFull",
+     "masslessT",
      If[IntegerQ[pack[[First[linePackNPositions[lines[[e]], packType]]]]] &&
        ! MemberQ[{0, 1}, pack[[First[linePackNPositions[lines[[e]], packType]]]]],
       AppendTo[issues, <|"lineIndex" -> e, "packType" -> packType,
         "nValue" -> pack[[First[linePackNPositions[lines[[e]], packType]]]]|>]
       ],
-     "massiveCross",
+     "massiveW",
      Do[
       If[IntegerQ[pack[[linePackNPositions[lines[[e]], packType][[endpointSlot]]]]] &&
         pack[[linePackNPositions[lines[[e]], packType][[endpointSlot]]]] >= 2,
@@ -1579,11 +1579,11 @@ tadpoleISPParity[topo_Association, loopIndex_Integer, ispIndex_Integer] := Modul
 
 
 tadpoleOddISPIntegralQ[topo_Association, J[_, _, ispList_]] := Module[{loopData, oddPowers},
-   (* shrunk（含初始化转换的 massless 自环）单槽不含态函数，但 loop-reversal
+   (* pinched（含初始化转换的 massless 自环）单槽不含态函数，但 loop-reversal
       对 ISP 奇幂的零化同样成立，必须与 full 态 tadpole 一起参与筛选。 *)
    loopData = Select[
      tadpoleLoopReversalData[topo],
-     MemberQ[{"massiveFull", "masslessFull", "shrunk"}, #["packType"]] && TrueQ[#["exclusiveLoopQ"]] &
+     MemberQ[{"massiveT", "masslessT", "pinched"}, #["packType"]] && TrueQ[#["exclusiveLoopQ"]] &
      ];
    AnyTrue[
     loopData,
@@ -1603,13 +1603,13 @@ tadpoleOddISPIntegralQ[topo_Association, J[_, _, ispList_]] := Module[{loopData,
 
 tadpoleMassiveSwapNeededQ[topo_Association, lineIndex_Integer, J[_, linePacks_, _]] :=
   lineIndex <= Length[linePacks] &&
-    Lookup[topo["lines"][[lineIndex]], "packType", Missing["packType"]] === "massiveFull" &&
-    linePacks[[lineIndex, linePackNPositions[topo["lines"][[lineIndex]], "massiveFull"]]] === {1, 0};
+    Lookup[topo["lines"][[lineIndex]], "packType", Missing["packType"]] === "massiveT" &&
+    linePacks[[lineIndex, linePackNPositions[topo["lines"][[lineIndex]], "massiveT"]]] === {1, 0};
 
 
 tadpoleSwapLinePack[topo_Association, J[aList_, linePacks_, ispList_], lineIndex_Integer] := Module[
    {newPacks = linePacks, nPositions},
-   nPositions = linePackNPositions[topo["lines"][[lineIndex]], "massiveFull"];
+   nPositions = linePackNPositions[topo["lines"][[lineIndex]], "massiveT"];
    newPacks[[lineIndex, nPositions]] = Reverse[newPacks[[lineIndex, nPositions]]];
    J[aList, newPacks, ispList]
    ];
@@ -1622,7 +1622,7 @@ tadpoleSymmetryRules0[topo_Association] := Module[{data, rules = {}},
     ];
    Do[
     Switch[dataItem["packType"],
-     "massiveFull",
+     "massiveT",
      With[{lineIndex = dataItem["lineIndex"]},
       AppendTo[rules,
        HoldPattern[(int_J /; tadpoleMassiveSwapNeededQ[topo, lineIndex, int])] :>
@@ -1648,8 +1648,8 @@ tadpoleSymmetryData[topo_Association] := Module[{data = tadpoleLoopReversalData[
     "status" -> "generated",
     "loopReversalData" -> data,
     (* 空 tadpole 集合是合法结果；显式返回空列，避免 Lookup[{}] 产生 Missing。 *)
-    "massiveFullLineIndices" -> Lookup[Select[data, #["packType"] === "massiveFull" &], "lineIndex", {}],
-    "masslessFullLineIndices" -> Lookup[Select[data, #["packType"] === "masslessFull" &], "lineIndex", {}],
+    "massiveTLineIndices" -> Lookup[Select[data, #["packType"] === "massiveT" &], "lineIndex", {}],
+    "masslessTLineIndices" -> Lookup[Select[data, #["packType"] === "masslessT" &], "lineIndex", {}],
     "automaticRuleCount" -> Length[tadpoleSymmetryRules0[topo]],
     "automaticRules" -> tadpoleSymmetryRules0[topo],
     "userRuleCount" -> Length[repSymmetry0[topo]],
@@ -1982,7 +1982,7 @@ externalLegEnergyMomentumDependenceIssues[topo_Association] := Module[
 
 
 (* 标量积坐标规则只依赖动量路由、ISP 和外部不变量命名。
-   缓存键排除 sector、顶点和 seed 配置，使同一 family 的 shrink sectors 共享一次 LinearSolve。 *)
+   缓存键排除 sector、顶点和 seed 配置，使同一 family 的 pinch sectors 共享一次 LinearSolve。 *)
 $scalarProductRuleCache = <||>;
 
 
@@ -2267,7 +2267,7 @@ makeIBPGenerators[topo_Association] := Module[
 (*轻量 momentum IBP seed*)
 
 (* 本章生成 momentum IBP seed 的传播子幂次项、z/ISP 吸收和 massive/massless building-block 导数项。
-   输出会经过 EOM 与 per-line massless endpoint canonical 门禁；shrunk pack 的 bS 幂次也使用当前 pack 指标。 *)
+   输出会经过 EOM 与 per-line massless endpoint canonical 门禁；pinched pack 的 bS 幂次也使用当前 pack 指标。 *)
 
 linearTerms[expr_] := Module[{expanded = Expand[expr]},
    If[Head[expanded] === Plus, List @@ expanded, {expanded}]
@@ -2356,7 +2356,7 @@ vertexPowerIndex[topo_Association, J[aList_, linePacks_, ispList_], vertexId_] :
 linePowerIndex[topo_Association, J[aList_, linePacks_, ispList_], e_Integer] := Module[
    {base, packType = actualLinePackType[topo, e, linePacks[[e]]]},
    base = lineIntegerPowerIndex[topo, J[aList, linePacks, ispList], e];
-   base + If[packType === "shrunk", lineBSZeroPoint[topo, e], lineBZeroPoint[topo, e]]
+   base + If[packType === "pinched", lineBSZeroPoint[topo, e], lineBZeroPoint[topo, e]]
    ];
 
 
@@ -2497,15 +2497,15 @@ compiledMomentumEndpointDerivativeTerms[
 
 toggleMasslessLineState[topo_Association, J[aList_, linePacks_, ispList_], e_Integer] := Module[
    {newLinePacks = linePacks, nPosition},
-   nPosition = First[linePackNPositions[topo["lines"][[e]], "masslessFull"]];
+   nPosition = First[linePackNPositions[topo["lines"][[e]], "masslessT"]];
    newLinePacks[[e, nPosition]] = 1 - newLinePacks[[e, nPosition]];
    J[aList, newLinePacks, ispList]
    ];
 
 
 (* q 导数同时作用 massive Hankel block 与 massless 指数核。
-   masslessFull 使用 d_q M_n = i sigma (tau_u-tau_v) M_(1-n)；
-   masslessCross 使用两个端点相位符号的和。 *)
+   masslessT 使用 d_q M_n = i sigma (tau_u-tau_v) M_(1-n)；
+   masslessW 使用两个端点相位符号的和。 *)
 momentumBuildingBlockDerivativeTerms[topo_Association, int_J, gen_Association, repSP2ZRules_List] := Module[
    {dLoop, vector, lineMomenta, lines, loopCoeff, vDotQ,
      shiftedInt, packType, sigma},
@@ -2521,14 +2521,14 @@ momentumBuildingBlockDerivativeTerms[topo_Association, int_J, gen_Association, r
       vDotQ = Expand[expandDotExpr[vector, lineMomenta[[e]], topo] /. repSP2ZRules];
       packType = lines[[e]]["packType"];
       Switch[packType,
-       "massiveFull" | "massiveCross",
+       "massiveT" | "massiveW",
         Total[
          Table[
           loopCoeff compiledMomentumEndpointDerivativeTerms[topo, int, e, endpointSlot, vDotQ],
           {endpointSlot, 2}
           ]
         ],
-       "masslessFull",
+       "masslessT",
        sigma = sameBranchSKSign[lines[[e]]];
         shiftedInt = shiftLinePower[topo, toggleMasslessLineState[topo, int, e], e, 1];
        loopCoeff (
@@ -2543,7 +2543,7 @@ momentumBuildingBlockDerivativeTerms[topo_Association, int_J, gen_Association, r
            topo
            ]
          ),
-       "masslessCross",
+       "masslessW",
        shiftedInt = shiftLinePower[topo, int, e, 1];
        loopCoeff Total[
          Table[
@@ -2659,8 +2659,8 @@ applyMomentumGeneratorSeed[topo_Association, int_J, gen_Association] := Module[
 (* ::Chapter:: *)
 (*轻量 time IBP core seed*)
 
-(* 本章接入 time-IBP 的通用 core 项：顶点幂次、外部能量、massive building-block 端点导数、massless 端点翻转项和 massive/massless theta 边界缩并项。
-   单独 time batch 会把进一步 shrink-sector 生成标为 pending；canonical batch 完整补齐全部 contact-reachable sectors。 *)
+(* 本章接入 time-IBP 的通用 core 项：顶点幂次、外部能量、massive building-block 端点导数、massless 端点翻转项和 massive/massless theta 边界收缩项。
+   单独 time batch 会把进一步 pinch-sector 生成标为 pending；canonical batch 完整补齐全部 pinched-reachable sectors。 *)
 
 rawVertexExternalEnergy[topo_Association, vertexId_] := Module[
    {sectorEnergies = Lookup[topo, "sectorExternalLegEnergyByVertex", Missing["NotSet"]]},
@@ -2746,9 +2746,9 @@ skEndpointPhaseSign[line_Association, endpointSlot_Integer] := Module[
    ];
 
 
-(* massless time regular 原子：masslessFull 在有序端点上执行 {b,n}->{b-1,1-n}，两端系数为 +I sigma/-I sigma；
+(* massless time regular 原子：masslessT 在有序端点上执行 {b,n}->{b-1,1-n}，两端系数为 +I sigma/-I sigma；
    若 sector 已使两端点 coincident，endpointSlots 同时包含 1、2，两个 regular 项必须在此处相消。
-   masslessCross 没有 n 或 theta，只按各端点 SK 相位移动 b。 *)
+   masslessW 没有 n 或 theta，只按各端点 SK 相位移动 b。 *)
 timeMasslessEndpointDerivativeTerms[topo_Association, J[aList_, linePacks_, ispList_], vertexId_] := Module[
    {pos, connectedLines, lines = topo["lines"], endpointSlots, endpointSign,
     newLinePacks, shiftedIntegral, nPosition, sigma},
@@ -2759,20 +2759,20 @@ timeMasslessEndpointDerivativeTerms[topo_Association, J[aList_, linePacks_, ispL
     Table[
      endpointSlots = lineEndpointSlotsAtVertex[lines[[e]], vertexId];
      Switch[lines[[e]]["packType"],
-      "masslessFull",
+      "masslessT",
       sigma = sameBranchSKSign[lines[[e]]];
       Total[
        Table[
         endpointSign = sigma If[endpointSlot === 1, 1, -1];
         newLinePacks = linePacks;
-        nPosition = First[linePackNPositions[lines[[e]], "masslessFull"]];
+        nPosition = First[linePackNPositions[lines[[e]], "masslessT"]];
         newLinePacks[[e, nPosition]] = 1 - newLinePacks[[e, nPosition]];
         shiftedIntegral = shiftLinePower[topo, J[aList, newLinePacks, ispList], e, -1];
         I endpointSign shiftedIntegral,
         {endpointSlot, endpointSlots}
         ]
        ],
-      "masslessCross",
+      "masslessW",
       Total[
        Table[
         endpointSign = skEndpointPhaseSign[lines[[e]], endpointSlot];
@@ -2790,7 +2790,7 @@ timeMasslessEndpointDerivativeTerms[topo_Association, J[aList_, linePacks_, ispL
    ];
 
 
-(* 缩并后同一条线的两个原端点可能落到同一 active vertex；
+(* 收缩后同一条线的两个原端点可能落到同一 active vertex；
    此时必须同时微分两个 building block，不能只取 FirstPosition。 *)
 timeMassiveBuildingBlockDerivativeTerms[topo_Association, J[aList_, linePacks_, ispList_], vertexId_] := Module[
    {pos, connectedLines, lines = topo["lines"], endpointSlots},
@@ -2799,7 +2799,7 @@ timeMassiveBuildingBlockDerivativeTerms[topo_Association, J[aList_, linePacks_, 
    connectedLines = topo["vertexLines"][[pos]][[All, 1]];
    Total[
     Table[
-     If[! MemberQ[{"massiveFull", "massiveCross"}, actualLinePackType[topo, e, linePacks[[e]]]],
+     If[! MemberQ[{"massiveT", "massiveW"}, actualLinePackType[topo, e, linePacks[[e]]]],
       0,
       endpointSlots = lineEndpointSlotsAtVertex[lines[[e]], vertexId];
        Total[
@@ -2815,30 +2815,30 @@ timeMassiveBuildingBlockDerivativeTerms[topo_Association, J[aList_, linePacks_, 
    ];
 
 
-lineCompiledShrinkTerms[line_Association] := Lookup[
+lineCompiledPinchTerms[line_Association] := Lookup[
    lineCompiledFunctionSystem[line],
-   "shrinkTerms",
+   "pinchTerms",
    {}
    ];
 
 
-lineShrinkZeroPointShift[line_Association] := Module[
+linePinchZeroPointShift[line_Association] := Module[
    {compiled = lineCompiledFunctionSystem[line]},
    Lookup[
     line,
-    "shrinkZeroPointShift",
-    Lookup[compiled, "shrinkZeroPointShift", 0]
+    "pinchZeroPointShift",
+    Lookup[compiled, "pinchZeroPointShift", 0]
     ]
    ];
 
 
-sectorZeroPointRules[topo_Association, shrunkLines_List, repMap_Association, activeVertices_List] := Module[
-   {lineRules, vertexRules, classVertices, classShrunkLines, shiftSum},
+sectorZeroPointRules[topo_Association, pinchedLines_List, repMap_Association, activeVertices_List] := Module[
+   {lineRules, vertexRules, classVertices, classPinchedLines, shiftSum},
    lineRules = Flatten@Table[
-      If[MemberQ[shrunkLines, e],
-       bS0[topo["lines"][[e, "id"]]] -> lineBZeroPoint[topo, e] + lineShrinkZeroPointShift[topo["lines"][[e]]],
+      If[MemberQ[pinchedLines, e],
+       bS0[topo["lines"][[e, "id"]]] -> lineBZeroPoint[topo, e] + linePinchZeroPointShift[topo["lines"][[e]]],
        Switch[actualLinePackType[topo, e, makeLinePack[topo["lines"][[e]]]],
-        "shrunk", bS0[topo["lines"][[e, "id"]]] -> lineBSZeroPoint[topo, e],
+        "pinched", bS0[topo["lines"][[e, "id"]]] -> lineBSZeroPoint[topo, e],
         _, b0[topo["lines"][[e, "id"]]] -> lineBZeroPoint[topo, e]
         ]
        ],
@@ -2846,8 +2846,8 @@ sectorZeroPointRules[topo_Association, shrunkLines_List, repMap_Association, act
       ];
    vertexRules = Table[
      classVertices = Select[topo["vertexIds"], Lookup[repMap, #] === rep &];
-     classShrunkLines = Select[shrunkLines, Function[e, And @@ (Function[v, Lookup[repMap, v] === rep] /@ topo["lines"][[e, "endpoints"]])]];
-     shiftSum = Total[lineShrinkZeroPointShift[topo["lines"][[#]]] & /@ classShrunkLines];
+     classPinchedLines = Select[pinchedLines, Function[e, And @@ (Function[v, Lookup[repMap, v] === rep] /@ topo["lines"][[e, "endpoints"]])]];
+     shiftSum = Total[linePinchZeroPointShift[topo["lines"][[#]]] & /@ classPinchedLines];
      a0[rep] -> Total[vertexZeroPoint[topo, #] & /@ classVertices] - shiftSum,
      {rep, activeVertices}
      ];
@@ -2855,16 +2855,16 @@ sectorZeroPointRules[topo_Association, shrunkLines_List, repMap_Association, act
    ];
 
 
-(* massive Wronskian 缩并带一个额外 1/q 和 1/(-tau)，故 bS=b+1 且 merged a 减 1；
+(* massive Wronskian 收缩带一个额外 1/q 和 1/(-tau)，故 bS=b+1 且 merged a 减 1；
    massless 反对称 theta-delta 不带这些因子，必须保持 bS=b 且 merged a 不移位。 *)
-lineShrinkBShift[line_Association] := If[
+linePinchBShift[line_Association] := If[
    Lookup[line, "massType", "massive"] === "massless",
    0,
-   Lookup[First[Lookup[lineCompiledFunctionSystem[line], "shrinkTerms", {<|"bShift" -> 1|>}]], "bShift", 1]
+   Lookup[First[Lookup[lineCompiledFunctionSystem[line], "pinchTerms", {<|"bShift" -> 1|>}]], "bShift", 1]
    ];
 
 
-shrinkLinesIntegral[
+pinchLinesIntegral[
    topo_Association,
    J[aList_, linePacks_, ispList_],
    specs_List
@@ -2911,26 +2911,26 @@ thetaBoundaryAtomicTerms[
    vertexId_
    ] := Module[
    {line = topo["lines"][[e]], endpointSlots, endpointSlot, endpointOrientation,
-    pack = linePacks[[e]], packType, coeff, shrinkTerms},
+    pack = linePacks[[e]], packType, coeff, pinchTerms},
    endpointSlots = lineEndpointSlotsAtVertex[line, vertexId];
    If[Length[endpointSlots] =!= 1, Return[{}]];
    endpointSlot = First[endpointSlots];
    endpointOrientation = If[endpointSlot === 1, 1, -1];
    packType = actualLinePackType[topo, e, pack];
    Switch[packType,
-    "massiveFull",
+    "massiveT",
     coeff = With[{nPositions = linePackNPositions[line, packType]},
       -sameBranchSKSign[line] KroneckerDelta[Total[pack[[nPositions]]], 1]
         (-1)^pack[[nPositions[[endpointSlot]]]]
       ];
-    shrinkTerms = lineCompiledShrinkTerms[line];
+    pinchTerms = lineCompiledPinchTerms[line];
     (<|
         "lineIndex" -> e,
        "coefficient" -> coeff Lookup[#, "coefficient", 0],
         "bShift" -> Lookup[#, "bShift", 1],
         "aShift" -> Lookup[#, "bShift", 1]
-        |> &) /@ shrinkTerms,
-    "masslessFull",
+        |> &) /@ pinchTerms,
+    "masslessT",
     {<|
       "lineIndex" -> e,
       "coefficient" -> -2 endpointOrientation KroneckerDelta[pack[[First[linePackNPositions[line, packType]]]], 1],
@@ -2946,24 +2946,24 @@ thetaBoundaryAtomicTerms[
 thetaBundleKey[topo_Association, e_Integer] := Sort[vertexPosition[topo, #] & /@ topo["lines"][[e, "endpoints"]]];
 
 
-(* 同一代表顶点对的 full lines 共享一个 theta。共同边界
+(* 同一代表顶点对的 time-ordered lines 共享一个 theta。共同边界
    Product[A]-Product[B] 在 J=(A+B)/2、D=A-B 基底中只含非空奇数 D 子集，
-   k-line contact 的系数为 2^(1-k)。每个子集只合并顶点一次，绝不生成 delta^k。 *)
-timeThetaBoundaryShrinkTerms[topo_Association, int : J[aList_, linePacks_, ispList_], vertexId_] := Module[
+   k-line pinched 的系数为 2^(1-k)。每个子集只合并顶点一次，绝不生成 delta^k。 *)
+timeThetaBoundaryPinchTerms[topo_Association, int : J[aList_, linePacks_, ispList_], vertexId_] := Module[
    {pos, connectedLines, eligibleLines, bundles, oddSubsets, atomicChoices},
    pos = vertexPosition[topo, vertexId];
    If[Head[pos] === Missing, Return[0]];
    connectedLines = topo["vertexLines"][[pos]][[All, 1]];
    eligibleLines = Select[
      connectedLines,
-     MemberQ[{"massiveFull", "masslessFull"}, actualLinePackType[topo, #, linePacks[[#]]]] &&
+     MemberQ[{"massiveT", "masslessT"}, actualLinePackType[topo, #, linePacks[[#]]]] &&
        Length[lineEndpointSlotsAtVertex[topo["lines"][[#]], vertexId]] === 1 &
      ];
    bundles = GatherBy[eligibleLines, thetaBundleKey[topo, #] &];
    Total[Table[
      oddSubsets = Select[Rest[Subsets[bundle]], OddQ[Length[#]] &];
      Total[Table[
-       (* 精确为零的端点 contact 不参与组合；否则 0 J 会被错误送入 sector normalization。 *)
+       (* 精确为零的端点 pinched 不参与组合；否则 0 J 会被错误送入 sector normalization。 *)
        atomicChoices = Select[
            thetaBoundaryAtomicTerms[topo, int, #, vertexId],
            ! zeroQ[Lookup[#, "coefficient", 0]] &
@@ -2972,11 +2972,11 @@ timeThetaBoundaryShrinkTerms[topo_Association, int : J[aList_, linePacks_, ispLi
         0,
         Total[
          Function[choice,
-            normalizeContactTerm[
+            normalizePinchedTerm[
              topo,
              int,
              2^(1 - Length[selected]) Times @@ Lookup[choice, "coefficient"] *
-              shrinkLinesIntegral[topo, int, KeyDrop[#, "coefficient"] & /@ choice]
+              pinchLinesIntegral[topo, int, KeyDrop[#, "coefficient"] & /@ choice]
              ]
             ] /@ Tuples[atomicChoices]
          ]
@@ -3006,7 +3006,7 @@ applyTimeGeneratorSeed[topo_Association, int_J, gen_Association] := Module[
      timeExternalEnergyTerm[topo, int, vertexId] +
      timeMasslessEndpointDerivativeTerms[topo, int, vertexId] +
      timeMassiveBuildingBlockDerivativeTerms[topo, int, vertexId] +
-     timeThetaBoundaryShrinkTerms[topo, int, vertexId]
+     timeThetaBoundaryPinchTerms[topo, int, vertexId]
     ]
    ];
 
@@ -3126,7 +3126,7 @@ externalVectorPropagatorDerivativeTerms[topo_Association, int_J, gen_Association
    ];
 
 
-(* 外部动力学量导数与 qIBP 共用最终 AT 编译结果；WT 只用于 theta shrink。 *)
+(* 外部动力学量导数与 qIBP 共用最终 AT 编译结果；WT 只用于 theta pinch。 *)
 externalVectorBuildingBlockDerivativeTerms[topo_Association, int_J, gen_Association, repSP2ZRules_List] := Module[
    {dExternal, vector, lineMomenta, lines, extCoeff, vDotQ,
     shiftedInt, packType, sigma},
@@ -3142,7 +3142,7 @@ externalVectorBuildingBlockDerivativeTerms[topo_Association, int_J, gen_Associat
       vDotQ = Expand[expandDotExpr[vector, lineMomenta[[e]], topo] /. repSP2ZRules];
       packType = lines[[e]]["packType"];
       Switch[packType,
-       "massiveFull" | "massiveCross",
+       "massiveT" | "massiveW",
        Total[
         Table[
          extCoeff compiledMomentumEndpointDerivativeTerms[
@@ -3151,7 +3151,7 @@ externalVectorBuildingBlockDerivativeTerms[topo_Association, int_J, gen_Associat
          {endpointSlot, 2}
          ]
         ],
-       "masslessFull",
+       "masslessT",
        sigma = sameBranchSKSign[lines[[e]]];
        shiftedInt = shiftLinePower[topo, toggleMasslessLineState[topo, int, e], e, 1];
        extCoeff (
@@ -3166,7 +3166,7 @@ externalVectorBuildingBlockDerivativeTerms[topo_Association, int_J, gen_Associat
            topo
            ]
          ),
-       "masslessCross",
+       "masslessW",
        shiftedInt = shiftLinePower[topo, int, e, 1];
        extCoeff Total[
          Table[
@@ -3421,9 +3421,9 @@ makeIndependentVariableDerivativeSeedBatch[topo_Association, int_J, opts : Optio
 
 
 (* ::Chapter:: *)
-(*自动 shrink-sector seed*)
+(*自动 pinch-sector seed*)
 
-(* 本章从 top-sector 的 massive full lines 派生 shrunk sectors。
+(* 本章从 top-sector 的 massive T lines 派生 pinched sectors。
    为避免大图爆炸，默认有 sector 数量保护；超过保护时只保留 pending gate，不展开。 *)
 
 vertexRepresentativeMap[vertexIds_List, pairs_List] := Module[
@@ -3467,39 +3467,39 @@ remapExternalLegEnergiesToRepresentatives[sectorEnergies_, repMap_Association] :
    ];
 
 
-shrinkSectorTopology[topo_Association, shrunkLines_List] := Module[
-   {foldedShrunkLines, pairs, repMap, activeVertices, fixedA, newLines, newExtLegs, newZeroPointRules,
+pinchSectorTopology[topo_Association, pinchedLines_List] := Module[
+   {foldedPinchedLines, pairs, repMap, activeVertices, fixedA, newLines, newExtLegs, newZeroPointRules,
     newBMatrix, newVertexLines, sectorTopo, initialRepMap, coincidentMasslessLines},
    initialRepMap = vertexRepresentativeMap[
       topo["vertexIds"],
-      topo["lines"][[#, "endpoints"]] & /@ shrunkLines
+      topo["lines"][[#, "endpoints"]] & /@ pinchedLines
       ];
-   (* 未被选中但在顶点合并后两端重合的 masslessFull 线一并转 contracted 单槽：
+   (* 未被选中但在顶点合并后两端重合的 masslessT 线一并转 pinched 单槽：
       等时值 J_e=1、零点移位为零，与收缩线共用全部 bookkeeping（含 sector key）。
-      massiveFull 幸存线保持三槽加 swap 规则，不在此列。 *)
+      massiveT 幸存线保持三槽加 swap 规则，不在此列。 *)
    coincidentMasslessLines = Select[
-     Complement[Range[topo["nE"]], shrunkLines],
-     topo["lines"][[#, "packType"]] === "masslessFull" &&
+     Complement[Range[topo["nE"]], pinchedLines],
+     topo["lines"][[#, "packType"]] === "masslessT" &&
        SameQ @@ Lookup[initialRepMap, topo["lines"][[#, "endpoints"]]] &
      ];
-   (* shrunkLines 是模式参数不能重赋值；折叠结果进 Module 局部量后统一使用。 *)
-   foldedShrunkLines = Sort @ Union[shrunkLines, coincidentMasslessLines];
-   pairs = topo["lines"][[#, "endpoints"]] & /@ foldedShrunkLines;
+   (* pinchedLines 是模式参数不能重赋值；折叠结果进 Module 局部量后统一使用。 *)
+   foldedPinchedLines = Sort @ Union[pinchedLines, coincidentMasslessLines];
+   pairs = topo["lines"][[#, "endpoints"]] & /@ foldedPinchedLines;
    repMap = vertexRepresentativeMap[topo["vertexIds"], pairs];
    activeVertices = DeleteDuplicates[Lookup[repMap, topo["vertexIds"]]];
    fixedA = Association[Thread[Complement[topo["vertexIds"], activeVertices] -> 0]];
    newLines = MapIndexed[
      Module[{line = #1, e = First[#2], endpoints},
        endpoints = Lookup[repMap, line["endpoints"]];
-       If[MemberQ[foldedShrunkLines, e],
-        Join[line, <|"originalEndpoints" -> Lookup[line, "originalEndpoints", line["endpoints"]], "endpoints" -> endpoints, "state" -> "shrunk", "packType" -> "shrunk"|>],
+       If[MemberQ[foldedPinchedLines, e],
+        Join[line, <|"originalEndpoints" -> Lookup[line, "originalEndpoints", line["endpoints"]], "endpoints" -> endpoints, "state" -> "pinched", "packType" -> "pinched"|>],
         Join[line, <|"originalEndpoints" -> Lookup[line, "originalEndpoints", line["endpoints"]], "endpoints" -> endpoints|>]
         ]
        ] &,
      topo["lines"]
      ];
    newExtLegs = remapExtLegsToRepresentatives[topo["extLegs"], repMap];
-   newZeroPointRules = sectorZeroPointRules[topo, foldedShrunkLines, repMap, activeVertices];
+   newZeroPointRules = sectorZeroPointRules[topo, foldedPinchedLines, repMap, activeVertices];
    newBMatrix = Table[
      Which[
       newLines[[e, "endpoints", 1]] === topo["vertexIds"][[v]], 1,
@@ -3512,10 +3512,10 @@ shrinkSectorTopology[topo_Association, shrunkLines_List] := Module[
      Select[Table[{e, newBMatrix[[v, e]]}, {e, Length[newLines]}], #[[2]] =!= 0 &],
      {v, Length[topo["vertexIds"]]}
      ];
-   (* sector 只消费已解析 root topology，并更新 contact 真正改变的内部字段。
+   (* sector 只消费已解析 root topology，并更新 pinched 真正改变的内部字段。
       不重新构造用户 case，也不再次调用公开 parser。 *)
    sectorTopo = Join[topo, <|
-     "name" -> topo["name"] <> "_sector_" <> StringRiffle["e" <> ToString[#] & /@ foldedShrunkLines, "_"],
+     "name" -> topo["name"] <> "_sector_" <> StringRiffle["e" <> ToString[#] & /@ foldedPinchedLines, "_"],
      "lines" -> newLines,
      "extLegs" -> newExtLegs,
      "sectorExternalLegEnergyByVertex" -> remapExternalLegEnergiesToRepresentatives[
@@ -3529,7 +3529,7 @@ shrinkSectorTopology[topo_Association, shrunkLines_List] := Module[
      "sectorVertexRepresentativeMap" -> repMap,
      "activeVertexIds" -> activeVertices,
      "fixedAVertexValues" -> fixedA,
-     "sectorShrunkLines" -> foldedShrunkLines
+     "sectorPinchedLines" -> foldedPinchedLines
      |>];
    Join[sectorTopo, <|
     "sectorMetadata" -> makeSectorMetadata[sectorTopo],
@@ -3539,29 +3539,29 @@ shrinkSectorTopology[topo_Association, shrunkLines_List] := Module[
    ];
 
 
-massiveFullLineIndices[topo_Association] := Flatten@Position[Lookup[topo["lines"], "packType"], "massiveFull"];
+massiveTLineIndices[topo_Association] := Flatten@Position[Lookup[topo["lines"], "packType"], "massiveT"];
 
 
-masslessFullLineIndices[topo_Association] := Flatten@Position[Lookup[topo["lines"], "packType"], "masslessFull"];
+masslessTLineIndices[topo_Association] := Flatten@Position[Lookup[topo["lines"], "packType"], "masslessT"];
 
 
-(* 接触枚举按选择子集推进；coincident 折叠会让不同选择落到同一 shrunk 集（如纯
+(* 接触枚举按选择子集推进；coincident 折叠会让不同选择落到同一 pinched 集（如纯
    massless 多线 bubble 的 {e1}/{e2} 都折叠成全集）。sector 清单必须按折叠后的
-   sectorShrunkLines 去重，接触项路由仍按各自选择进行。 *)
-shrinkSectorTopologiesForSubsets[topo_Association, subsets_List] := DeleteDuplicatesBy[
-   shrinkSectorTopology[topo, #] & /@ subsets,
-   Lookup[#, "sectorShrunkLines"] &
+   sectorPinchedLines 去重，接触项路由仍按各自选择进行。 *)
+pinchSectorTopologiesForSubsets[topo_Association, subsets_List] := DeleteDuplicatesBy[
+   pinchSectorTopology[topo, #] & /@ subsets,
+   Lookup[#, "sectorPinchedLines"] &
    ];
 
 
-thetaFullLineIndices[topo_Association] := Sort @ Join[
-   massiveFullLineIndices[topo],
-   masslessFullLineIndices[topo]
+thetaTLineIndices[topo_Association] := Sort @ Join[
+   massiveTLineIndices[topo],
+   masslessTLineIndices[topo]
    ];
 
 
-contactReachableShrinkSubsets[topo_Association] := Module[
-   {lines = thetaFullLineIndices[topo], queue = {{}}, seen = <||>, result = {},
+pinchedReachablePinchSubsets[topo_Association] := Module[
+   {lines = thetaTLineIndices[topo], queue = {{}}, seen = <||>, result = {},
     state, pairs, repMap, eligible, bundles, events, newState, key},
    AssociateTo[seen, ToString[{}, InputForm] -> True];
    While[queue =!= {},
@@ -3593,15 +3593,15 @@ contactReachableShrinkSubsets[topo_Association] := Module[
    ];
 
 
-shrinkSectorSubsets[topo_Association] := Module[
-   {lines = thetaFullLineIndices[topo], subsets},
+pinchSectorSubsets[topo_Association] := Module[
+   {lines = thetaTLineIndices[topo], subsets},
    If[lines === {}, Return[<|"status" -> "generated", "subsets" -> {}, "completeCoverageQ" -> True|>]];
-   subsets = contactReachableShrinkSubsets[topo];
+   subsets = pinchedReachablePinchSubsets[topo];
    <|"status" -> "generated", "subsets" -> subsets, "completeCoverageQ" -> True|>
    ];
 
 
-Options[makeTopologyData] = {PrecomputeShrinkSectorMetadata -> False};
+Options[makeTopologyData] = {PrecomputePinchSectorMetadata -> False};
 
 
 makeTopologyIndexMaps[topo_Association, metadata_Association] := <|
@@ -3630,10 +3630,10 @@ vertexPairBundleKey[line_Association] := Sort[Lookup[line, "originalEndpoints", 
 
 
 masslessBundleCandidates[topo_Association] := Module[
-   {indexedLines, masslessFullLines, grouped},
+   {indexedLines, masslessTLines, grouped},
    indexedLines = MapIndexed[Join[#1, <|"lineIndex" -> First[#2]|>] &, topo["lines"]];
-   masslessFullLines = Select[indexedLines, #["packType"] === "masslessFull" &];
-   grouped = GroupBy[masslessFullLines, vertexPairBundleKey];
+   masslessTLines = Select[indexedLines, #["packType"] === "masslessT" &];
+   grouped = GroupBy[masslessTLines, vertexPairBundleKey];
    KeyValueMap[
     If[Length[#2] > 1,
       <|
@@ -3641,7 +3641,7 @@ masslessBundleCandidates[topo_Association] := Module[
        "lineIndices" -> Lookup[#2, "lineIndex"],
        "lineIds" -> Lookup[#2, "id"],
        "packTemplates" -> (makeLinePack /@ #2),
-        "bundleMode" -> "commonThetaOddSubsetContacts"
+       "bundleMode" -> "commonThetaOddSubsetPinchedTerms"
        |>,
       Nothing
       ] &,
@@ -3659,7 +3659,7 @@ masslessEndpointConventionData[topo_Association] := MapIndexed[
      "n1OppositeEndpoint" -> #1["endpoints"][[2]],
      "convention" -> "n=1 is the antisymmetric state defined by the first endpoint; swapping endpoints flips n=1"
      |> &,
-   Select[topo["lines"], #["packType"] === "masslessFull" &]
+   Select[topo["lines"], #["packType"] === "masslessT" &]
    ];
 
 
@@ -3718,7 +3718,7 @@ topologyValidationReport[topo_Association] := Module[
     ];
    lineIds = Lookup[topo["lines"], "id"];
    packTypes = Lookup[topo["lines"], "packType"];
-   allowedPackTypes = {"massiveFull", "massiveCross", "masslessFull", "masslessCross", "shrunk"};
+   allowedPackTypes = {"massiveT", "massiveW", "masslessT", "masslessW", "pinched"};
    duplicateLoopMomenta = Cases[Tally[topo["loopMomenta"]], {mom_, count_} /; count > 1 :> mom];
    If[duplicateLoopMomenta =!= {},
     appendIssue["error", "duplicateLoopMomenta", <|"loopMomenta" -> topo["loopMomenta"], "duplicates" -> duplicateLoopMomenta|>]
@@ -3843,10 +3843,10 @@ topologyValidationReport[topo_Association] := Module[
     ];
    badStateLines = Select[
      MapIndexed[Join[#1, <|"lineIndex" -> First[#2]|>] &, topo["lines"]],
-     ! MemberQ[{"full", "shrunk"}, Lookup[#, "state", "full"]] &
+     ! MemberQ[{"full", "pinched"}, Lookup[#, "state", "full"]] &
      ];
    If[badStateLines =!= {},
-    appendIssue["error", "unknownLineStates", <|"lineIndices" -> Lookup[badStateLines, "lineIndex"], "states" -> Lookup[badStateLines, "state"], "allowedStates" -> {"full", "shrunk"}|>]
+    appendIssue["error", "unknownLineStates", <|"lineIndices" -> Lookup[badStateLines, "lineIndex"], "states" -> Lookup[badStateLines, "state"], "allowedStates" -> {"full", "pinched"}|>]
     ];
    lineMomentumVars = DeleteDuplicates[Flatten[Variables /@ Lookup[topo["lines"], "momentum"]]];
    declaredMomentumVars = ds016MomentumAtoms@Lookup[
@@ -3924,8 +3924,8 @@ makeTopologyData[case_Association, OptionsPattern[]] := Module[
        "indexMaps" -> <||>,
        "seedSummary" -> <||>,
        "masslessBundleCandidates" -> {},
-       "precomputedShrinkSectorSummary" -> <|"status" -> "skipped"|>,
-       "precomputedShrinkSectorKeys" -> {}
+       "precomputedPinchSectorSummary" -> <|"status" -> "skipped"|>,
+       "precomputedPinchSectorKeys" -> {}
        |>]]
     ];
    topo = parseTopology[case];
@@ -3950,17 +3950,17 @@ makeTopologyData[case_Association, OptionsPattern[]] := Module[
        "indexMaps" -> <||>,
        "seedSummary" -> <||>,
        "masslessBundleCandidates" -> {},
-       "precomputedShrinkSectorSummary" -> <|"status" -> "skipped"|>,
-       "precomputedShrinkSectorKeys" -> {}
+       "precomputedPinchSectorSummary" -> <|"status" -> "skipped"|>,
+       "precomputedPinchSectorKeys" -> {}
        |>]]
     ];
    topMetadata = makeSectorMetadata[topo];
-   subsetData = If[TrueQ[OptionValue[PrecomputeShrinkSectorMetadata]],
-     shrinkSectorSubsets[topo],
+   subsetData = If[TrueQ[OptionValue[PrecomputePinchSectorMetadata]],
+     pinchSectorSubsets[topo],
      <|"status" -> "skipped", "subsets" -> {}, "completeCoverageQ" -> False|>
      ];
    sectorTopos = If[Lookup[subsetData, "status", "skipped"] === "generated",
-     shrinkSectorTopologiesForSubsets[topo, Lookup[subsetData, "subsets", {}]],
+     pinchSectorTopologiesForSubsets[topo, Lookup[subsetData, "subsets", {}]],
      {}
      ];
    sectorMetadataList = Join[{topMetadata}, Lookup[#, "sectorMetadata", makeSectorMetadata[#]] & /@ sectorTopos];
@@ -3974,8 +3974,8 @@ makeTopologyData[case_Association, OptionsPattern[]] := Module[
     "effectiveSymmetryRules" -> effectiveSymmetryRules0[topo],
     "masslessBundleCandidates" -> masslessBundleCandidates[topo],
      "masslessEndpointConventions" -> masslessEndpointConventionData[topo],
-     "precomputedShrinkSectorSummary" -> KeyDrop[subsetData, "subsets"],
-     "precomputedShrinkSectorKeys" -> Lookup[sectorMetadataList, "sectorKey"]
+     "precomputedPinchSectorSummary" -> KeyDrop[subsetData, "subsets"],
+     "precomputedPinchSectorKeys" -> Lookup[sectorMetadataList, "sectorKey"]
      |>]
    ];
 
@@ -4028,10 +4028,10 @@ canonicalGeneratorStrings[list_] := Sort[ToString[#, InputForm] & /@ list];
 
 
 expectedGeneratorsBySector[batch_Association] := Module[
-   {topEntry, topMetadata, topKey, shrinkSummaries, shrinkEntries},
+   {topEntry, topMetadata, topKey, pinchSummaries, pinchEntries},
    topMetadata = SelectFirst[
      Lookup[batch, "sectorMetadataList", {}],
-     Lookup[#, "sectorShrunkLines", Missing["NoShrunkLines"]] === {} &,
+     Lookup[#, "sectorPinchedLines", Missing["NoPinchedLines"]] === {} &,
      Missing["TopSectorMetadata"]
      ];
    topKey = If[Head[topMetadata] === Missing, Missing["TopSectorKey"], topMetadata["sectorKey"]];
@@ -4039,15 +4039,15 @@ expectedGeneratorsBySector[batch_Association] := Module[
       "qIBP" -> Lookup[Lookup[batch, "momentumSummary", <||>], "generators", {}],
       "tIBP" -> Lookup[Lookup[batch, "timeSummary", <||>], "generators", {}]
       |>;
-   shrinkSummaries = Lookup[Lookup[batch, "shrinkSectorSummary", <||>], "sectorSummaries", {}];
-   shrinkEntries = Table[
+   pinchSummaries = Lookup[Lookup[batch, "pinchSectorSummary", <||>], "sectorSummaries", {}];
+   pinchEntries = Table[
      Lookup[summary, "sectorKey", Missing["SectorKeyRequired"]] -> <|
        "qIBP" -> Lookup[Lookup[summary, "momentumSummary", <||>], "generators", {}],
        "tIBP" -> Lookup[Lookup[summary, "timeSummary", <||>], "generators", {}]
        |>,
-     {summary, shrinkSummaries}
+     {summary, pinchSummaries}
      ];
-   Association[Join[{topEntry}, shrinkEntries]]
+   Association[Join[{topEntry}, pinchEntries]]
    ];
 
 
@@ -5632,7 +5632,7 @@ dSIBPPublicAPI::notopo =
    "公开 API 缺少 topology context。请使用显式 topo 参数，或先调用 setIBPTopologyContext[topo]。";
 dSIBPPublicAPI::badtopo = "topology context 无效或解析失败：`1`。";
 dSIBPPublicAPI::badshape = "表达式中的 J 与 topology context 不兼容：`1`。";
-dSIBPPublicAPI::badstate = "IBP 公开算子要求所有 full-line 离散态已显式取 0/1：`1`。";
+dSIBPPublicAPI::badstate = "IBP 公开算子要求所有未收缩传播子的离散态已显式取 0/1：`1`。";
 dSIBPPublicAPI::badgen = "找不到请求的 IBP 生成元：`1`。";
 dSIBPPublicAPI::badvar = "变量 `1` 不在当前 topology 初始化的外部独立变量列表 `2` 中。";
 dSIBPPublicAPI::noinverse = "当前动力学规则没有唯一的用户坐标到基础标量积反向映射；rep2innerform 已拒绝。审计：`1`。";
@@ -5673,9 +5673,9 @@ resolvePublicTopologyContext[spec_: Automatic] := Module[{topo},
 
 
 publicExpectedPackLength[line_Association, packType_String] := Switch[packType,
-   "massiveFull" | "massiveCross", If[lineIndexedPowerQ[line], 3, 2],
-   "masslessFull", If[lineIndexedPowerQ[line], 2, 1],
-   "masslessCross" | "shrunk", If[lineIndexedPowerQ[line], 1, 0],
+   "massiveT" | "massiveW", If[lineIndexedPowerQ[line], 3, 2],
+   "masslessT", If[lineIndexedPowerQ[line], 2, 1],
+   "masslessW" | "pinched", If[lineIndexedPowerQ[line], 1, 0],
    _, Missing["UnknownPackType", packType]
    ];
 
@@ -5714,10 +5714,10 @@ publicResolvedDiscreteStateIssues[topo_Association, J[aList_, linePacks_, ispLis
     If[ListQ[pack],
      packType = actualLinePackType[topo, e, pack];
      Switch[packType,
-      "massiveFull" | "massiveCross",
+      "massiveT" | "massiveW",
       Do[If[! MemberQ[{0, 1}, pack[[p]]], AppendTo[issues, <|"lineIndex" -> e, "packType" -> packType, "packPosition" -> p, "value" -> pack[[p]]|>]],
        {p, linePackNPositions[topo["lines"][[e]], packType]}],
-      "masslessFull",
+      "masslessT",
       With[{p = First[linePackNPositions[topo["lines"][[e]], packType]]},
        If[! MemberQ[{0, 1}, pack[[p]]], AppendTo[issues, <|"lineIndex" -> e, "packType" -> packType, "packPosition" -> p, "value" -> pack[[p]]|>]]],
       _, Null
@@ -5951,12 +5951,12 @@ integrandBuildingBlock[line_Association, pack_List, momentumMagnitude_] := Modul
    {lineId = line["id"], endpoints = line["endpoints"], packType = line["packType"], nPositions},
    nPositions = linePackNPositions[line, packType];
    Switch[packType,
-    "massiveFull" | "massiveCross",
+    "massiveT" | "massiveW",
     Hh[MassiveBlock[lineFunctionPreset[line], Lookup[line, "nu", nu], Lookup[line, "skType", "++"], lineId, endpoints, momentumMagnitude, pack[[nPositions[[1]]]], pack[[nPositions[[2]]]]]],
-    "masslessFull",
+    "masslessT",
     Hh[MasslessBlock[Lookup[line, "skType", "++"], lineId, endpoints, momentumMagnitude, pack[[First[nPositions]]]]],
-    "masslessCross",
-    Hh[MasslessCrossBlock[Lookup[line, "skType", "+-"], lineId, endpoints, momentumMagnitude]],
+    "masslessW",
+    Hh[MasslessWBlock[Lookup[line, "skType", "+-"], lineId, endpoints, momentumMagnitude]],
     _, 1
     ]
    ];
@@ -6187,7 +6187,7 @@ treeLoopIntegralFromTree[int_J, data_Association] := Module[
    linePacks = Table[
      line = topo["lines"][[e]];
      Switch[line["packType"],
-      "massiveFull" | "massiveCross",
+      "massiveT" | "massiveW",
       states = Table[
         vertexIndex = FirstPosition[data["vertexOrder"], line["endpoints"][[slot]], Missing["NoVertex"]];
         If[Head[vertexIndex] === Missing, Return[$Failed]];
@@ -6198,7 +6198,7 @@ treeLoopIntegralFromTree[int_J, data_Association] := Module[
         {slot, 2}
         ];
       If[lineIndexedPowerQ[line], Prepend[states, Lookup[baseline, line["id"], 0]], states],
-      "shrunk",
+      "pinched",
       If[lineIndexedPowerQ[line], {Lookup[baseline, line["id"], 0]}, {}],
       _,
       Message[treeLoopIntegralFromTree::unsupported, dsTreeBackProjectionSentence[line["id"], line["packType"]]];
@@ -6422,25 +6422,25 @@ repIterative[expr_, end_, data_Association, OptionsPattern[]] /;
 (* ::Chapter:: *)
 (*Loop time-IBP 到 tree 的显式投影*)
 
-(* 投影器从每个 loop J 的 shrunk pack 重建目标 sector，再按原始 line/endpoint 顺序打包 n。
+(* 投影器从每个 loop J 的 pinched pack 重建目标 sector，再按原始 line/endpoint 顺序打包 n。
    所有 theta、WT、zero-point 与 coincident canonical 已在 dtau 中完成；这里不重写传播子边界公式。 *)
 
 loopToTreeProjection::badloop = "loop-to-tree 投影只接受合法三槽 loop J：`1`。";
-loopToTreeProjection::mixedcontact = "mixed-sign line 不得产生 theta/contact shrink：`1`。";
+loopToTreeProjection::mixedpinched = "mixed-sign line 不得产生 theta/pinched pinch：`1`。";
 
 
-loopIntegralShrunkLines[int : J[_, linePacks_List, _], topo_Association] := Select[
+loopIntegralPinchedLines[int : J[_, linePacks_List, _], topo_Association] := Select[
    Range[Min[Length[linePacks], topo["nE"]]],
-   actualLinePackType[topo, #, linePacks[[#]]] === "shrunk" &&
-     ! MemberQ[{"masslessCross", "massiveCross"}, topo["lines"][[#, "packType"]]] &
+   actualLinePackType[topo, #, linePacks[[#]]] === "pinched" &&
+     ! MemberQ[{"masslessW", "massiveW"}, topo["lines"][[#, "packType"]]] &
    ];
 
 
-loopTreeTargetTopology[int : J[_, linePacks_List, _], topo_Association] := Module[{shrunk, badMixed},
-   shrunk = loopIntegralShrunkLines[int, topo];
-   badMixed = Select[shrunk, MemberQ[{"+-", "-+"}, Lookup[topo["lines"][[#]], "skType", "++"]] &];
-   If[badMixed =!= {}, Message[loopToTreeProjection::mixedcontact, badMixed]; Return[$Failed]];
-   If[shrunk === {}, topo, shrinkSectorTopology[topo, shrunk]]
+loopTreeTargetTopology[int : J[_, linePacks_List, _], topo_Association] := Module[{pinched, badMixed},
+   pinched = loopIntegralPinchedLines[int, topo];
+   badMixed = Select[pinched, MemberQ[{"+-", "-+"}, Lookup[topo["lines"][[#]], "skType", "++"]] &];
+   If[badMixed =!= {}, Message[loopToTreeProjection::mixedpinched, badMixed]; Return[$Failed]];
+   If[pinched === {}, topo, pinchSectorTopology[topo, pinched]]
    ];
 
 
@@ -6484,7 +6484,7 @@ projectLoopIntegralToTree[int : J[aList_List, linePacks_List, ispList_List], top
    packs = Table[
      legStates = {};
      Do[
-      If[! MemberQ[loopIntegralShrunkLines[int, topo], e] && MemberQ[{"massiveFull", "massiveCross"}, topo["lines"][[e, "packType"]]],
+      If[! MemberQ[loopIntegralPinchedLines[int, topo], e] && MemberQ[{"massiveT", "massiveW"}, topo["lines"][[e, "packType"]]],
        line = topo["lines"][[e]];
        lineId = line["id"];
        originalEndpoints = Lookup[line, "originalEndpoints", line["endpoints"]];
@@ -6523,32 +6523,32 @@ projectLoopTimeEquationToTree[expr_, topoSpec_Association, referenceInt_: Automa
 
 
 DSTreeSeeds[vertex_, int : J[_, _, _], topoSpec_Association] := Module[
-   {topo, loopSeed, treeSeed, contactAudit, shrinkConsumptionTrace, allLoopIntegrals, shrunkByTerm, projectedReference},
+   {topo, loopSeed, treeSeed, pinchedAudit, pinchConsumptionTrace, allLoopIntegrals, pinchedByTerm, projectedReference},
    topo = normalizeTopologySpec[topoSpec];
    If[topo === $Failed, Return[$Failed]];
    loopSeed = dtau[vertex, int, topo];
    If[loopSeed === $Failed, Return[$Failed]];
    allLoopIntegrals = DeleteDuplicates[Cases[loopSeed, J[_, _, _], Infinity]];
-   shrunkByTerm = Association@Table[
-      ToString[item, InputForm] -> loopIntegralShrunkLines[item, topo],
+   pinchedByTerm = Association@Table[
+      ToString[item, InputForm] -> loopIntegralPinchedLines[item, topo],
       {item, allLoopIntegrals}
       ];
-   contactAudit = Map[
+   pinchedAudit = Map[
      Function[e,
       <|"lineIndex" -> e, "lineId" -> topo["lines"][[e, "id"]], "skType" -> Lookup[topo["lines"][[e]], "skType", Missing["skType"]],
        "thetaAllowedQ" -> MemberQ[{"++", "--"}, Lookup[topo["lines"][[e]], "skType", "++"]]|>
       ],
-     DeleteDuplicates[Flatten[Values[shrunkByTerm]]]
+     DeleteDuplicates[Flatten[Values[pinchedByTerm]]]
      ];
-   shrinkConsumptionTrace = Map[
+   pinchConsumptionTrace = Map[
      Function[e,
       <|"lineIndex" -> e, "lineId" -> topo["lines"][[e, "id"]],
        "skType" -> Lookup[topo["lines"][[e]], "skType", Missing["skType"]],
-       "consumer" -> If[Lookup[topo["lines"][[e]], "massType", "massive"] === "massive", "WT/shrinkTerms", "masslessContact"]|>
+       "consumer" -> If[Lookup[topo["lines"][[e]], "massType", "massive"] === "massive", "WT/pinchTerms", "masslessPinched"]|>
       ],
-     DeleteDuplicates[Flatten[Values[shrunkByTerm]]]
+     DeleteDuplicates[Flatten[Values[pinchedByTerm]]]
      ];
-   If[AnyTrue[contactAudit, ! TrueQ[#"thetaAllowedQ"] &], Message[loopToTreeProjection::mixedcontact, dsMixedContactSentence[contactAudit]]; Return[$Failed]];
+   If[AnyTrue[pinchedAudit, ! TrueQ[#"thetaAllowedQ"] &], Message[loopToTreeProjection::mixedpinched, dsMixedPinchedSentence[pinchedAudit]]; Return[$Failed]];
    treeSeed = projectLoopTimeEquationToTree[loopSeed, topo, int];
    projectedReference = projectLoopIntegralToTree[int, topo, int];
    <|
@@ -6558,10 +6558,10 @@ DSTreeSeeds[vertex_, int : J[_, _, _], topoSpec_Association] := Module[
     "treeSeed" -> treeSeed,
     "treeIntegral" -> projectedReference,
     "referenceA" -> First[int],
-    "contactAudit" -> contactAudit,
-    "shrinkConsumptionTrace" -> shrinkConsumptionTrace,
-    "mixedContactQ" -> AnyTrue[contactAudit, MemberQ[{"+-", "-+"}, #"skType"] &],
-    "shrunkLinesByIntegral" -> shrunkByTerm
+    "pinchedAudit" -> pinchedAudit,
+    "pinchConsumptionTrace" -> pinchConsumptionTrace,
+    "mixedPinchedQ" -> AnyTrue[pinchedAudit, MemberQ[{"+-", "-+"}, #"skType"] &],
+    "pinchedLinesByIntegral" -> pinchedByTerm
     |>
    ];
 
@@ -6621,7 +6621,7 @@ makeTreeTimeReductionRules[records_List, data_Association] := Module[
      tp = treeTp[vertex];
      tpInv = treeTpInverse[vertex];
      (* regular 必须与 dsDirectTreeRegularSeed 的 M0.J[a] - M1.J[a-1] 同构，
-        source 才是纯 contact 项；解出 J[a-1] 时 source 随 M0 块一起变号。 *)
+        source 才是纯 pinched 项；解出 J[a-1] 时 source 随 M0 块一起变号。 *)
      regular = m0.currentInts - m1.minusInts;
      source = Expand[equations - regular];
      If[! TrueQ[source === ConstantArray[0, Length[source]]], sourceQ = True];
@@ -6656,7 +6656,7 @@ makeTreeFamilyDataFromTopology[topoSpec_Association] := Module[
       Return[$Failed]
       ];
      legs = Flatten@Table[
-        If[MemberQ[{"massiveFull", "massiveCross"}, topo["lines"][[e, "packType"]]],
+        If[MemberQ[{"massiveT", "massiveW"}, topo["lines"][[e, "packType"]]],
          Table[
           If[topo["lines"][[e, "endpoints", slot]] === active[[v]],
            {<|
@@ -6684,10 +6684,10 @@ makeTreeFamilyDataFromTopology[topoSpec_Association] := Module[
      ];
    makeTreeFamilyData[<|
      "name" -> topo["name"],
-     "sector" -> sectorKeyFromShrunkLines[topo, Lookup[topo, "sectorShrunkLines", {}]],
+     "sector" -> sectorKeyFromPinchedLines[topo, Lookup[topo, "sectorPinchedLines", {}]],
      "vertices" -> vertices,
      "topology" -> topo,
-     "requiresSourceRules" -> thetaFullLineIndices[topo] =!= {}
+     "requiresSourceRules" -> thetaTLineIndices[topo] =!= {}
      |>]
    ];
 
@@ -6695,8 +6695,8 @@ makeTreeFamilyDataFromTopology[topoSpec_Association] := Module[
 makeTreeSectorFamilies[topoSpec_Association] := Module[{topo, subsets, sectorTopos, families},
    topo = normalizeTopologySpec[topoSpec];
    If[topo === $Failed, Return[$Failed]];
-   subsets = contactReachableShrinkSubsets[topo];
-   sectorTopos = Join[{topo}, shrinkSectorTopologiesForSubsets[topo, subsets]];
+   subsets = pinchedReachablePinchSubsets[topo];
+   sectorTopos = Join[{topo}, pinchSectorTopologiesForSubsets[topo, subsets]];
    families = makeTreeFamilyDataFromTopology /@ sectorTopos;
    If[MemberQ[families, $Failed], Return[$Failed]];
    <|
@@ -6746,9 +6746,9 @@ treeSectorIntegralDistanceData[int_J, end_, context_Association] := Module[{fami
    endpoints = normalizeTreeEndpoints[treeSectorEndpoints[end, family, context], family];
    If[endpoints === $Failed || ! And @@ (IntegerQ /@ First[int][[All, 1]]), Return[$Failed]];
    <|"integral" -> int, "sector" -> family["sector"], "endpoints" -> endpoints,
-    "remainingThetaLines" -> Length[thetaFullLineIndices[family["topology"]]],
+    "remainingThetaLines" -> Length[thetaTLineIndices[family["topology"]]],
     "distance" -> treeEndpointDistance[int, endpoints],
-    "progressKey" -> {Length[thetaFullLineIndices[family["topology"]]], treeEndpointDistance[int, endpoints]}|>
+    "progressKey" -> {Length[thetaTLineIndices[family["topology"]]], treeEndpointDistance[int, endpoints]}|>
    ];
 
 
@@ -6842,7 +6842,7 @@ repIterative[expr_, end_, context_Association, OptionsPattern[]] /; KeyExistsQ[c
 (*Tree dlog connection*)
 
 (* dlog 输出始终把 primitive matrix、letter/constant-matrix 对和同序 master list 一起返回。
-   多顶点 top block 是按 vertexOrder 的 Kronecker sum；contact source 由 DSTreeSeeds 单独提供。 *)
+   多顶点 top block 是按 vertexOrder 的 Kronecker sum；pinched source 由 DSTreeSeeds 单独提供。 *)
 
 treeVertexDLogData[vertex_Association] := Module[
    {p, states, momentumMagnitudes, k0, omega0, omegaEx, tp, tpInv, m1, omega, letters, coeffs},

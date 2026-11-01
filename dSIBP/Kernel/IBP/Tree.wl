@@ -129,7 +129,7 @@ dsMakeTreeTaggedTimeReductionRules[records_List, data_Association] := Module[
      If[MemberQ[{invM1, invM0t}, $Failed], singularQ = True; Return[]];
      tp = treeTp[vertex];
      tpInv = treeTpInverse[vertex];
-     (* regular 与 dsDirectTreeRegularSeed 的 M0.J[a] - M1.J[a-1] 同构，source 只留 contact；
+     (* regular 与 dsDirectTreeRegularSeed 的 M0.J[a] - M1.J[a-1] 同构，source 只留 pinched；
         解 J[a-1] 时 source 随 M0 块变号，解 J[a+1] 时 source 保持负号。 *)
      regular = m0.currentTokens - m1.minusTokens;
      source = Expand[equations - regular];
@@ -202,13 +202,13 @@ dsTreeTokenDistanceData[token : dsTreeToken[sectorKey_String, int_J], end_, fami
    endpoints = normalizeTreeEndpoints[treeSectorEndpoints[end, family, familyContext], family];
    If[endpoints === $Failed, Return[$Failed]];
    <|"token" -> token, "sectorKey" -> sectorKey, "endpoints" -> endpoints,
-    "remainingThetaLines" -> Length[thetaFullLineIndices[family["topology"]]],
+    "remainingThetaLines" -> Length[thetaTLineIndices[family["topology"]]],
     "distance" -> treeEndpointDistance[int, endpoints],
-    "progressKey" -> {Length[thetaFullLineIndices[family["topology"]]], treeEndpointDistance[int, endpoints]}|>
+    "progressKey" -> {Length[thetaTLineIndices[family["topology"]]], treeEndpointDistance[int, endpoints]}|>
    ];
 
 
-(* tagged linearData 允许递推跨 contact sector；每条跨 sector 依赖仍须严格降低各自 endpoint 距离。 *)
+(* tagged linearData 允许递推跨 pinched sector；每条跨 sector 依赖仍须严格降低各自 endpoint 距离。 *)
 dsTreeTaggedStepProgress[source_dsTreeToken, replacement_, end_, familyContext_Association] := Module[
    {sourceData, targets, targetData, invalidTargets},
    sourceData = dsTreeTokenDistanceData[source, end, familyContext];

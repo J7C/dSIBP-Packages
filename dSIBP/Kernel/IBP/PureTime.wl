@@ -1,7 +1,7 @@
 (* ::Package:: *)
 (* 本模块保留 direct pure-time 公式作为 massive-only 交叉检查；生产路径统一使用
    J[aList,linePacks,{}]。regular 项直接由
-   vertex-family 的 M1/M0 构造，contact 项直接消费 compiled WT/shrinkTerms 与共同 theta。
+   vertex-family 的 M1/M0 构造，pinched 项直接消费 compiled WT/pinchTerms 与共同 theta。
    loop 三槽表示仅由独立交叉验证调用，不是本模块的生产路径。 *)
 
 (* ::Chapter:: *)
@@ -12,7 +12,7 @@
 dsPureTimeUnsupportedLines[family_Association] := Select[
    Range[Lookup[family["topology"], "nE", 0]],
    With[{line = family["topology", "lines"][[#]]},
-     Lookup[line, "state", "full"] =!= "shrunk" && Lookup[line, "packType", ""] === "masslessFull"
+     Lookup[line, "state", "full"] =!= "pinched" && Lookup[line, "packType", ""] === "masslessT"
      ] &
    ];
 
@@ -80,37 +80,37 @@ dsDirectTreeRegularSeed[vertexId_, int_J, family_Association] := Module[
 
 
 (* ::Chapter:: *)
-(*Direct 共同-theta contact*)
+(*Direct 共同-theta pinched*)
 
-dsDirectTreeAtomicContactChoices[
+dsDirectTreeAtomicPinchedChoices[
    vertexId_, int_J, family_Association, lineIndex_Integer
    ] := Module[
-   {topo = family["topology"], line, endpointSlots, endpointSlot, n1, n2, coefficient, shrinkTerms},
+   {topo = family["topology"], line, endpointSlots, endpointSlot, n1, n2, coefficient, pinchTerms},
    line = topo["lines"][[lineIndex]];
    endpointSlots = lineEndpointSlotsAtVertex[line, vertexId];
-   If[Length[endpointSlots] =!= 1 || Lookup[line, "packType", ""] =!= "massiveFull", Return[{}]];
+   If[Length[endpointSlots] =!= 1 || Lookup[line, "packType", ""] =!= "massiveT", Return[{}]];
    endpointSlot = First[endpointSlots];
    n1 = dsTreeLegState[int, family, line["id"], 1];
    n2 = dsTreeLegState[int, family, line["id"], 2];
    If[MemberQ[{n1, n2}, _Missing], Return[{}]];
-    (* shrinkTerms 保存 -W_T；离散 prefactor 的负号把乘积恢复为物理 theta contact。 *)
+    (* pinchTerms 保存 -W_T；离散 prefactor 的负号把乘积恢复为物理 theta pinched。 *)
     coefficient = -sameBranchSKSign[line] KroneckerDelta[n1 + n2, 1]
       (-1)^If[endpointSlot === 1, n1, n2];
-   shrinkTerms = lineCompiledShrinkTerms[line];
+   pinchTerms = lineCompiledPinchTerms[line];
    Map[
     <|
       "lineIndex" -> lineIndex,
       "coefficient" -> coefficient Lookup[#, "coefficient", 0],
       "bShift" -> Lookup[#, "bShift", 1],
-      "zeroPointShift" -> Lookup[#, "zeroPointShift", lineShrinkZeroPointShift[line]],
+      "zeroPointShift" -> Lookup[#, "zeroPointShift", linePinchZeroPointShift[line]],
       "aShift" -> Lookup[#, "bShift", 1]
       |> &,
-    shrinkTerms
+    pinchTerms
     ]
    ];
 
 
-dsTreeContactTargetIntegral[
+dsTreePinchedTargetIntegral[
    int_J,
    sourceFamily_Association,
    targetFamily_Association,
@@ -157,7 +157,7 @@ dsTreeContactTargetIntegral[
    ];
 
 
-dsDirectTreeContactCoefficient[
+dsDirectTreePinchedCoefficient[
    int_J,
    targetInt_J,
    sourceFamily_Association,
@@ -169,7 +169,7 @@ dsDirectTreeContactCoefficient[
      shiftByLine, deltaLinePowers, lineMomentumMagnitudes, atomicCoefficient},
    (* source 与 target 都按 (-tau)^A 定义，合并时间幂不产生额外连续幂相位。
       vertex basis 已除去逐 sector prefactor；统一 J 中的 residual power 再乘 N_t/N_s 后，
-      每条 contact line 只剩 compiled s+z，因而不随用户 bS0 重基改变。 *)
+      每条 pinched line 只剩 compiled s+z，因而不随用户 bS0 重基改变。 *)
    shiftByLine = Association@Map[
       Lookup[#, "lineIndex"] -> (Lookup[#, "bShift", 0] + Lookup[#, "zeroPointShift", 0]) &,
       choices
@@ -191,36 +191,36 @@ dsDirectTreeContactCoefficient[
    ];
 
 
-dsDirectTreeContactTerms[
+dsDirectTreePinchedTerms[
    vertexId_, int_J, sourceFamily_Association, familyContext_Association
    ] := Module[
-   {topo = sourceFamily["topology"], connectedLines, eligibleLines, bundles, sourceShrunk,
-    oddSubsets, atomicChoices, totalShrunk, targetSector, targetFamily, targetInt, coefficient, terms = {}},
+   {topo = sourceFamily["topology"], connectedLines, eligibleLines, bundles, sourcePinched,
+    oddSubsets, atomicChoices, totalPinched, targetSector, targetFamily, targetInt, coefficient, terms = {}},
    connectedLines = DeleteDuplicates@Flatten[Cases[
        Lookup[topo, "vertexLines", {}][[dsTreeVertexIndex[sourceFamily, vertexId]]],
        {e_Integer, _} :> e
        ]];
    eligibleLines = Select[
      connectedLines,
-     Lookup[topo["lines"][[#]], "packType", ""] === "massiveFull" &&
-       Lookup[topo["lines"][[#]], "state", "full"] =!= "shrunk" &&
+     Lookup[topo["lines"][[#]], "packType", ""] === "massiveT" &&
+       Lookup[topo["lines"][[#]], "state", "full"] =!= "pinched" &&
        Length[lineEndpointSlotsAtVertex[topo["lines"][[#]], vertexId]] === 1 &
      ];
    bundles = GatherBy[eligibleLines, thetaBundleKey[topo, #] &];
-   sourceShrunk = Lookup[topo, "sectorShrunkLines", {}];
+   sourcePinched = Lookup[topo, "sectorPinchedLines", {}];
    Do[
     oddSubsets = Select[Rest[Subsets[bundle]], OddQ[Length[#]] &];
     Do[
-     atomicChoices = dsDirectTreeAtomicContactChoices[vertexId, int, sourceFamily, #] & /@ selected;
+     atomicChoices = dsDirectTreeAtomicPinchedChoices[vertexId, int, sourceFamily, #] & /@ selected;
      If[AnyTrue[atomicChoices, # === {} &], Continue[]];
      Do[
-      totalShrunk = Sort@Union[sourceShrunk, Lookup[choice, "lineIndex"]];
-       targetSector = sectorKeyFromShrunkLines[topo, totalShrunk];
+      totalPinched = Sort@Union[sourcePinched, Lookup[choice, "lineIndex"]];
+       targetSector = sectorKeyFromPinchedLines[topo, totalPinched];
       targetFamily = dsTreeFamilyBySector[targetSector, familyContext];
       If[Head[targetFamily] === Missing, Return[$Failed]];
-      targetInt = dsTreeContactTargetIntegral[int, sourceFamily, targetFamily, choice];
+      targetInt = dsTreePinchedTargetIntegral[int, sourceFamily, targetFamily, choice];
       If[targetInt === $Failed, Return[$Failed]];
-      coefficient = dsDirectTreeContactCoefficient[
+      coefficient = dsDirectTreePinchedCoefficient[
         int, targetInt, sourceFamily, targetFamily, choice, 2^(1 - Length[selected])
         ];
       If[! TrueQ[coefficient === 0],
@@ -265,19 +265,19 @@ dsTreeExpressionTerms[expr_, sectorKey_String] := Module[{terms, records},
 
 dsDirectTreeSeedRecord[
    vertexId_, int_J, sourceFamily_Association, familyContext_Association
-   ] := Module[{regular, regularTerms, contactTerms, combined},
+   ] := Module[{regular, regularTerms, pinchedTerms, combined},
    If[! dsPureTimeFamilyUsableQ[sourceFamily],
-    Return[<|"status" -> "failed", "reason" -> "masslessFullNeedsTreeState",
+    Return[<|"status" -> "failed", "reason" -> "masslessTNeedsTreeState",
       "lineIndices" -> dsPureTimeUnsupportedLines[sourceFamily]|>]
     ];
    regular = dsDirectTreeRegularSeed[vertexId, int, sourceFamily];
    If[regular === $Failed, Return[<|"status" -> "failed", "reason" -> "regularSeedFailed"|>]];
    regularTerms = dsTreeExpressionTerms[regular, sourceFamily["sector"]];
-   contactTerms = dsDirectTreeContactTerms[vertexId, int, sourceFamily, familyContext];
-   If[MemberQ[{regularTerms, contactTerms}, $Failed],
-    Return[<|"status" -> "failed", "reason" -> "contactSeedFailed"|>]
+   pinchedTerms = dsDirectTreePinchedTerms[vertexId, int, sourceFamily, familyContext];
+   If[MemberQ[{regularTerms, pinchedTerms}, $Failed],
+    Return[<|"status" -> "failed", "reason" -> "pinchedSeedFailed"|>]
     ];
-   combined = dsCombineTreeTaggedTerms[Join[regularTerms, contactTerms]];
+   combined = dsCombineTreeTaggedTerms[Join[regularTerms, pinchedTerms]];
    <|
     "status" -> "generated",
     "generator" -> dtau[vertexId],

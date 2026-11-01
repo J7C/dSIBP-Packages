@@ -1,7 +1,7 @@
 (* ::Package:: *)
 (* mix bubble+tree 示例：bubble 的 cycle momenta 为 l1 与 l1+k1+k2，前者 massive、
    后者 massless；massless bridge 和 bubble 另一外腿均携带 k1+k2，三点顶点另接 k1、k2。
-   本例覆盖 kL/kE 角色、参数重定义、massless 三槽 convention、cycle/bridge contact、圈指标全偶
+   本例覆盖 kL/kE 角色、参数重定义、massless 三槽 convention、cycle/bridge pinched、圈指标全偶
    与坐标完备性；固定 bridge 不属于圈积分，因此不施加 parity。 *)
 
 (* ::Chapter:: *)
@@ -90,7 +90,7 @@ contextInfo = DSInfo[context, "Full"];
 notation = DSParameterNotation[context];
 publicAPI = DSPublicAPI[];
 
-(* cycle/fixed full 传播子都保留两个顶点的三槽；fixed 传播子以短字符串 "F" 标记无 b 指标。 *)
+(* cycle/fixed time-ordered 传播子都保留两个顶点的三槽；fixed 传播子以短字符串 "F" 标记无 b 指标。 *)
 integral = J[
    {0, 0, 0},
    {{0, 0, 0}, {0, 0, 0}, {"F", 0, 1}},
@@ -98,8 +98,8 @@ integral = J[
    ];
 
 timeSeed = dtau[v3, integral, topology];
-zeroContactIntegral = ReplacePart[integral, {2, 3} -> {"F", 0, 0}];
-zeroContactTimeSeed = dtau[v3, zeroContactIntegral, topology];
+zeroPinchedIntegral = ReplacePart[integral, {2, 3} -> {"F", 0, 0}];
+zeroPinchedTimeSeed = dtau[v3, zeroPinchedIntegral, topology];
 loopLoopSeed = dqq[1, 1, integral, topology];
 loopExternalSeed = dqk[1, 1, integral, topology];
 totalDerivative = ds[ss11^2 integral + sE1 integral, sE1, topology];
@@ -129,7 +129,7 @@ customDerivative = ds[loopScale^2 integral + legScale1 integral, legScale1, cust
 customDerivativeVariables = Lookup[Lookup[customContext, "derivatives", <||>], "operators", {}][[All, "userVariable"]];
 
 (* 只构造 general templates，用 sector key 确认 massive cycle、massless cycle 与 massless bridge
-   都进入 contact-reachable 数据；本例不连续撒点，也不运行 reduction。 *)
+   都进入 pinched-reachable 数据；本例不连续撒点，也不运行 reduction。 *)
 templateSeedData = DSSeeds[customContext, ProgressReporting -> False];
 templateRecords = DSAllSeeds[templateSeedData];
 templateSectorKeys = DeleteDuplicates[Lookup[templateRecords, "sectorKey", {}]];
@@ -289,7 +289,7 @@ summary = <|
    "bridgePacks" -> bridgePacks,
    "timeSeedUsesBridgeMagnitude" -> ! FreeQ[timeSeed, ss11],
    "timeSeedContractsBridge" -> ! FreeQ[timeSeed, J[_, {_, _, {"F"}}, _]],
-   "zeroContactHasNoFailure" -> FreeQ[zeroContactTimeSeed, $Failed],
+   "zeroPinchedHasNoFailure" -> FreeQ[zeroPinchedTimeSeed, $Failed],
    "momentumSeedsUseCanonicalBridgePack" -> And @@ (SameQ[#, {"F", 1, 0}] & /@ Cases[{loopLoopSeed, loopExternalSeed}, J[_, packs_, _] :> packs[[3]], Infinity]),
    "totalDerivativeCoefficientTermExact" -> SameQ[totalDerivative, expectedTotalDerivative],
    "coordinateRoundTrip" -> Together[outerCoordinate - ss11^2] === 0,
@@ -321,7 +321,7 @@ If[! And[
     summary["loopExternalMomenta"] === {k1 + k2},
     summary["independentExternalMomenta"] === {k1, k2},
     summary["notationVariables"] === {ss11, sE1, sE2},
-    summary["linePackTypes"] === {"massiveFull", "masslessFull", "masslessFull"},
+    summary["linePackTypes"] === {"massiveT", "masslessT", "masslessT"},
     summary["cycleParityIsEven"],
     summary["fixedBridgeExcludedFromParity"],
     summary["defaultDerivativeVariables"] === {ss11, sE1, sE2, E1, E2, E3},
@@ -340,7 +340,7 @@ If[! And[
     summary["bridgePackHasNoB"],
     summary["timeSeedUsesBridgeMagnitude"],
     summary["timeSeedContractsBridge"],
-    summary["zeroContactHasNoFailure"],
+    summary["zeroPinchedHasNoFailure"],
     summary["momentumSeedsUseCanonicalBridgePack"],
     summary["totalDerivativeCoefficientTermExact"],
     summary["coordinateRoundTrip"],

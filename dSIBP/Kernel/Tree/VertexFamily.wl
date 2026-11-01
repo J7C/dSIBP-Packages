@@ -20,7 +20,7 @@ dsTreeFamilyContext[context_Association] /; dsContextQ[context] :=
 
 
 (* raw J[vertexPacks] 的 source-aware 首步复用 sector-tagged direct seed，再仅在公开 raw
-   返回边界去掉 sector token。这样传播子动量模长与共同-theta contact 都保持同源。 *)
+   返回边界去掉 sector token。这样传播子动量模长与共同-theta pinched 都保持同源。 *)
 treeSourceAwareStepFromTopology[
    int_J, vertexIndex_Integer, endpoint_Integer, data_Association
    ] /; AssociationQ[Lookup[data, "rootTopology", Missing["NoRootTopology"]]] := Module[
@@ -41,10 +41,10 @@ treeSourceAwareStepFromTopology[
 (* ::Chapter:: *)
 (*多 sector dlog 数据汇总*)
 
-(* 每个 sector 的对角块仍由 vertex-family 公式构造；非对角块从 loop dtau 的 tagged contact source 提取，
-   因而共同 theta、多线 simultaneous contact 和 mixed-sign 禁用规则只在既有 loop 边界层出现一次。 *)
+(* 每个 sector 的对角块仍由 vertex-family 公式构造；非对角块从 loop dtau 的 tagged pinched source 提取，
+   因而共同 theta、多线 simultaneous pinched 和 mixed-sign 禁用规则只在既有 loop 边界层出现一次。 *)
 
-(* p=0 的 terminal contact vertex 没有 massive leg；空能量表必须是 {}，不能让 Lookup 产生 Missing。 *)
+(* p=0 的 terminal pinched vertex 没有 massive leg；空能量表必须是 {}，不能让 Lookup 产生 Missing。 *)
 treeVertexDLogData[vertex_Association] := Module[
    {p, states, momentumMagnitudes, k0, omega0, omegaEx, tp, tpInv, m1, omega, letters, coeffs},
    p = vertex["p"];
@@ -81,10 +81,10 @@ dsTreeMasterSectorOffsets[blocks_List] := Module[{counts, starts, ends},
 
 
 (* ::Section::Closed:: *)
-(*Contact selector 与 sector normalization*)
+(*Pinched selector 与 sector normalization*)
 
 (* 对 parent sector 的 a=0 master 逐顶点调用 time-IBP；同 sector 项属于 M1/M0，只有 lower-sector 项进入 R。 *)
-dsTreeContactRows[family_Association, masters_List, context_Association] := Module[
+dsTreePinchedRows[family_Association, masters_List, context_Association] := Module[
    {sourceSector = family["sector"], familyContext, rowsByVertex, vertexIndex, seedMaster, record, linearData, terms,
     sourceData, reducedSource},
    familyContext = dsTreeFamilyContext[context];
@@ -99,12 +99,12 @@ dsTreeContactRows[family_Association, masters_List, context_Association] := Modu
            ]];
         record = dsDirectTreeSeedRecord[vertexId, seedMaster, family, familyContext];
         If[! AssociationQ[record] || Lookup[record, "status", "error"] =!= "generated",
-         Return[<|"status" -> "error", "reason" -> "contactSeedGenerationFailed",
+         Return[<|"status" -> "error", "reason" -> "pinchedSeedGenerationFailed",
            "sectorKey" -> sourceSector, "vertex" -> vertexId, "row" -> row, "record" -> record|>]
          ];
         linearData = Lookup[record, "treeLinearData", <||>];
         If[! dsTreeLinearDataQ[linearData],
-         Return[<|"status" -> "error", "reason" -> "contactSeedTaggingFailed",
+         Return[<|"status" -> "error", "reason" -> "pinchedSeedTaggingFailed",
            "sectorKey" -> sourceSector, "vertex" -> vertexId, "row" -> row|>]
          ];
         terms = Select[linearData["terms"], Lookup[#, "sectorKey", sourceSector] =!= sourceSector &];
@@ -117,7 +117,7 @@ dsTreeContactRows[family_Association, masters_List, context_Association] := Modu
           dsRepIterativeTreeLinearData[sourceData, Automatic, context]
           ];
         If[Lookup[reducedSource, "status", "error"] =!= "reduced",
-         Return[<|"status" -> "error", "reason" -> "contactSourceReductionFailed",
+         Return[<|"status" -> "error", "reason" -> "pinchedSourceReductionFailed",
            "sectorKey" -> sourceSector, "vertex" -> vertexId, "row" -> row,
            "sourceData" -> sourceData, "reducedSource" -> reducedSource|>]
          ];
@@ -133,7 +133,7 @@ dsTreeContactRows[family_Association, masters_List, context_Association] := Modu
 
 
 (* 每个 target sector 单独按其 master order 抽取矩阵，避免相同裸 J shape 跨 sector 混淆。 *)
-dsTreeContactMatrices[
+dsTreePinchedMatrices[
    rowData_Association,
    sectorOrder_List,
    masterLists_Association
@@ -166,14 +166,14 @@ dsTreeContactMatrices[
       rowData["rowsByVertex"]
       ];
    If[unresolved =!= {},
-    <|"status" -> "error", "reason" -> "contactSourceNotInTargetMasterBasis", "unresolved" -> unresolved|>,
+    <|"status" -> "error", "reason" -> "pinchedSourceNotInTargetMasterBasis", "unresolved" -> unresolved|>,
     <|"status" -> "generated", "sectorKey" -> sourceSector,
       "rowsByVertex" -> rowData["rowsByVertex"], "matricesByVertex" -> matricesByVertex|>
     ]
    ];
 
 
-dsTreeContactTransitions[contactData_List] := Flatten[Map[
+dsTreePinchedTransitions[pinchedData_List] := Flatten[Map[
     Function[sourceData,
      KeyValueMap[
       Function[{vertexId, targetMatrices},
@@ -198,16 +198,16 @@ dsTreeContactTransitions[contactData_List] := Flatten[Map[
       sourceData["matricesByVertex"]
       ]
      ],
-    contactData
+    pinchedData
     ], 2];
 
 
-(* contact selector 把各 lower sector 的入边化为常矩阵；物理 sector prefactor 另由
+(* pinched selector 把各 lower sector 的入边化为常矩阵；物理 sector prefactor 另由
    sector metadata 保存。两层不能混名，否则容易在 DE 中漏掉或重复连续零点幂。 *)
-dsTreeDLogSelectorCoefficients[sectorOrder_List, contactData_List, families_List] := Module[
+dsTreeDLogSelectorCoefficients[sectorOrder_List, pinchedData_List, families_List] := Module[
    {transitions, selectorCoefficients = <|First[sectorOrder] -> 1|>, audits = {}, energyExpressions, energyVariables,
     child, candidates, chosen, selectorCoefficient, ratios, nonconstant},
-   transitions = dsTreeContactTransitions[contactData];
+   transitions = dsTreePinchedTransitions[pinchedData];
    energyExpressions = Flatten[Cases[
       families,
       vertex_Association /; KeyExistsQ[vertex, "signedExternalLegEnergy"] :>
@@ -243,7 +243,7 @@ dsTreeDLogSelectorCoefficients[sectorOrder_List, contactData_List, families_List
       "chosenTransition" -> chosen, "incomingTransitions" -> ratios,
       "energyIndependentRatiosQ" -> (nonconstant === {}), "nonconstantRatios" -> nonconstant|>];
     If[nonconstant =!= {},
-     Return[<|"status" -> "error", "reason" -> "nonconstantContactSelector",
+     Return[<|"status" -> "error", "reason" -> "nonconstantPinchedSelector",
        "sectorKey" -> child, "selectorCoefficients" -> selectorCoefficients, "audits" -> audits|>]
      ],
     {index, 2, Length[sectorOrder]}
@@ -254,8 +254,8 @@ dsTreeDLogSelectorCoefficients[sectorOrder_List, contactData_List, families_List
 
 
 (* 每个 tree master 的完整 normalization 定义为
-   selectorCoefficient * physicalSectorPrefactor。前者化简跨 sector contact，后者保存
-   Wronskian 连续幂；所有导数路线都从本记录读取二者，禁止再次从 contact 反推。 *)
+   selectorCoefficient * physicalSectorPrefactor。前者化简跨 sector pinched，后者保存
+   Wronskian 连续幂；所有导数路线都从本记录读取二者，禁止再次从 pinched 反推。 *)
 dsTreeMasterNormalizationRecords[
    sectorOrder_List,
    selectorData_Association,
@@ -315,11 +315,11 @@ dsTreeAssembleConnection[
    blocks_List,
    families_List,
    sectorOrder_List,
-   contactData_List,
+   pinchedData_List,
    normalizationRecords_Association
    ] := Module[{dimensions, sectorPositions, selectorCoefficients, completeNormalizations,
     omegaBlocks, sourceIndex, targetIndex,
-    sourceFamily, vertexIndex, sourcePrimitive, rawMatrix, normalizedMatrix, normalizedContactData},
+    sourceFamily, vertexIndex, sourcePrimitive, rawMatrix, normalizedMatrix, normalizedPinchedData},
    dimensions = Lookup[blocks, "masterCount"];
    sectorPositions = AssociationThread[sectorOrder -> Range[Length[sectorOrder]]];
    selectorCoefficients = AssociationMap[
@@ -340,7 +340,7 @@ dsTreeAssembleConnection[
       ],
      {i, Length[blocks]}, {j, Length[blocks]}
      ];
-   normalizedContactData = Map[
+   normalizedPinchedData = Map[
       Function[sourceData,
       sourceIndex = sectorPositions[sourceData["sectorKey"]];
       sourceFamily = families[[sourceIndex]];
@@ -361,8 +361,8 @@ dsTreeAssembleConnection[
                    selectorCoefficients[targetSector] rawMatrix
                   ];
                (* 对角块用 regular 部分的 M1（omega = omegaEx - I Tp^-1 Omega0 Tp M1）；
-                  非对角块用 contact source S。全导数恒等式 0 = regular + S 给出 S = -regular，
-                  故 contact selector 相对 M1 多带一个负号：这里前置系数取 +I 而非 -I，
+                  非对角块用 pinched source S。全导数恒等式 0 = regular + S 给出 S = -regular，
+                  故 pinched selector 相对 M1 多带一个负号：这里前置系数取 +I 而非 -I，
                   使 top-to-child 块与 naive DE 及 arXiv:2411.03088 potential col5 一致。 *)
                omegaBlocks[[sourceIndex, targetIndex]] = Expand[
                  omegaBlocks[[sourceIndex, targetIndex]] + I sourcePrimitive . normalizedMatrix
@@ -375,15 +375,15 @@ dsTreeAssembleConnection[
           sourceData["matricesByVertex"]
           ]|>]
       ],
-     contactData
+     pinchedData
      ];
    <|"omega" -> ArrayFlatten[omegaBlocks], "omegaBlocks" -> omegaBlocks,
-     "normalizedContactData" -> normalizedContactData|>
+     "normalizedPinchedData" -> normalizedPinchedData|>
    ];
 
 
 dsTreeMultiSectorDLog[context_Association, seedData_: Automatic, auditLevel_: "standard"] := Module[
-   {familyContext, families, sectorOrder, blocks, dimensions, masterLists, contactRows, contactData,
+   {familyContext, families, sectorOrder, blocks, dimensions, masterLists, pinchedRows, pinchedData,
     selectorData, normalizationData, normalizationRecords, assembled, completeNormalizations,
     letters, omega, letterMatrices, offsets, taggedMasters,
     bareMasters, dlogResidual, sourceEquations},
@@ -397,15 +397,15 @@ dsTreeMultiSectorDLog[context_Association, seedData_: Automatic, auditLevel_: "s
     ];
    dimensions = Lookup[blocks, "masterCount"];
    masterLists = AssociationThread[sectorOrder -> Lookup[blocks, "masters"]];
-   contactRows = MapThread[dsTreeContactRows[#1, #2, context] &, {families, Lookup[blocks, "masters"]}];
-   If[AnyTrue[contactRows, Lookup[#, "status", "error"] =!= "generated" &],
-    Return[<|"status" -> "error", "reason" -> "contactRowGenerationFailed", "contactRows" -> contactRows|>]
+   pinchedRows = MapThread[dsTreePinchedRows[#1, #2, context] &, {families, Lookup[blocks, "masters"]}];
+   If[AnyTrue[pinchedRows, Lookup[#, "status", "error"] =!= "generated" &],
+    Return[<|"status" -> "error", "reason" -> "pinchedRowGenerationFailed", "pinchedRows" -> pinchedRows|>]
     ];
-   contactData = dsTreeContactMatrices[#, sectorOrder, masterLists] & /@ contactRows;
-   If[AnyTrue[contactData, Lookup[#, "status", "error"] =!= "generated" &],
-    Return[<|"status" -> "error", "reason" -> "contactMatrixGenerationFailed", "contactData" -> contactData|>]
+   pinchedData = dsTreePinchedMatrices[#, sectorOrder, masterLists] & /@ pinchedRows;
+   If[AnyTrue[pinchedData, Lookup[#, "status", "error"] =!= "generated" &],
+    Return[<|"status" -> "error", "reason" -> "pinchedMatrixGenerationFailed", "pinchedData" -> pinchedData|>]
     ];
-   selectorData = dsTreeDLogSelectorCoefficients[sectorOrder, contactData, families];
+   selectorData = dsTreeDLogSelectorCoefficients[sectorOrder, pinchedData, families];
    If[Lookup[selectorData, "status", "error"] =!= "generated",
     Return[Join[<|"status" -> "error", "reason" -> "dlogSelectorFailed"|>, selectorData]]
      ];
@@ -415,7 +415,7 @@ dsTreeMultiSectorDLog[context_Association, seedData_: Automatic, auditLevel_: "s
     ];
    normalizationRecords = normalizationData["records"];
    assembled = dsTreeAssembleConnection[
-     blocks, families, sectorOrder, contactData, normalizationRecords
+     blocks, families, sectorOrder, pinchedData, normalizationRecords
      ];
    completeNormalizations = AssociationMap[
      Lookup[normalizationRecords[#], "completeNormalization"] &,
@@ -447,7 +447,7 @@ dsTreeMultiSectorDLog[context_Association, seedData_: Automatic, auditLevel_: "s
       blocks
       ]];
    bareMasters = Lookup[taggedMasters, "integral"];
-   sourceEquations = Lookup[contactData, "rowsByVertex"];
+   sourceEquations = Lookup[pinchedData, "rowsByVertex"];
    <|
     "status" -> "generated",
     "connectionStructure" -> "sectorDAGBlockTriangular",
@@ -469,11 +469,11 @@ dsTreeMultiSectorDLog[context_Association, seedData_: Automatic, auditLevel_: "s
     "masterNormalizationRecords" -> normalizationRecords,
     "dlogSelectorCoefficients" -> selectorData["selectorCoefficients"],
     "selectorAudits" -> selectorData["audits"],
-    "contactMaps" -> assembled["normalizedContactData"],
+    "pinchedMaps" -> assembled["normalizedPinchedData"],
     "omegaBlocks" -> assembled["omegaBlocks"],
     "sourceEquations" -> sourceEquations,
     "inputSourceData" -> seedData,
-    "sourceConvention" -> "Eq. (3.66)-(3.68): off-diagonal block = +I T^-1 Omega0 T times direct compiled-WT contact selector; the +I (vs the diagonal block's -I) encodes S = -regular from 0 = regular + S"
+    "sourceConvention" -> "Eq. (3.66)-(3.68): off-diagonal block = +I T^-1 Omega0 T times direct compiled-WT pinched selector; the +I (vs the diagonal block's -I) encodes S = -regular from 0 = regular + S"
     |>
    ];
 

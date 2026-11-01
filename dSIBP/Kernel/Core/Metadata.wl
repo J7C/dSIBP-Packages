@@ -15,7 +15,7 @@ Options[DSInit] = {
    };
 
 DSInit::badinput = "DSInit 输入不是有效的 topology Association，或 ISP/动量坐标不闭合。";
-DSInit::sectorincomplete = "无法完整初始化 contact-reachable sectors：`1`。";
+DSInit::sectorincomplete = "无法完整初始化 pinched-reachable sectors：`1`。";
 DSInit::initconflict = "初始化目录 `1` 已含不同输入哈希或未知文件；如确认覆盖，请显式设置 OverwriteInitialization -> True。";
 DSInit::writefailed = "初始化 metadata 写入失败：`1`。";
 DSInit::badnuconvention = "NuConvention 只接受 \"Positive\" 或 \"Negative\"。";
@@ -294,7 +294,7 @@ dsTimeIBPVertexCertificate[topo_Association, sectorKey_, vertexId_] := Module[
     Table[
      If[
       Lookup[line, "massType", "massive"] === "massive" &&
-       Lookup[line, "packType", ""] =!= "shrunk",
+       Lookup[line, "packType", ""] =!= "pinched",
       Map[
        Function[endpointSlot,
         <|
@@ -419,7 +419,7 @@ DSInit[input_Association, OptionsPattern[]] := Module[
      "初始化 topology、ISP 与完整 sector metadata / Initializing topology, ISP, and complete sector metadata",
      makeTopologyData[
        effectiveInput,
-      PrecomputeShrinkSectorMetadata -> True
+      PrecomputePinchSectorMetadata -> True
       ],
      progress
      ];
@@ -479,7 +479,7 @@ DSInit[input_Association, OptionsPattern[]] := Module[
       <|"inputHash" -> inputHash, "topologyData" -> topologyData, "validationReport" -> validation|>
       ]]
     ];
-   subsetSummary = Lookup[topologyData, "precomputedShrinkSectorSummary", <||>];
+   subsetSummary = Lookup[topologyData, "precomputedPinchSectorSummary", <||>];
    If[Lookup[subsetSummary, "status", "missing"] =!= "generated" || ! TrueQ[Lookup[subsetSummary, "completeCoverageQ", False]],
     Message[DSInit::sectorincomplete,
      Module[{st, statusCN, statusEN},
@@ -488,8 +488,8 @@ DSInit[input_Association, OptionsPattern[]] := Module[
         "generated", {"已生成", "generated"},
         "skipped", {"已跳过", "skipped"},
         _, {"缺失", "missing"}];
-      "contact-reachable sector 预枚举" <> statusCN <> "，且覆盖检查未通过。 Pre-enumeration of contact-reachable sectors was " <> statusEN <> " and the coverage check failed."
-      ]]; dsErrorPrint["contact-reachable sector 未完整初始化。 Contact-reachable sectors were not initialized completely."];
+      "pinched-reachable sector 预枚举" <> statusCN <> "，且覆盖检查未通过。 Pre-enumeration of pinched-reachable sectors was " <> statusEN <> " and the coverage check failed."
+      ]]; dsErrorPrint["pinched-reachable sector 未完整初始化。 Pinched-reachable sectors were not initialized completely."];
     Return[dsFailedInitializationData[
       "incompleteSectorMetadata",
       <|"inputHash" -> inputHash, "topologyData" -> topologyData|>
