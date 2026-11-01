@@ -5,9 +5,9 @@ spacetime: **MadStree**, **dSIBP** and **FlintNDE**.
 
 | Package | Language | Role |
 | --- | --- | --- |
-| [dSIBP](dSIBP/) | Wolfram Language | Topology-driven generation of dS IBP relations, parameter-derivative seeds, sector metadata and backend-neutral reduction input for graphs with any number of loops, any topology and mixed massive/massless propagators. |
-| [MadStree](MadStree/) | Wolfram Language | Assembly of the dS tree and time-only formula: master integrals, recurrence metadata, the analytic `dlog`-form differential equation, and high-precision evaluation of the resulting boundary-value problem. |
-| [FlintNDE](FlintNDE/) | Python, with a Wolfram Language front end and an optional C++ engine | Arbitrary-precision numerical transport of first-order matrix differential equations `Y'(x) = A(x) Y(x)`, plus reconstruction of half-analytic Laurent/power series in a regulator. An optional C++/FLINT engine runs the fixed-regulator batch contract with bit-identical outputs. |
+| [dSIBP](dSIBP-1.0/) | Wolfram Language | Topology-driven generation of dS IBP relations, parameter-derivative seeds, sector metadata and backend-neutral reduction input for graphs with any number of loops, any topology and mixed massive/massless propagators. |
+| [MadStree](MadStree-1.01/) | Wolfram Language | Assembly of the dS tree and time-only formula: master integrals, recurrence metadata, the analytic `dlog`-form differential equation, and high-precision evaluation of the resulting boundary-value problem. |
+| [FlintNDE](FlintNDE-1.01/) | Python, with a Wolfram Language front end and an optional C++ engine | Arbitrary-precision numerical transport of first-order matrix differential equations `Y'(x) = A(x) Y(x)`, plus reconstruction of half-analytic Laurent/power series in a regulator. An optional C++/FLINT engine runs the fixed-regulator batch contract with bit-identical outputs. |
 
 ## How the packages fit together
 
@@ -15,7 +15,7 @@ The dependency direction is fixed: **MadStree → FlintNDE**.
 
 MadStree turns a graph into an analytic `dlog` differential equation and an exact starting
 vector, then hands both to FlintNDE, which does the numerics. MadStree ships its own bundled copy
-of FlintNDE under `MadStree/Vendor/FlintNDE`, so it works without a separate installation of
+of FlintNDE under `MadStree-1.01/Vendor/FlintNDE`, so it works without a separate installation of
 the Python package.
 
 dSIBP calls neither of the other two. It generates and serializes relations; it never runs a
@@ -31,10 +31,18 @@ graphs, master-integral ordering or normalization; turning a physics problem int
 
 ```
 dSIBP-Packages/
-  MadStree/     Kernel/, Backend/, Vendor/FlintNDE/, Examples/, Documentation/
-  dSIBP/        Kernel/, Examples/, Documentation/
-  FlintNDE/     flintnde/, Mathematica/, Kernel/, engine/, examples/, config/, Documentation/
+  MadStree-1.01/   Kernel/, Backend/, Vendor/FlintNDE/, Examples/, Documentation/
+  dSIBP-1.0/     Kernel/, Examples/, Documentation/
+  FlintNDE-1.01/   flintnde/, Mathematica/, Kernel/, engine/, examples/, config/, Documentation/
 ```
+
+## Current versions
+
+| Package | Development version | Release version | Release directory |
+| --- | --- | --- | --- |
+| dSIBP | `030.0` | `1.0` | `dSIBP-1.0/` |
+| MadStree | `v1.01` | `1.01` | `MadStree-1.01/` |
+| FlintNDE | `v1.01` | `1.01` | `FlintNDE-1.01/` |
 
 Each package is self-contained and is loaded from its own directory; nothing is read through a
 shared parent path.
@@ -48,16 +56,16 @@ shared parent path.
   Installing FlintNDE once pulls both in:
 
   ```powershell
-  python -m pip install path/to/FlintNDE
+  python -m pip install path/to/FlintNDE-1.01
   ```
 
-  MadStree launches the Python back end as a child process from `MadStree/Backend/` against
+  MadStree launches the Python back end as a child process from `MadStree-1.01/Backend/` against
   its bundled `Vendor/FlintNDE`, so `python -m pip install` is optional for MadStree users, but
   a working `python-flint` in the interpreter is not.
 - The FlintNDE C++ engine is optional and not needed for any Python or Wolfram entry point.
   Building it requires an MSYS2 UCRT64 toolchain (`g++`, `make`) and the FLINT 3.x development
   library; on Windows the `libflint` runtime must be reachable through PATH or the
-  `"EngineLibraryPath"` option. See `FlintNDE/README.md` for the build and usage.
+  `"EngineLibraryPath"` option. See `FlintNDE-1.01/README.md` for the build and usage.
 - External IBP reduction (Kira) is not part of any package. dSIBP emits reduction input and
   reads results back; the solver itself runs outside this repository.
 
@@ -67,12 +75,12 @@ Load one package per code block; each snippet is independent.
 
 ```wl
 (* dSIBP *)
-AppendTo[$Path, "/absolute/path/to/dSIBP-Packages/dSIBP"];
+AppendTo[$Path, "/absolute/path/to/dSIBP-Packages/dSIBP-1.0"];
 Needs["dSIBP`"];
 DSPublicAPI[]                      (* the full public surface, grouped by workflow *)
 
 (* MadStree *)
-AppendTo[$Path, "/absolute/path/to/dSIBP-Packages/MadStree"];
+AppendTo[$Path, "/absolute/path/to/dSIBP-Packages/MadStree-1.01"];
 Needs["MadStree`"];
 ```
 
@@ -88,9 +96,10 @@ kernel as MadStree, three option names — `ParallelTaskCount`, `MessageLanguage
 name then resolves to whichever package was loaded last. Write `MadStree`ParallelTaskCount` (or
 load MadStree last) when you pass an option to a MadStree entry point.
 
-Each package prints a citation reminder on its first successful load; this release is `1.0` for
-dSIBP and MadStree and `1.01` for FlintNDE, and `dSIBP`$dSIBPVersion` and
-`FlintNDE`$FlintNDEVersion` report it at run time.
+Each package prints a citation reminder on its first successful load. The package release
+identifiers are `1.0` for dSIBP and `1.01` for MadStree and FlintNDE. At run time,
+`dSIBP`$dSIBPVersion` reports `1.0`, while `MadStree`$MadStreeVersion` and
+`FlintNDE`$FlintNDEVersion` report `1.01`.
 Source and documentation are UTF-8, and every internal `Get` passes the encoding explicitly, so
 no extra option is needed when loading a package.
 
@@ -98,13 +107,13 @@ no extra option is needed when loading a package.
 
 User manuals and formula references are compiled PDFs next to their editable `.tex` sources:
 
-- `dSIBP/Documentation/dSIBP_manual-cn.pdf` — the Chinese dSIBP manual: conventions, the public
+- `dSIBP-1.0/Documentation/dSIBP_manual-cn.pdf` — the Chinese dSIBP manual: conventions, the public
   interface and a worked walk-through of every example.
-- `dSIBP/Documentation/dSIBP_manual-en.pdf` — the English “dSIBP Handbook” covering the same
+- `dSIBP-1.0/Documentation/dSIBP_manual-en.pdf` — the English “dSIBP Handbook” covering the same
   material.
-- `MadStree/Documentation/handbook.pdf` — the MadStree handbook in English;
+- `MadStree-1.01/Documentation/handbook.pdf` — the MadStree handbook in English;
   `用户手册.pdf` is the same handbook in Chinese.
-- `FlintNDE/Documentation/FlintNDE_manual-en.pdf` — the FlintNDE paper: the numerical method,
+- `FlintNDE-1.01/Documentation/FlintNDE_manual-en.pdf` — the FlintNDE paper: the numerical method,
   the public interface and its documented limits; `FlintNDE_manual-cn.pdf` is the Chinese edition.
 
 ## Examples
@@ -113,12 +122,12 @@ Every example resolves its own package directory from `$InputFileName` or from a
 variable at the top of the file, so all of them run directly from a clone of this repository:
 
 ```powershell
-wolframscript -file MadStree/Examples/01_massless_time_ordered_edge.wl
-wolframscript -file dSIBP/Examples/01_mixed_bubble_workflow.wl
-python FlintNDE/examples/qnm_2x2.py
+wolframscript -file MadStree-1.01/Examples/01_massless_time_ordered_edge.wl
+wolframscript -file dSIBP-1.0/Examples/01_mixed_bubble_workflow.wl
+python FlintNDE-1.01/examples/qnm_2x2.py
 ```
 
-See `MadStree/Examples/README.md`, `dSIBP/Examples/README.md` and `FlintNDE/examples/README.md`
+See `MadStree-1.01/Examples/README.md`, `dSIBP-1.0/Examples/README.md` and `FlintNDE-1.01/examples/README.md`
 for what each case covers. Two of the dSIBP cases (`04`, `06`) drive an external Kira reduction
 and expect the environment variable `DSIBP_KIRA_WORKSPACE` to point at a writable workspace
 outside this repository; they refuse to run without it, which is the intended guard, not a

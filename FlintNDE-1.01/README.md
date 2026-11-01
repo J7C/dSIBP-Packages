@@ -35,10 +35,11 @@ bit-identical to the Python side.
 
 ## Install and requirements
 
-Python 3.10 or newer, `python-flint >= 0.6`, `sympy >= 1.12`:
+This directory contains FlintNDE release `1.01`. Python 3.10 or newer,
+`python-flint >= 0.6`, `sympy >= 1.12`:
 
 ```powershell
-python -m pip install path/to/FlintNDE
+python -m pip install path/to/FlintNDE-1.01
 ```
 
 `pip` pulls the two dependencies in. After one install, any script anywhere can simply
@@ -46,7 +47,7 @@ python -m pip install path/to/FlintNDE
 top so they run straight from a clone with no installation.
 
 ```
-FlintNDE/
+FlintNDE-1.01/
   pyproject.toml
   flintnde/            the Python package (import name: flintnde)
   FlintNDE.m           Wolfram loader

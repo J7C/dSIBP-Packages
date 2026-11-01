@@ -11,15 +11,17 @@ exports those relations; it never runs a reduction itself.
 
 ## Loading
 
+This directory contains dSIBP release `1.0`.
+
 ```wl
-AppendTo[$Path, "/absolute/path/to/dSIBP-Packages/dSIBP"];
+AppendTo[$Path, "/absolute/path/to/dSIBP-Packages/dSIBP-1.0"];
 Needs["dSIBP`"];
 ```
 
 The layout is the standard Wolfram module tree:
 
 ```
-dSIBP/
+dSIBP-1.0/
   dSIBP.m          top-level loader
   Kernel/          module sources
   Examples/        runnable cases

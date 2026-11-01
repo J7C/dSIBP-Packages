@@ -33,8 +33,10 @@ components return Acb values; divergent components return the text value `Infini
 
 ## Loading
 
+This directory contains MadStree release `1.01`.
+
 ```wl
-packageRoot = "/absolute/path/to/MadStree";
+packageRoot = "/absolute/path/to/MadStree-1.01";
 AppendTo[$Path, packageRoot];
 Needs["MadStree`"];
 ```
@@ -42,8 +44,9 @@ Needs["MadStree`"];
 The first successful load prints one citation reminder. arXiv identifiers are clickable
 in notebooks, while a headless kernel prints full URLs. MadStree lists only
 [arXiv:2401.00129](https://arxiv.org/abs/2401.00129),
-[arXiv:2411.03088](https://arxiv.org/abs/2411.03088), and the MadStree package paper
-([arXiv:2610.28526](https://arxiv.org/abs/2610.28526)).
+[arXiv:2411.03088](https://arxiv.org/abs/2411.03088), and Jiaqi Chen, Yi-Xiao Tao, Xinyi Wang
+and Dong Zhang, [*MadStree: automated evaluation of tree-level de Sitter correlators*](https://arxiv.org/abs/2610.28526),
+arXiv:2610.28526.
 
 ## Minimal workflow
 

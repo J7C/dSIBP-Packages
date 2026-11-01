@@ -15,5 +15,5 @@ Do not develop features here: the copy exists only so that a released MadStree k
 numerical backend, and MadStree's result cache is keyed by the content identity of
 `flintnde/*.py` and `pyproject.toml`.
 
-See the top-level `FlintNDE/` directory of this repository for the documentation of the
+See the top-level `FlintNDE-1.01/` directory of this repository for the documentation of the
 standalone package, which evolves independently of this copy.
