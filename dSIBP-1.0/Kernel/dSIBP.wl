@@ -46,12 +46,8 @@ rep2outform::usage = "rep2outform[expr] 把内部标量积坐标按当前规则�
 rep2Integrand::usage = "rep2Integrand[expr] 把统一 J 表示展开为用于核对的形式 integrand；双参数形式接受 parsed topology 或 DSInit context。";
 symmetry::usage = "symmetry[expr,topo] 一次应用 topology 的内建、用户和 tadpole 对称性规则。";
 repSymmetry0::usage = "repSymmetry0[topo] 返回 topology 输入的原始用户对称性规则。";
-repIterative0::usage = "repIterative0 保存最近一次 tree 单步迭代生成的原始替换规则。";
-repIterative::usage = "repIterative[expr,end] 把 tree 积分迭代约化到各顶点的目标时间幂次；sector-tagged treeLinearData 输入会保持 sector 身份并返回同结构约化结果，end 缺省为全零。";
-DSTreeSeeds::usage = "DSTreeSeeds 直接生成带 sector/pinched 审计的 pure-time/tree 种子；loop time-IBP 投影只保留为交叉验证。";
-DSTreeNaiveIBP::usage = "DSTreeNaiveIBP[context,masters] 把 loop time-IBP 投影成 sector-tagged tree 线性系统，并在指定有序 master basis 下直接求解全部一步升幂对象；masters 缺省取 DSTreeDLogDE 的同序归一化 masters。";
+DSTreeNaiveIBP::usage = "DSTreeNaiveIBP[context,masters] 把 loop time-IBP 投影成 sector-tagged tree 线性系统，并在指定有序 master basis 下直接求解全部一步升幂对象；masters 缺省时由内部 dlog master 判定自动给出同序归一化 masters。";
 DSTreeNaiveDE::usage = "DSTreeNaiveDE[context,variables,masters] 通过 loop 顶点相位导数投影、h 的传播子动量模长导数和 DSTreeNaiveIBP 约化构造 tree 微分方程；结果保持指定 master 顺序和 normalization。";
-DSTreeDLogDE::usage = "DSTreeDLogDE[data] 返回 tree vertex-family 的 dlog 微分方程、同序 master 列表和 letters；DSInit context 输入使用 direct pure-time pinched selectors 组装全部可达 sector 的 block-triangular connection、normalization 审计与同序 tagged masters。严格表示与 dlog residual 证书只在 AuditLevel->\"full\" 执行。";
 
 DSInit::usage = "DSInit[input,opts] 验证 topology/ISP、初始化完整 pinched-reachable sector，并可写出版本化 init metadata。";
 DSInfo::usage = "DSInfo[] 返回当前初始化的简要信息；DSInfo[context,\"Full\"] 返回完整初始化 Association。";
@@ -145,7 +141,7 @@ dsPackageLoadCompleteQ[] := And @@ (
     Length[DownValues[#]] > 0 & /@ {
       DSInit, DSSeeds, DSGenerateIBP, DSLinear, DSReorderIntegrals, DSUserMI,
       DSKiraPlan, DSKiraExport, DSKiraImport, DSDE, DSScaleCheck,
-      DSTreeSeeds, DSTreeNaiveIBP, DSTreeNaiveDE, DSTreeDLogDE
+      DSTreeNaiveIBP, DSTreeNaiveDE
       }
     );
 

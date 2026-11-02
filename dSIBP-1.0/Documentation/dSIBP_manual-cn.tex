@@ -129,7 +129,7 @@ linearData = DSLinear[seeds,context];
     \href{https://arxiv.org/abs/2604.14549}{arXiv:2604.14549} 的矩阵逐元相等（三种变量约定各 $361/361$）；scaling 恒等式符号成立（source-level $33/33$、active basis $19/19$）。
   \item \textbf{mix bubble+tree 全流程}（IBP、DE、scaling）：81 个 master 的外部 Kira 约化闭合；六张 $81\times81$ DE 无残留符号；$81/81$ 个 source-level Euler scaling 与 IBP 恒等式严格为零，提供独立于数值约化的 scaling 证据；约化自身的 scaling 证书在记录的精确点给出。
   \item \textbf{通用公式对 naive 撒点}（IBP 与 DE）：程序包直接代入推导所得的通用公式，其输出与同一函数族 naive IBP 种子撒点的约化结果比较一致。
-  \item \textbf{树图 DE 对 MadStree}（tree DE）：直接 $d\log$ 路线与 naive IBP 路线结果一致；另对 15 个 master 的 mixed 三顶点树图族，把 \texttt{dSIBP} 的参数导数送入 MadStree（\href{https://arxiv.org/abs/2610.28526}{arXiv:2610.28526}）对 $k_1,k_2,k_3,\texttt{sE}1,\texttt{sE}2$ 五个变量约化，75 个导数全部闭合，五张 $15\times15$ 矩阵与 MadStree 直接 $d\log$ 公式路线逐元相等。
+  \item \textbf{树图 DE 对 MadStree}（tree DE）：对 15 个 master 的 mixed 三顶点树图族，把 \texttt{dSIBP} 的参数导数送入 MadStree（\href{https://arxiv.org/abs/2610.28526}{arXiv:2610.28526}）对 $k_1,k_2,k_3,\texttt{sE}1,\texttt{sE}2$ 五个变量约化，75 个导数全部闭合，五张 $15\times15$ 矩阵与 MadStree 直接 $d\log$ 公式路线逐元相等。
 \end{itemize}
 程序包发布版见 \url{https://github.com/J7C/dSIBP-Packages}。
 
@@ -1180,7 +1180,7 @@ context = DSInit[case, RegisterAsCurrent->False];
 seeds = DSSeeds[context];
 linear = DSLinear[seeds, context];
 \end{verbatim}
-其中 top sector 的公开 shared state 为 $\{0,1\}$；raw $(n_1,n_2)\in\{0,1\}^2$ 只用于 quotient 与导数审计。同分支单传播子可达 sector keys 为 \texttt{\{"1","0"\}}，异分支只有 \texttt{"1"}。两个顶点各自的 time generator 作用于 top representatives；同分支 pinch sector 另有合并顶点的 time seed。成功时 \texttt{DSSeeds} 与 \texttt{DSLinear} 都返回 \texttt{status -> "generated"}。含 massless time-ordered 传播子的 \texttt{DSTreeSeeds/repIterative/DSTreeNaiveIBP/DSTreeNaiveDE/DSTreeDLogDE} 当前返回 \texttt{PendingRederivation} 与 \texttt{masslessQuotientFormulaNotCertified}；表示 adapter 不绕过这项数学门禁。
+其中 top sector 的公开 shared state 为 $\{0,1\}$；raw $(n_1,n_2)\in\{0,1\}^2$ 只用于 quotient 与导数审计。同分支单传播子可达 sector keys 为 \texttt{\{"1","0"\}}，异分支只有 \texttt{"1"}。两个顶点各自的 time generator 作用于 top representatives；同分支 pinch sector 另有合并顶点的 time seed。成功时 \texttt{DSSeeds} 与 \texttt{DSLinear} 都返回 \texttt{status -> "generated"}。含 massless time-ordered 传播子的 \texttt{DSTreeNaiveIBP/DSTreeNaiveDE} 当前返回 \texttt{PendingRederivation} 与 \texttt{masslessQuotientFormulaNotCertified}；表示 adapter 不绕过这项数学门禁。
 
 \texttt{linearData} 是后端中立的 Mathematica Association，不是 reduction 结果。核心字段为：
 \begin{verbatim}
@@ -1211,7 +1211,7 @@ linearData = DSLinear[ibpData, context,
 serializer；必须先得到成功的 backend-neutral \texttt{linearData}。
 
 \texttt{DSGenerateIBP}、\allowbreak\texttt{DSLinear} 与 tree 侧的
-\texttt{DSTreeNaiveIBP}、\allowbreak\texttt{DSTreeNaiveDE}、\allowbreak\texttt{DSTreeDLogDE} 共享
+\texttt{DSTreeNaiveIBP}、\allowbreak\texttt{DSTreeNaiveDE} 共享
 \texttt{AuditLevel}。缺省 \texttt{AuditLevel->"standard"} 只消费同源 sealed producer 的状态、计数、摘要和 digest 字段，不重算模板/关系内容 hash，也不重复 canonical、parity、coverage 或 tree residual 扫描。需要开发、独立检验或发布证书时显式使用 \texttt{AuditLevel->"full"}。这不会放宽用户输入、未推导公式、递推终止、外部 artifact 身份或 reduction/DE closure 边界。
 
 \subsection{Kira 两阶段计划}
@@ -1494,35 +1494,35 @@ Tree 使用原生 time-only 公开对象：
 \begin{verbatim}
 J[sectorKey,timeShifts,stateBits]
 \end{verbatim}
-\texttt{timeShifts} 按当前 sector 的 active vertex-component 顺序保存时间幂次；\texttt{stateBits} 按该 sector 的 registry 保存存活 building blocks 的离散态。massive-only 论文公式需要的 vertex basis 由 package 在 Private context 内按 \texttt{sectorKey} 构造，完成迭代或 dlog 计算后立即映回上述公开表示；用户结果、诊断、master list 和 \texttt{linearData} 均不得出现一参数形式，也不得出现用内部传播子 pack 表示的旧 time-only \texttt{J}。
+\texttt{timeShifts} 按当前 sector 的 active vertex-component 顺序保存时间幂次；\texttt{stateBits} 按该 sector 的 registry 保存存活 building blocks 的离散态。massive-only 内部计算需要的 vertex basis 由 package 在 Private context 内按 \texttt{sectorKey} 构造，完成 naive 约化或内部 dlog master 判定后立即映回上述公开表示；用户结果、诊断、master list 和 \texttt{linearData} 均不得出现一参数形式，也不得出现用内部传播子 pack 表示的旧 time-only \texttt{J}。
 
 Loop 到 tree 的投影使用完整物理传播子幂。目标项相对参考 seed 的每条传播子显式能量系数为 $k_e^{-\Delta(b+b0)}$；收缩传播子改用 $bS+bS0$。source 与 target 都按 $(-\tau)^A$ 定义，pinched 合并不另乘 $(-1)^{\Delta\sum(a+a0)}$。当前 sector 的 $a0$ 进入 tree 的 $\nu_0$。所以 h-mode pinched 的 $bS=b+1$、$bS0=b0-2\nu$ 必须共同给出 $k^{2\nu-1}$，不能只保留整数 $k^{1}$。
 
-单顶点 $p$-fold family 的 $2^p$ 个 masters 按二进制顺序 \texttt{00...0,00...1,...,11...1} 保存。\texttt{repIterative[expr,end]} 使用 2401.00129 Eq.~(3.37)、(3.47)、(3.50) 直接生成的 general-index 单次规则，把每个 $a_e$ 约化到指定终点；\texttt{Automatic} 表示全零终点，长度不符或指标/终点不是可判定整数时拒绝。它不设置最大步数，而逐步验证字典序
-$\{\text{剩余可 pinched 的 theta 传播子数},\sum_e|a_e-a_{e,\mathrm{end}}|\}$ 严格下降，并检测重复 canonical 状态；不下降、递推奇异或循环才是数学失败。含 pinched source 时，raw 与 sector-tagged 迭代都从 \texttt{DSTreeSeeds} 的 direct pure-time relation 生成同一首步，因而保留由用户传播子 \texttt{momentum} 字段决定的模长；旧三槽 loop 投影只作交叉验证。
+单顶点 $p$-fold family 的 $2^p$ 个 masters 按二进制顺序 \texttt{00...0,00...1,...,11...1} 保存。内部 sector-tagged 递推使用 2401.00129 Eq.~(3.37)、(3.47)、(3.50) 直接生成的 general-index 单次规则，把含 pinched source 的 lower 时间幂约到目标 sector 的 master order。它不设置最大步数，而逐步验证字典序
+$\{\text{剩余可 pinched 的 theta 传播子数},\sum_e|a_e-a_{e,\mathrm{end}}|\}$ 严格下降，并检测重复 canonical 状态；不下降、递推奇异或循环才是数学失败。sector-tagged 迭代从 direct pure-time relation 生成同一首步，因而保留由用户传播子 \texttt{momentum} 字段决定的模长。
 
-\texttt{DSTreeDLogDE} 的 sector 对角块使用该文 Eq.~(3.54)--(3.55)，非对角块使用 Eq.~(3.66)--(3.68)。letters 按顶点顺序逐块排列：每个顶点先列 massive-leg energies，再按 binary master order 列 cut letters，最后稳定去重；\texttt{letterMatrices} 使用同一键顺序。$G_{+-}/G_{-+}$ 没有 theta，不使用 Wronskian/pinched；$G_{++}/G_{--}$ 的 pinched source 先由已验证的 loop \texttt{dtau}、compiled $W_T$、共同-theta和 coincident canonical 处理，再映射到 tree lower sector。
+内部 dlog master 判定的 sector 对角块使用该文 Eq.~(3.54)--(3.55)，非对角块使用 Eq.~(3.66)--(3.68)，为 \texttt{DSTreeNaiveIBP} 提供缺省的同序归一化 masters。letters 按顶点顺序逐块排列：每个顶点先列 massive-leg energies，再按 binary master order 列 cut letters，最后稳定去重；内部 \texttt{letterMatrices} 使用同一键顺序。$G_{+-}/G_{-+}$ 没有 theta，不使用 Wronskian/pinched；$G_{++}/G_{--}$ 的 pinched source 先由已验证的 loop \texttt{dtau}、compiled $W_T$、共同-theta和 coincident canonical 处理，再映射到 tree lower sector。
 
-程序对每个 binary master 保持 $n$ 不变，只把当前求导顶点设为 $a=1$，用所得 $R^{(1)}$ 构造非对角 pinched selector；不会误用 $a=0$ seed 的 $R^{(0)}$。每个 lower sector 分别保存有理 pinched selector 与物理 sector prefactor，后者吸收 Wronskian 和 zero-point 产生的连续能量幂；complete normalization 的对数导数由 naive/direct 两条路线共同消费。以下返回字段用于审计：
+程序对每个 binary master 保持 $n$ 不变，只把当前求导顶点设为 $a=1$，用所得 $R^{(1)}$ 构造非对角 pinched selector；不会误用 $a=0$ seed 的 $R^{(0)}$。每个 lower sector 分别保存有理 pinched selector 与物理 sector prefactor，后者吸收 Wronskian 和 zero-point 产生的连续能量幂；complete normalization 的对数导数由 naive DE 消费。内部 dlog 判定另保存以下审计字段：
 \begin{verbatim}
 masterNormalizationRecords, dlogSelectorCoefficients, selectorAudits, pinchedMaps
 omegaBlocks, dlogQ
 \end{verbatim}
-\texttt{masters} 中每项的 \texttt{coefficient} 是对应 sector 的有理 selector $S_s$，不是完整物理 normalization；$N_s$ 与乘积 $S_sN_s$ 只在同键的 \texttt{masterNormalizationRecords} 中给出。矩阵、letters 与该 master 顺序完全一致。
+公开 \texttt{masters} 中每项的 \texttt{coefficient} 是对应 sector 的有理 selector $S_s$，不是完整物理 normalization；$N_s$ 与乘积 $S_sN_s$ 只在内部同键的 \texttt{masterNormalizationRecords} 中给出。矩阵、letters 与该 master 顺序完全一致。
 
-还提供不使用上述直接 dlog/递推矩阵的交叉路线：
+公开 tree 约化与 DE 使用 naive 路线：
 \begin{verbatim}
-ibp = DSTreeNaiveIBP[context, treeDLog["masters"]];
+ibp = DSTreeNaiveIBP[context];
 de  = DSTreeNaiveDE[ibp, {K1,K2,k12}];
 \end{verbatim}
-\texttt{DSTreeNaiveIBP} 对每个 sector 的 binary master 和活动顶点生成 $a_v=1$ 的 loop 代表元，只调用 \texttt{dtau} 与既有 pinched canonical，再把投影方程作为有限线性系统直接求解；它不调用 \texttt{repIterative} 或 $A_\pm$。\texttt{DSTreeNaiveDE} 对外腿相位项复用 loop 投影，对 massive 传播子动量模长则直接使用 h 的动量导数关系，因为 loop 适配器中的内部动量是积分变量，不能冒充 tree 的外部参数。对于 bare sector integral $I_s$ 的顶点态 $n$，raw tree 导数为
+\texttt{DSTreeNaiveIBP} 对每个 sector 的 binary master 和活动顶点生成 $a_v=1$ 的 loop 代表元，只调用 \texttt{dtau} 与既有 pinched canonical，再把投影方程作为有限线性系统直接求解；它不调用 $A_\pm$ 递推矩阵。\texttt{DSTreeNaiveDE} 对外腿相位项复用 loop 投影，对 massive 传播子动量模长则直接使用 h 的动量导数关系，因为 loop 适配器中的内部动量是积分变量，不能冒充 tree 的外部参数。对于 bare sector integral $I_s$ 的顶点态 $n$，raw tree 导数为
 \begin{align}
  \partial_k I_s[a,n=0]&=-I_s[a+1,n=1],\\
  \partial_k I_s[a,n=1]&=I_s[a+1,n=0]-\frac{1-2\nu}{k}I_s[a,n=1].
 \end{align}
-同一传播子的两个顶点分别贡献，随后统一用 naive time-IBP 约到指定 masters。程序依次使用 $J_s=N_sI_s$ 与 $F_s=S_sJ_s$，所以乘积法则完整加入 $(\partial S_s)J_s$、$S_s(\partial\log N_s)J_s$ 和 $S_sN_s\partial I_s$；只允许前两项产生参数与动力学量的有理对数导数，不把 $k^{c\nu}$ 留在系数中。输出的 \texttt{matrices/sources/residualObjects} 与输入 master 顺序一致。缺省 masters 来自 \texttt{DSTreeDLogDE}；做独立检验时应显式传入列表，确保两路线只共享 basis 和 normalization，而不共享 reduction rules。
+同一传播子的两个顶点分别贡献，随后统一用 naive time-IBP 约到指定 masters。程序依次使用 $J_s=N_sI_s$ 与 $F_s=S_sJ_s$，所以乘积法则完整加入 $(\partial S_s)J_s$、$S_s(\partial\log N_s)J_s$ 和 $S_sN_s\partial I_s$；只允许前两项产生参数与动力学量的有理对数导数，不把 $k^{c\nu}$ 留在系数中。输出的 \texttt{matrices/sources/residualObjects} 与输入 master 顺序一致。缺省 masters 由内部 dlog master 判定自动给出同序归一化列表（\texttt{masterSource -> "automaticDLog"}）；也可显式传入等价列表（\texttt{masterSource -> "explicit"}）。
 
-若不同 lower sectors 具有相同长度的 \texttt{timeShifts}，公开 \texttt{sectorKey} 仍唯一编码 pinch set；内部按 root 传播子顺序排列的 pack pattern 只用于验证该 key，不是第二套公开身份。公式型 tree 路线当前只认证 massive-only family；含 massless time-ordered 传播子时五个 tree 公式接口均 fail closed 为 \texttt{PendingRederivation}，直到 quotient basis 的递推和 dlog 公式重新推导完成。
+若不同 lower sectors 具有相同长度的 \texttt{timeShifts}，公开 \texttt{sectorKey} 仍唯一编码 pinch set；内部按 root 传播子顺序排列的 pack pattern 只用于验证该 key，不是第二套公开身份。naive tree 路线当前只认证 massive-only family；含 massless time-ordered 传播子时 \texttt{DSTreeNaiveIBP}/\texttt{DSTreeNaiveDE} 均 fail closed 为 \texttt{PendingRederivation}，直到 quotient basis 上的约化重新推导完成。
 
 \section{常见错误与当前限制}
 
@@ -1541,7 +1541,7 @@ de  = DSTreeNaiveDE[ibp, {K1,K2,k12}];
   \item seed 直接导出 Kira：错误；先构造 \texttt{linearData}。
 \end{itemize}
 
-当前未实现：一般图 automorphism/参数对称性的自动发现、scaleless 全自动前端、自动选择 propagator basis、streaming/chunked 高圈 seed、massless 三槽 quotient basis 上的公式型 tree 递推/dlog，以及实际运行 reduction。当前版本已实现标准 context、动力学变量审计、h/H 与 massless exponential parity、交互消息、Kira 结果取回和 loop/tree DE/scaling；package 仍只验证并导入用户在外部生成的完整 reduction。
+当前未实现：一般图 automorphism/参数对称性的自动发现、scaleless 全自动前端、自动选择 propagator basis、streaming/chunked 高圈 seed、massless 三槽 quotient basis 上的 tree 约化，以及实际运行 reduction。当前版本已实现标准 context、动力学变量审计、h/H 与 massless exponential parity、交互消息、Kira 结果取回和 loop/tree DE/scaling；package 仍只验证并导入用户在外部生成的完整 reduction。
 
 \appendix
 \section{公开函数汇总}
@@ -1552,7 +1552,7 @@ de  = DSTreeNaiveDE[ibp, {K1,K2,k12}];
 \texttt{DSKiraImport}、\allowbreak\texttt{DSDE}、\allowbreak\texttt{DSScaleCheck}、\allowbreak\texttt{DSRedefineParameters}、\allowbreak
 \texttt{DSTreeNaiveIBP} 与 \texttt{DSTreeNaiveDE} 接受；\texttt{AuditLevel}（缺省
 \texttt{"standard"}）设置自审计深度，由 \texttt{DSGenerateIBP}、\allowbreak\texttt{DSLinear}、\allowbreak
-\texttt{DSTreeNaiveIBP}、\allowbreak\texttt{DSTreeNaiveDE} 与 \texttt{DSTreeDLogDE} 接受。第三列只列
+\texttt{DSTreeNaiveIBP}、\allowbreak\texttt{DSTreeNaiveDE} 接受。第三列只列
 各命令专用的 option 与 spec 键及缺省；它们的语义和完整用法随对应命令在正文各节介绍。
 
 \begingroup
@@ -1592,11 +1592,8 @@ de  = DSTreeNaiveDE[ibp, {K1,K2,k12}];
 \texttt{DSKiraImport} & 读回完整 Kira reduction/master 输出 & \texttt{KiraReductionFile}、\allowbreak\texttt{KiraMasterFile} = Automatic （缺省 \texttt{results/Tuserweight/} 的 family 输出，其它路径显式给出）；\allowbreak\texttt{KiraCompletionFile} = Automatic；\allowbreak\texttt{KiraCompletionPatterns} = Automatic \\
 \texttt{DSDE} & 用 \texttt{ds} 与 reduction 构造同序 DE，并检查所有导数积分已约回 master & 变量参数缺省为全部初始化变量；\allowbreak\texttt{OutputDirectory} = None \\
 \texttt{DSScaleCheck} & 检查 top/residual Euler scaling & \texttt{ScalingRelation} = \texttt{"Custom"}；\allowbreak\texttt{ScalingVariables}、\allowbreak\texttt{ScalingWeights}、\allowbreak\texttt{ScalingDegrees} = Automatic；\\allowbreak spec 键 \texttt{relation}、\allowbreak\texttt{variables}、\allowbreak\texttt{weights}、\allowbreak\texttt{degrees} 与之等价 \\
-\texttt{DSTreeSeeds} & 生成 direct pure-time/tree sector rules；loop 投影只作交叉验证 & 无专用 option （整体调用遍历全部 time 生成元顶点，亦可单顶点调用） \\
-\texttt{repIterative} & tree 积分迭代到指定 $a_e$ 终点；严格下降/循环/奇异性门禁保证数学终止 & end 参数缺省 \texttt{Automatic} （各顶点零时间幂）；\allowbreak无步数上限 option \\
-\texttt{DSTreeNaiveIBP} & 联立投影后的 tree time-IBP 并解一步升幂对象 & masters 参数缺省为 \texttt{DSTreeDLogDE} 同序 master 列表 \\
+\texttt{DSTreeNaiveIBP} & 联立投影后的 tree time-IBP 并解一步升幂对象 & masters 参数缺省 \texttt{Automatic}，由内部 dlog master 判定给出同序归一化列表 \\
 \texttt{DSTreeNaiveDE} & 用 naive tree IBP 构造同序 normalized-master DE & variables 参数缺省为顶点能量与 massive-leg 模长；\\allowbreak masters 参数缺省同 \texttt{DSTreeNaiveIBP}；\allowbreak亦可直接接收其返回值 \\
-\texttt{DSTreeDLogDE} & 生成 tree dlog connection、letters 和同序 masters & 无专用 option \\
 \texttt{dtau} & 指定顶点的 time-IBP & 显式 topology 或当前 context \\
 \texttt{dqq}/\texttt{dqk} & 指定 loop generator 的 momentum-IBP & 显式 topology 或当前 context \\
 \texttt{ds} & 对带动力学系数的 $J$ 线性组合求总导数 & 变量必须是初始化外部名字 \\
@@ -1607,6 +1604,6 @@ de  = DSTreeNaiveDE[ibp, {K1,K2,k12}];
 \end{longtable}
 \endgroup
 
-表中的原子、tree 与 \texttt{DS*} 高层接口均由当前主线提供。各函数的精确可用 options 以 \texttt{Options[函数]} 为准；massless 公式型 tree 接口以结构化 \texttt{PendingRederivation} 明确失败，不得静默回退到历史表示或不完整结果。
+表中的原子、tree 与 \texttt{DS*} 高层接口均由当前主线提供。各函数的精确可用 options 以 \texttt{Options[函数]} 为准；massless tree 接口以结构化 \texttt{PendingRederivation} 明确失败，不得静默回退到历史表示或不完整结果。
 
 \end{document}

@@ -1239,8 +1239,6 @@ integralMetadataList[integrals_List, metadataList_List, orderingSpec_: <||>] := 
    ];
 
 
-
-
 ruleSetsForVars[vars_List] := If[Length[vars] == 0,
    {{}},
    Thread[vars -> #] & /@ Tuples[{0, 1}, Length[vars]]
@@ -1726,7 +1724,6 @@ expandDotExpr[p_, r_, topo_Association] := Module[
    ];
 
 
-
 externalInvariantSymbolName[i_Integer, j_Integer, count_Integer : 0] := ToExpression[
    "s" <> coordinateIndexString[Min[i, j], count] <> coordinateIndexString[Max[i, j], count]
    ];
@@ -1978,7 +1975,6 @@ externalLegEnergyMomentumDependenceIssues[topo_Association] := Module[
     Nothing
     ]
    ];
-
 
 
 (* 标量积坐标规则只依赖动量路由、ISP 和外部不变量命名。
@@ -4151,7 +4147,6 @@ makeCanonicalSeedCoverageReport[batch_Association] := Module[
    ];
 
 
-
 (* ::Chapter:: *)
 (*seed MMA 保存与读取*)
 
@@ -6175,64 +6170,6 @@ treeAplusMatrix[vertex_Association, shift_: 0] := Module[{m0t, inv},
 treeStateIndex[bits_List] := FromDigits[bits, 2] + 1;
 
 
-treeLoopIntegralFromTree::unsupported = "tree 到 loop seed 的反投影尚不支持该 line pack：`1`。";
-
-
-treeLoopIntegralFromTree[int_J, data_Association] := Module[
-   {topo = Lookup[data, "topology", Missing["NoLoopTopology"]], packs, aList, linePacks, baseline, line, states, vertexIndex, legIndex},
-   If[Head[topo] === Missing || ! treeIntegralQ[int, data], Return[$Failed]];
-   packs = First[int];
-   aList = packs[[All, 1]];
-   baseline = Lookup[data, "loopBaselinePowers", <||>];
-   linePacks = Table[
-     line = topo["lines"][[e]];
-     Switch[line["packType"],
-      "massiveT" | "massiveW",
-      states = Table[
-        vertexIndex = FirstPosition[data["vertexOrder"], line["endpoints"][[slot]], Missing["NoVertex"]];
-        If[Head[vertexIndex] === Missing, Return[$Failed]];
-        vertexIndex = First[vertexIndex];
-        legIndex = FirstPosition[Lookup[data["vertices"][[vertexIndex, "massiveLegs"]], "id"], {line["id"], slot}, Missing["NoLeg"]];
-        If[Head[legIndex] === Missing, Return[$Failed]];
-        packs[[vertexIndex, 1 + First[legIndex]]],
-        {slot, 2}
-        ];
-      If[lineIndexedPowerQ[line], Prepend[states, Lookup[baseline, line["id"], 0]], states],
-      "pinched",
-      If[lineIndexedPowerQ[line], {Lookup[baseline, line["id"], 0]}, {}],
-      _,
-      Message[treeLoopIntegralFromTree::unsupported, dsTreeBackProjectionSentence[line["id"], line["packType"]]];
-      Return[$Failed]
-      ],
-     {e, topo["nE"]}
-     ];
-   J[aList, linePacks, ConstantArray[0, Length[topo["ispData"]]]]
-   ];
-
-
-treeSourceAwareStepFromTopology[int_J, vertexIndex_Integer, endpoint_Integer, data_Association] := Module[
-   {packs = First[int], current, seedA, states, vertexId, localIntegrals, loopIntegrals, records, ruleData, rules, result},
-   current = packs[[vertexIndex, 1]];
-   If[current === endpoint, Return[int]];
-   seedA = If[current < endpoint, current + 1, current];
-   states = treeBinaryStates[data["vertices"][[vertexIndex, "p"]]];
-   vertexId = data["vertexOrder"][[vertexIndex]];
-   localIntegrals = J[ReplacePart[packs, vertexIndex -> Prepend[#, seedA]]] & /@ states;
-   loopIntegrals = treeLoopIntegralFromTree[#, data] & /@ localIntegrals;
-   If[! FreeQ[loopIntegrals, $Failed], Return[$Failed]];
-   records = Map[DSTreeSeeds[vertexId, #, data["topology"]] &, loopIntegrals];
-   If[! FreeQ[records, $Failed], Return[$Failed]];
-   ruleData = makeTreeTimeReductionRules[records, data];
-   rules = Lookup[ruleData, If[current < endpoint, "minus", "plus"], {}];
-   result = Replace[int, rules];
-   If[result === int,
-    Message[makeTreeFamilyData::badinput, dsTreeIssueSentence[{<|"code" -> "missingSourceAwareStep", "integral" -> int, "vertex" -> vertexId|>}]];
-    $Failed,
-    result
-    ]
-   ];
-
-
 treeSingleStepIntegral[int_J, vertexIndex_Integer, endpoint_Integer, data_Association] := Module[
    {packs, pack, current, bits, vertex, matrix, nextA, states, row, newPacks, directRules, directResult},
    If[! treeIntegralQ[int, data], Return[$Failed]];
@@ -6241,9 +6178,6 @@ treeSingleStepIntegral[int_J, vertexIndex_Integer, endpoint_Integer, data_Associ
    current = First[pack];
    bits = Rest[pack];
    vertex = data["vertices"][[vertexIndex]];
-   If[TrueQ[Lookup[data, "requiresSourceRules", False]] && AssociationQ[Lookup[data, "topology", Missing["NoLoopTopology"]]],
-    Return[treeSourceAwareStepFromTopology[int, vertexIndex, endpoint, data]]
-    ];
    directRules = Lookup[Lookup[data, "timeReductionRules", <||>], If[current < endpoint, "minus", "plus"], {}];
    directResult = Replace[int, directRules];
    If[directResult =!= int, Return[directResult]];
@@ -6287,12 +6221,6 @@ normalizeTreeEndpoints[end_, data_Association] := Module[{result},
    ];
 
 
-treeReducibleIntegrals[expr_, endpoints_List, data_Association] := Select[
-   DeleteDuplicates[Cases[expr, int_J /; treeIntegralQ[int, data], {0, Infinity}]],
-   Or @@ MapThread[Unequal, {First[#][[All, 1]], endpoints}] &
-   ];
-
-
 treeEndpointDistance[int_J, endpoints_List] := Total[Abs[First[int][[All, 1]] - endpoints]];
 
 
@@ -6301,277 +6229,6 @@ treeProgressKeyLessQ[target : {_, _}, source : {_, _}] :=
 
 
 treeRecurrenceStateHash[expr_] := IntegerString[Hash[HoldComplete[expr], "SHA256"], 16, 64];
-
-
-(* 每条递推边都必须严格降低到指定 endpoint 的整数 L1 距离。该局部序保证递推 DAG
-   不依赖任意迭代次数；完整表达式哈希另用于诊断实现错误造成的状态循环。 *)
-treeSingleFamilyStepProgress[source_J, replacement_, endpoints_List, data_Association] := Module[
-   {sourceDistance, targets, invalidTargets, targetDistances},
-   sourceDistance = treeEndpointDistance[source, endpoints];
-   targets = DeleteDuplicates[Cases[replacement, int_J, {0, Infinity}]];
-   invalidTargets = Select[
-     targets,
-     ! treeIntegralQ[#, data] || ! And @@ (IntegerQ /@ First[#][[All, 1]]) &
-     ];
-   targetDistances = treeEndpointDistance[#, endpoints] & /@ Complement[targets, invalidTargets];
-   <|
-    "passQ" -> TrueQ[invalidTargets === {} && And @@ (# < sourceDistance & /@ targetDistances)],
-    "source" -> source,
-    "sourceDistance" -> sourceDistance,
-    "targetIntegrals" -> targets,
-    "targetDistances" -> targetDistances,
-    "invalidTargets" -> invalidTargets
-    |>
-   ];
-
-
-repIterativeData::badindex = "tree a 指标必须是可判定整数：`1`。";
-repIterativeData::nosector = "tree 积分无法唯一匹配 sector family：`1`。";
-repIterativeData::noprogress = "tree 递推没有严格趋近指定终点：`1`。 Tree recurrence did not strictly approach the requested endpoint: `1`.";
-repIterativeData::cycle = "tree 递推检测到重复 canonical 状态：`1`。 Tree recurrence encountered a repeated canonical state: `1`.";
-
-
-Options[repIterativeData] = {};
-
-
-repIterativeData[expr_, end_: Automatic, data_Association, OptionsPattern[]] := Module[
-   {endpoints, result = Expand[expr], integrals, allA, steps = 0, firstInt, packs, vertexIndex,
-    replacement, progressData, seenStates = <||>, stateHash},
-   endpoints = normalizeTreeEndpoints[end, data];
-   If[endpoints === $Failed, Return[<|"status" -> "error", "result" -> $Failed, "steps" -> 0|>]];
-   integrals = Select[DeleteDuplicates[Cases[result, int_J /; treeIntegralQ[int, data], {0, Infinity}]], True &];
-   allA = Flatten[First[#][[All, 1]] & /@ integrals];
-   If[! And @@ (IntegerQ /@ allA), Message[repIterativeData::badindex, Select[allA, ! IntegerQ[#] &]]; Return[<|"status" -> "error", "result" -> $Failed, "steps" -> 0|>]];
-   AssociateTo[seenStates, treeRecurrenceStateHash[result] -> True];
-   While[(integrals = treeReducibleIntegrals[result, endpoints, data]) =!= {},
-    firstInt = First[integrals];
-    packs = First[firstInt];
-    vertexIndex = SelectFirst[Range[Length[endpoints]], packs[[#, 1]] =!= endpoints[[#]] &];
-    replacement = treeSingleStepIntegral[firstInt, vertexIndex, endpoints[[vertexIndex]], data];
-    If[replacement === $Failed, Return[<|"status" -> "singular", "result" -> $Failed, "steps" -> steps|>]];
-    progressData = treeSingleFamilyStepProgress[firstInt, replacement, endpoints, data];
-    If[! TrueQ[progressData["passQ"]],
-     Message[repIterativeData::noprogress,
-      dsTreeIssueSentence[<|"code" -> "noprogress", "integral" -> firstInt, "steps" -> steps|>]];
-     Return[<|"status" -> "error", "reason" -> "nonDecreasingRecurrence", "result" -> $Failed,
-       "steps" -> steps, "progressData" -> progressData|>]
-     ];
-    result = Expand[result /. firstInt -> replacement];
-    stateHash = treeRecurrenceStateHash[result];
-    If[KeyExistsQ[seenStates, stateHash],
-     Message[repIterativeData::cycle,
-      dsTreeIssueSentence[<|"code" -> "cycle", "steps" -> steps|>]];
-     Return[<|"status" -> "error", "reason" -> "recurrenceCycle", "result" -> $Failed,
-       "steps" -> steps, "stateHash" -> stateHash|>]
-     ];
-    AssociateTo[seenStates, stateHash -> True];
-    steps++;
-    ];
-   <|"status" -> "reduced", "result" -> result, "steps" -> steps, "endpoints" -> endpoints|>
-   ];
-
-
-$dSIBPTreeFamilyContext = None;
-repIterative0 = {};
-
-
-treeFirstStepToZero[int_J, data_Association] := Module[{packs, vertexIndex},
-   If[! treeIntegralQ[int, data], Return[int]];
-   packs = First[int];
-   If[! And @@ (IntegerQ /@ packs[[All, 1]]), Return[$Failed]];
-   vertexIndex = SelectFirst[Range[Length[packs]], packs[[#, 1]] =!= 0 &, Missing["AtEndpoint"]];
-   If[Head[vertexIndex] === Missing, int, treeSingleStepIntegral[int, vertexIndex, 0, data]]
-   ];
-
-
-makeRepIterative0[data_Association] /; KeyExistsQ[data, "vertices"] && ! KeyExistsQ[data, "families"] := With[{family = data}, {
-    HoldPattern[int_J] /; treeIntegralQ[int, family] && And @@ (IntegerQ /@ First[int][[All, 1]]) && AnyTrue[First[int][[All, 1]], # != 0 &] :>
-     treeFirstStepToZero[int, family]
-    }];
-
-
-setTreeFamilyContext[data_Association] := Module[{},
-   $dSIBPTreeFamilyContext = data;
-   repIterative0 = makeRepIterative0[data];
-   data
-   ];
-
-
-Options[repIterative] = Options[repIterativeData];
-
-
-repIterative[expr_, end_: Automatic, OptionsPattern[]] := If[
-   AssociationQ[$dSIBPTreeFamilyContext],
-    If[KeyExistsQ[$dSIBPTreeFamilyContext, "families"],
-     repIterativeSectorData[expr, end, $dSIBPTreeFamilyContext]["result"],
-     repIterativeData[expr, end, $dSIBPTreeFamilyContext]["result"]
-    ],
-   Message[makeTreeFamilyData::badinput, dsTreeIssueSentence[{<|"code" -> "treeContextNotSet"|>}]];
-   $Failed
-   ];
-
-
-repIterative[expr_, end_, data_Association, OptionsPattern[]] /;
-   KeyExistsQ[data, "vertices"] && ! KeyExistsQ[data, "families"] := Module[{activeData},
-   (* 显式 family 调用同时刷新公开原始规则，保证随后可直接使用 repIterative0。 *)
-   activeData = setTreeFamilyContext[data];
-   repIterativeData[expr, end, activeData]["result"]
-   ];
-
-
-(* ::Chapter:: *)
-(*Loop time-IBP 到 tree 的显式投影*)
-
-(* 投影器从每个 loop J 的 pinched pack 重建目标 sector，再按原始 line/endpoint 顺序打包 n。
-   所有 theta、WT、zero-point 与 coincident canonical 已在 dtau 中完成；这里不重写传播子边界公式。 *)
-
-loopToTreeProjection::badloop = "loop-to-tree 投影只接受合法三槽 loop J：`1`。";
-loopToTreeProjection::mixedpinched = "mixed-sign line 不得产生 theta/pinched pinch：`1`。";
-
-
-loopIntegralPinchedLines[int : J[_, linePacks_List, _], topo_Association] := Select[
-   Range[Min[Length[linePacks], topo["nE"]]],
-   actualLinePackType[topo, #, linePacks[[#]]] === "pinched" &&
-     ! MemberQ[{"masslessW", "massiveW"}, topo["lines"][[#, "packType"]]] &
-   ];
-
-
-loopTreeTargetTopology[int : J[_, linePacks_List, _], topo_Association] := Module[{pinched, badMixed},
-   pinched = loopIntegralPinchedLines[int, topo];
-   badMixed = Select[pinched, MemberQ[{"+-", "-+"}, Lookup[topo["lines"][[#]], "skType", "++"]] &];
-   If[badMixed =!= {}, Message[loopToTreeProjection::mixedpinched, badMixed]; Return[$Failed]];
-   If[pinched === {}, topo, pinchSectorTopology[topo, pinched]]
-   ];
-
-
-(* loop 的 a0 留在 tree family 的 nu0 中；b0/bS0 没有 tree 指标槽，必须随完整物理幂次进入显式能量系数。 *)
-loopTreeProjectionCoefficient[int : J[_, _, _], targetTopo_Association] := Module[
-   {momentumMagnitudePower},
-   momentumMagnitudePower = Times @@ Table[
-      lineMomentumMagnitude[targetTopo, e]^(-linePowerIndex[targetTopo, int, e]),
-      {e, targetTopo["nE"]}
-      ];
-   momentumMagnitudePower
-   ];
-
-
-loopTreeRelativeProjectionCoefficient[
-   int : J[targetA_List, _, _], targetTopo_Association,
-   referenceInt : J[referenceA_List, _, _], referenceTopo_Association
-   ] := Module[{targetLinePower, referenceLinePower, momentumMagnitude},
-   Times @@ Table[
-      targetLinePower = linePowerIndex[targetTopo, int, e];
-      referenceLinePower = linePowerIndex[referenceTopo, referenceInt, e];
-      momentumMagnitude = lineMomentumMagnitude[targetTopo, e];
-      momentumMagnitude^(-Expand[targetLinePower - referenceLinePower]),
-      {e, targetTopo["nE"]}
-      ]
-   ];
-
-
-projectLoopIntegralToTree[int : J[aList_List, linePacks_List, ispList_List], topo_Association, referenceInt : J[_, _, _]] := Module[
-   {targetTopo, referenceTopo, active, repMap, packs, legStates, originalEndpoints, line, lineId,
-    relativeCoefficient},
-   If[Length[linePacks] =!= topo["nE"] || ispList =!= ConstantArray[0, Length[ispList]],
-    Message[loopToTreeProjection::badloop, int]; Return[$Failed]
-    ];
-   targetTopo = loopTreeTargetTopology[int, topo];
-   referenceTopo = loopTreeTargetTopology[referenceInt, topo];
-   If[MemberQ[{targetTopo, referenceTopo}, $Failed], Return[$Failed]];
-   active = activeAVertexIds[targetTopo];
-   repMap = Lookup[targetTopo, "sectorVertexRepresentativeMap", AssociationThread[topo["vertexIds"] -> topo["vertexIds"]]];
-   If[Length[aList] =!= Length[active], Message[loopToTreeProjection::badloop, int]; Return[$Failed]];
-   packs = Table[
-     legStates = {};
-     Do[
-      If[! MemberQ[loopIntegralPinchedLines[int, topo], e] && MemberQ[{"massiveT", "massiveW"}, topo["lines"][[e, "packType"]]],
-       line = topo["lines"][[e]];
-       lineId = line["id"];
-       originalEndpoints = Lookup[line, "originalEndpoints", line["endpoints"]];
-       Do[
-        If[Lookup[repMap, originalEndpoints[[slot]], originalEndpoints[[slot]]] === active[[v]],
-          AppendTo[legStates, linePacks[[e, linePackNPositions[line, line["packType"]][[slot]]]]]
-         ],
-        {slot, 2}
-        ]
-       ],
-      {e, topo["nE"]}
-      ];
-     Prepend[legStates, aList[[v]]],
-     {v, Length[active]}
-     ];
-   relativeCoefficient = loopTreeRelativeProjectionCoefficient[int, targetTopo, referenceInt, referenceTopo];
-   relativeCoefficient J[packs]
-   ];
-
-
-projectLoopIntegralToTree[int : J[_, _, _], topo_Association] := Module[{targetTopo = loopTreeTargetTopology[int, topo]},
-   If[targetTopo === $Failed, $Failed, loopTreeProjectionCoefficient[int, targetTopo] projectLoopIntegralToTree[int, topo, int]]
-   ];
-projectLoopIntegralToTree[int_J, _Association, _J] := (Message[loopToTreeProjection::badloop, int]; $Failed);
-projectLoopIntegralToTree[int_J, _Association] := (Message[loopToTreeProjection::badloop, int]; $Failed);
-
-
-projectLoopTimeEquationToTree[expr_, topoSpec_Association, referenceInt_: Automatic] := Module[{topo, result, ref},
-   topo = normalizeTopologySpec[topoSpec];
-   If[topo === $Failed, Return[$Failed]];
-   ref = If[referenceInt === Automatic, FirstCase[expr, int : J[_, _, _] :> int, Missing["NoReferenceIntegral"], Infinity], referenceInt];
-   If[Head[ref] === Missing || integralKind[ref] =!= "Loop", Message[loopToTreeProjection::badloop, ref]; Return[$Failed]];
-   result = Expand[expr /. int : J[_, _, _] :> projectLoopIntegralToTree[int, topo, ref]];
-   If[FreeQ[result, $Failed], result, $Failed]
-   ];
-
-
-DSTreeSeeds[vertex_, int : J[_, _, _], topoSpec_Association] := Module[
-   {topo, loopSeed, treeSeed, pinchedAudit, pinchConsumptionTrace, allLoopIntegrals, pinchedByTerm, projectedReference},
-   topo = normalizeTopologySpec[topoSpec];
-   If[topo === $Failed, Return[$Failed]];
-   loopSeed = dtau[vertex, int, topo];
-   If[loopSeed === $Failed, Return[$Failed]];
-   allLoopIntegrals = DeleteDuplicates[Cases[loopSeed, J[_, _, _], Infinity]];
-   pinchedByTerm = Association@Table[
-      ToString[item, InputForm] -> loopIntegralPinchedLines[item, topo],
-      {item, allLoopIntegrals}
-      ];
-   pinchedAudit = Map[
-     Function[e,
-      <|"lineIndex" -> e, "lineId" -> topo["lines"][[e, "id"]], "skType" -> Lookup[topo["lines"][[e]], "skType", Missing["skType"]],
-       "thetaAllowedQ" -> MemberQ[{"++", "--"}, Lookup[topo["lines"][[e]], "skType", "++"]]|>
-      ],
-     DeleteDuplicates[Flatten[Values[pinchedByTerm]]]
-     ];
-   pinchConsumptionTrace = Map[
-     Function[e,
-      <|"lineIndex" -> e, "lineId" -> topo["lines"][[e, "id"]],
-       "skType" -> Lookup[topo["lines"][[e]], "skType", Missing["skType"]],
-       "consumer" -> If[Lookup[topo["lines"][[e]], "massType", "massive"] === "massive", "WT/pinchTerms", "masslessPinched"]|>
-      ],
-     DeleteDuplicates[Flatten[Values[pinchedByTerm]]]
-     ];
-   If[AnyTrue[pinchedAudit, ! TrueQ[#"thetaAllowedQ"] &], Message[loopToTreeProjection::mixedpinched, dsMixedPinchedSentence[pinchedAudit]]; Return[$Failed]];
-   treeSeed = projectLoopTimeEquationToTree[loopSeed, topo, int];
-   projectedReference = projectLoopIntegralToTree[int, topo, int];
-   <|
-    "status" -> If[treeSeed === $Failed, "error", "generated"],
-    "generator" -> dtau[vertex],
-    "loopSeed" -> loopSeed,
-    "treeSeed" -> treeSeed,
-    "treeIntegral" -> projectedReference,
-    "referenceA" -> First[int],
-    "pinchedAudit" -> pinchedAudit,
-    "pinchConsumptionTrace" -> pinchConsumptionTrace,
-    "mixedPinchedQ" -> AnyTrue[pinchedAudit, MemberQ[{"+-", "-+"}, #"skType"] &],
-    "pinchedLinesByIntegral" -> pinchedByTerm
-    |>
-   ];
-
-
-DSTreeSeeds[int : J[_, _, _], topoSpec_Association] := Module[{topo, vertices},
-   topo = normalizeTopologySpec[topoSpec];
-   If[topo === $Failed, Return[$Failed]];
-   vertices = Lookup[Select[makeIBPGenerators[topo], #"type" === "time" &], "vertex"];
-   DSTreeSeeds[#, int, topo] & /@ vertices
-   ];
 
 
 treeSeedRuleGroupKey[record_Association, data_Association] := Module[
@@ -6584,61 +6241,6 @@ treeSeedRuleGroupKey[record_Association, data_Association] := Module[
    vertexIndex = First[vertexIndex];
    packs = First[treeInt];
    {vertexId, ReplacePart[packs, vertexIndex -> {packs[[vertexIndex, 1]], "state"}]}
-   ];
-
-
-makeTreeTimeReductionRules::incomplete = "tree time seed 状态组不完整：`1`。";
-
-
-makeTreeTimeReductionRules[records_List, data_Association] := Module[
-   {good, grouped, minusRules = {}, plusRules = {}, sourceQ = False, groupData, vertexId, vertexIndex,
-    vertex, states, ordered, currentInts, minusInts, equations, m1, m0, invM1, invM0t, tp, tpInv,
-    regular, source, lowerRhs, upperRhs},
-   good = Select[Flatten[records], AssociationQ[#] && Lookup[#, "status", "error"] === "generated" &];
-   grouped = GroupBy[good, treeSeedRuleGroupKey[#, data] &];
-   KeyValueMap[
-    Function[{key, group},
-     If[Head[key] === Missing, Return[]];
-     vertexId = key[[1]];
-     vertexIndex = First@FirstPosition[data["vertexOrder"], vertexId];
-     vertex = data["vertices"][[vertexIndex]];
-     states = treeBinaryStates[vertex["p"]];
-     ordered = SortBy[group, Function[record,
-        treeStateIndex[Rest[First[First[Cases[record["treeIntegral"], _J, {0, Infinity}]]][[vertexIndex]]]]
-        ]];
-     If[Length[ordered] =!= Length[states], Message[makeTreeTimeReductionRules::incomplete, dsTreeTimeGroupSentence[<|"key" -> key, "expected" -> Length[states], "actual" -> Length[ordered]|>]]; Return[]];
-     currentInts = First[Cases[#"treeIntegral", _J, {0, Infinity}]] & /@ ordered;
-     minusInts = MapThread[
-       Function[{int, state}, J[ReplacePart[First[int], vertexIndex -> Prepend[state, First[int][[vertexIndex, 1]] - 1]]]],
-       {currentInts, states}
-       ];
-     equations = Lookup[ordered, "treeSeed"];
-     m1 = treeM1[vertex, vertex["nu0"] + First[currentInts[[1]]][[vertexIndex, 1]]];
-     m0 = treeM0[vertex];
-     invM1 = treeDiagonalInverse[m1];
-     invM0t = treeDiagonalInverse[treeM0Tilde[vertex]];
-     If[MemberQ[{invM1, invM0t}, $Failed], Return[]];
-     tp = treeTp[vertex];
-     tpInv = treeTpInverse[vertex];
-     (* regular 必须与 dsDirectTreeRegularSeed 的 M0.J[a] - M1.J[a-1] 同构，
-        source 才是纯 pinched 项；解出 J[a-1] 时 source 随 M0 块一起变号。 *)
-     regular = m0.currentInts - m1.minusInts;
-     source = Expand[equations - regular];
-     If[! TrueQ[source === ConstantArray[0, Length[source]]], sourceQ = True];
-     lowerRhs = Expand[treeAminusMatrix[vertex, First[currentInts[[1]]][[vertexIndex, 1]]] . currentInts + invM1.source];
-     upperRhs = Expand[treeAplusMatrix[vertex, First[currentInts[[1]]][[vertexIndex, 1]] - 1] . minusInts - tpInv.invM0t.tp.source];
-     minusRules = Join[minusRules, Thread[minusInts -> lowerRhs]];
-     plusRules = Join[plusRules, Thread[currentInts -> upperRhs]];
-     ],
-    grouped
-    ];
-   <|
-    "status" -> If[Length[grouped] === 0, "empty", "generated"],
-    "minus" -> DeleteDuplicates[minusRules],
-    "plus" -> DeleteDuplicates[plusRules],
-    "sourceQ" -> sourceQ,
-    "groupCount" -> Length[grouped]
-    |>
    ];
 
 
@@ -6723,15 +6325,6 @@ treeFamilyForIntegral[int_J, context_Association] := Module[{matches},
    ];
 
 
-makeRepIterative0[context_Association] /; KeyExistsQ[context, "families"] := With[{sectorContext = context}, {
-    HoldPattern[int_J] /; integralKind[int] === "Tree" &&
-       AssociationQ[treeFamilyForIntegral[int, sectorContext]] &&
-       And @@ (IntegerQ /@ First[int][[All, 1]]) &&
-       AnyTrue[First[int][[All, 1]], # != 0 &] :>
-     treeFirstStepToZero[int, treeFamilyForIntegral[int, sectorContext]]
-    }];
-
-
 treeSectorEndpoints[end_, family_Association, context_Association] := Which[
    end === Automatic, ConstantArray[0, Length[family["vertices"]]],
    AssociationQ[end], Lookup[end, family["sector"], ConstantArray[0, Length[family["vertices"]]]],
@@ -6740,134 +6333,11 @@ treeSectorEndpoints[end_, family_Association, context_Association] := Which[
    ];
 
 
-treeSectorIntegralDistanceData[int_J, end_, context_Association] := Module[{family, endpoints},
-   family = treeFamilyForIntegral[int, context];
-   If[Head[family] === Missing, Return[$Failed]];
-   endpoints = normalizeTreeEndpoints[treeSectorEndpoints[end, family, context], family];
-   If[endpoints === $Failed || ! And @@ (IntegerQ /@ First[int][[All, 1]]), Return[$Failed]];
-   <|"integral" -> int, "sector" -> family["sector"], "endpoints" -> endpoints,
-    "remainingThetaLines" -> Length[thetaTLineIndices[family["topology"]]],
-    "distance" -> treeEndpointDistance[int, endpoints],
-    "progressKey" -> {Length[thetaTLineIndices[family["topology"]]], treeEndpointDistance[int, endpoints]}|>
-   ];
-
-
-treeSectorStepProgress[source_J, replacement_, end_, context_Association] := Module[
-   {sourceData, targets, targetData, invalidTargets},
-   sourceData = treeSectorIntegralDistanceData[source, end, context];
-   targets = DeleteDuplicates[Cases[replacement, int_J /; integralKind[int] === "Tree", {0, Infinity}]];
-   targetData = treeSectorIntegralDistanceData[#, end, context] & /@ targets;
-   invalidTargets = Pick[targets, Head[#] === Symbol && # === $Failed & /@ targetData];
-   <|
-    "passQ" -> TrueQ[sourceData =!= $Failed && invalidTargets === {} &&
-       And @@ (treeProgressKeyLessQ[Lookup[#, "progressKey", {Infinity, Infinity}], sourceData["progressKey"]] & /@ targetData)],
-    "source" -> sourceData,
-    "targets" -> targetData,
-    "invalidTargets" -> invalidTargets
-    |>
-   ];
-
-
-Options[repIterativeSectorData] = Options[repIterativeData];
-
-
-repIterativeSectorData[expr_, end_: Automatic, context_Association, OptionsPattern[]] := Module[
-   {result = Expand[expr], steps = 0, integrals, item, family, endpoints, packs, vertexIndex, unresolved,
-    scanFailure, replacement, progressData, seenStates = <||>, stateHash},
-   AssociateTo[seenStates, treeRecurrenceStateHash[result] -> True];
-   While[True,
-    integrals = DeleteDuplicates[Cases[result, int_J /; integralKind[int] === "Tree", {0, Infinity}]];
-    unresolved = {};
-    scanFailure = None;
-    Do[
-     family = treeFamilyForIntegral[item, context];
-     If[Head[family] === Missing,
-      Message[repIterativeData::nosector, dsTreeNoSectorSentence[item]];
-      scanFailure = <|"status" -> "error", "result" -> $Failed, "steps" -> steps|>;
-      Break[]
-      ];
-     If[! And @@ (IntegerQ /@ First[item][[All, 1]]),
-      Message[repIterativeData::badindex, dsTreeBadIndexSentence[First[item][[All, 1]]]];
-      scanFailure = <|"status" -> "error", "result" -> $Failed, "steps" -> steps|>;
-      Break[]
-      ];
-     endpoints = normalizeTreeEndpoints[treeSectorEndpoints[end, family, context], family];
-     If[endpoints === $Failed,
-      scanFailure = <|"status" -> "error", "result" -> $Failed, "steps" -> steps|>;
-      Break[]
-      ];
-     If[Or @@ MapThread[Unequal, {First[item][[All, 1]], endpoints}], AppendTo[unresolved, item]],
-     {item, integrals}
-     ];
-    If[AssociationQ[scanFailure], Return[scanFailure]];
-    If[unresolved === {}, Break[]];
-    item = First[unresolved];
-    family = treeFamilyForIntegral[item, context];
-    endpoints = normalizeTreeEndpoints[treeSectorEndpoints[end, family, context], family];
-    If[endpoints === $Failed, Return[<|"status" -> "error", "result" -> $Failed, "steps" -> steps|>]];
-    packs = First[item];
-    vertexIndex = SelectFirst[Range[Length[endpoints]], packs[[#, 1]] =!= endpoints[[#]] &];
-    replacement = treeSingleStepIntegral[item, vertexIndex, endpoints[[vertexIndex]], family];
-    If[replacement === $Failed, Return[<|"status" -> "error", "reason" -> "recurrenceSingular", "result" -> $Failed, "steps" -> steps|>]];
-    progressData = treeSectorStepProgress[item, replacement, end, context];
-    If[! TrueQ[progressData["passQ"]],
-     Message[repIterativeData::noprogress,
-      dsTreeIssueSentence[<|"code" -> "noprogress", "integral" -> item, "steps" -> steps|>]];
-     Return[<|"status" -> "error", "reason" -> "nonDecreasingRecurrence", "result" -> $Failed,
-       "steps" -> steps, "progressData" -> progressData|>]
-     ];
-    result = Expand[result /. item -> replacement];
-    stateHash = treeRecurrenceStateHash[result];
-    If[KeyExistsQ[seenStates, stateHash],
-     Message[repIterativeData::cycle,
-      dsTreeIssueSentence[<|"code" -> "cycle", "steps" -> steps|>]];
-     Return[<|"status" -> "error", "reason" -> "recurrenceCycle", "result" -> $Failed,
-       "steps" -> steps, "stateHash" -> stateHash|>]
-     ];
-    AssociateTo[seenStates, stateHash -> True];
-    steps++;
-    ];
-   <|"status" -> "reduced", "result" -> result, "steps" -> steps|>
-   ];
-
-
-repIterative[expr_, end_, context_Association, OptionsPattern[]] /; KeyExistsQ[context, "families"] := Module[{activeContext},
-   (* 多 sector context 保留既有唯一分派门禁，同时同步本轮可直接替换的单步规则。 *)
-   activeContext = setTreeFamilyContext[context];
-   repIterativeSectorData[expr, end, activeContext]["result"]
-   ];
-
-
 (* ::Chapter:: *)
 (*Tree dlog connection*)
 
 (* dlog 输出始终把 primitive matrix、letter/constant-matrix 对和同序 master list 一起返回。
-   多顶点 top block 是按 vertexOrder 的 Kronecker sum；pinched source 由 DSTreeSeeds 单独提供。 *)
-
-treeVertexDLogData[vertex_Association] := Module[
-   {p, states, momentumMagnitudes, k0, omega0, omegaEx, tp, tpInv, m1, omega, letters, coeffs},
-   p = vertex["p"];
-   states = treeBinaryStates[p];
-   momentumMagnitudes = Lookup[vertex["massiveLegs"], "momentumMagnitude"];
-   k0 = vertex["signedExternalLegEnergy"];
-   omega0 = -I DiagonalMatrix[Table[
-      Log[k0 + Sum[(2 states[[row, i]] - 1) momentumMagnitudes[[i]], {i, p}]],
-      {row, Length[states]}
-      ]];
-   omegaEx = DiagonalMatrix[Table[
-     -Sum[states[[row, i]] (1 - 2 dsLineFormulaNu[vertex["massiveLegs"][[i]]]) Log[momentumMagnitudes[[i]]], {i, p}],
-      {row, Length[states]}
-      ]];
-   tp = treeTp[vertex];
-   tpInv = treeTpInverse[vertex];
-   m1 = treeM1[vertex, vertex["nu0"] + 1];
-   omega = Expand[omegaEx - I tpInv . omega0 . tp . m1];
-   (* 每个顶点先列 massive-line momentum magnitudes，再按 binary master order 列 cut letters；
-      多顶点输出按 vertexOrder 稳定拼接，保证矩阵序列化可复现。 *)
-   letters = DeleteDuplicates@Join[momentumMagnitudes, Cases[omega0, Log[arg_] :> arg, Infinity]];
-   coeffs = Association@Table[letter -> Map[Coefficient[#, Log[letter]] &, omega, {2}], {letter, letters}];
-   <|"vertex" -> vertex["id"], "states" -> states, "omega" -> omega, "letters" -> letters, "letterMatrices" -> coeffs|>
-   ];
+   多顶点 top block 是按 vertexOrder 的 Kronecker sum；pinched source 由 sector-tagged direct seed 单独提供。 *)
 
 
 treeEmbedVertexMatrix[matrix_List, vertexIndex_Integer, dimensions_List] := treeTensorProduct[

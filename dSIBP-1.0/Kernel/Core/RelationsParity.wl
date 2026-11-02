@@ -1133,7 +1133,7 @@ dsParityCertificate[records_List, context_Association] := Module[
 
 
 (* ::Chapter:: *)
-(*Massless tree formula capability*)
+(*Massless tree capability gate*)
 
 treeFormulaMasslessLines[context_Association] := Lookup[
    Select[
@@ -1151,8 +1151,8 @@ treeFormulaMasslessPendingQ[context_Association] := treeFormulaMasslessLines[con
 treeFormulaPendingRederivation[operation_String, context_Association] := Module[{lines},
    lines = treeFormulaMasslessLines[context];
    dsErrorPrint[
-    operation <> " 尚未在 massless 三槽 quotient basis 上重新推导，公式型 tree 路线已停止。" <>
-     " " <> operation <> " has not been rederived on the massless three-slot quotient basis; the formula-based tree route was stopped."
+    operation <> " 尚未在 massless 三槽 quotient basis 上重新推导，massless family 的 naive tree 约化暂不可用。" <>
+     " " <> operation <> " has not been rederived on the massless three-slot quotient basis; the naive tree route is not yet available for massless families."
     ];
    <|
     "status" -> "PendingRederivation",

@@ -425,16 +425,16 @@ reduction tables, caches, or runtime logs.
 
 \section{Tree vertex families}
 
-The direct tree workflow exposes \texttt{DSTreeSeeds}, \texttt{repIterative},
-\texttt{DSTreeNaiveIBP}, \texttt{DSTreeNaiveDE}, and \texttt{DSTreeDLogDE}. It constructs
-sector-tagged relations, ordered masters, normalized differential equations, and scaling
-checks from the same pinched and normalization metadata.
+The tree workflow exposes \texttt{DSTreeNaiveIBP} and \texttt{DSTreeNaiveDE}. It constructs
+sector-tagged relations, ordered masters, and normalized differential equations from the
+same pinched and normalization metadata.
 
-\texttt{DSTreeNaiveIBP} solves one-step raising relations in a specified basis.
-\texttt{DSTreeNaiveDE} uses that reduction to construct the naive connection, while
-\texttt{DSTreeDLogDE} constructs the block-structured dlog connection. For massless time-ordered
-quotients, formula-based reduction is available only after the required identities have
-been rederived.
+\texttt{DSTreeNaiveIBP} solves one-step raising relations in a specified basis. By default
+the ordered normalized masters are determined internally by the dlog master construction;
+an equivalent explicit list may also be supplied.
+\texttt{DSTreeNaiveDE} uses that reduction to construct the naive connection. For massless
+time-ordered quotients, tree reduction is available only after the required identities have
+been rederived on the quotient basis.
 
 \section{Common errors and current boundaries}
 
@@ -446,8 +446,8 @@ manifests, and incomplete reduction artifacts.
 
 dSIBP does not run reduction internally. It does not infer physical symmetry from symbol
 names, and it does not turn a finite-envelope completeness claim into a proof for arbitrary
-targets. Formula-based tree reduction remains limited to the certified massive-only
-quotient cases. Reference summaries record their evidence baseline and are not silently
+targets. Naive tree reduction remains limited to the certified massive-only
+cases. Reference summaries record their evidence baseline and are not silently
 reused as proof for a different generation policy.
 
 \section{Public API summary}
@@ -471,9 +471,8 @@ reused as proof for a different generation policy.
 & Kira planning, serialization, and verified result import. \\
 \texttt{DSDE}, \texttt{DSScaleCheck}
 & Differential equations and scaling certificates. \\
-\texttt{DSTreeSeeds}, \texttt{repIterative}, \texttt{DSTreeNaiveIBP},
-\texttt{DSTreeNaiveDE}, \texttt{DSTreeDLogDE}
-& Direct pure-time/tree generation and reduction. \\
+\texttt{DSTreeNaiveIBP}, \texttt{DSTreeNaiveDE}
+& Naive tree time-IBP reduction and differential equations. \\
 \texttt{dtau}, \texttt{dqq}, \texttt{dqk}, \texttt{ds}
 & Atomic time, momentum, and parameter derivatives. \\
 \texttt{rep2innerform}, \texttt{rep2outform}, \texttt{rep2Integrand},

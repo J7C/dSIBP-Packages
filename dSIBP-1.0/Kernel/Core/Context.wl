@@ -144,7 +144,7 @@ dsPublicAPISections[] := <|
      },
     "loopWorkflow" -> {"DSSeeds", "DSAllSeeds", "DSSeedGroups", "DSSeedGroupMetadata", "DSMetaSeedRange", "DSGenerateIBP", "DSLinear", "DSReorderIntegrals", "DSUserMI", "DSKiraPlan", "DSKiraExport", "DSKiraImport", "DSDE", "DSScaleCheck"},
    "pureTimeWorkflow" -> {
-     "DSTreeSeeds", "repIterative", "DSTreeNaiveIBP", "DSTreeNaiveDE", "DSTreeDLogDE"
+     "DSTreeNaiveIBP", "DSTreeNaiveDE"
      },
    "introspection" -> {"DSPublicAPI"}
    |>;
@@ -161,9 +161,7 @@ dsPublicAPIOptions[] := <|
    "DSDE" -> Options[DSDE],
    "DSScaleCheck" -> Options[DSScaleCheck],
    "DSTreeNaiveIBP" -> Options[DSTreeNaiveIBP],
-   "DSTreeNaiveDE" -> Options[DSTreeNaiveDE],
-   "DSTreeDLogDE" -> Options[DSTreeDLogDE],
-   "repIterative" -> Options[repIterative]
+   "DSTreeNaiveDE" -> Options[DSTreeNaiveDE]
    |>;
 
 

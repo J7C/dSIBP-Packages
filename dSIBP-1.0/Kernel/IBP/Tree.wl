@@ -3,8 +3,8 @@
 (* ::Chapter:: *)
 (*tree sector-tagged 数据边界*)
 
-(* 裸 J[vertexPacks] 继续作为公开公式表示；进入跨 sector linearData 时必须由后续 token 同时携带 sectorKey。
-   loop-to-tree 投影系数始终复用冻结核心的完整物理幂次公式，不能从 tree pack 反推零点。 *)
+(* J[vertexPacks] 是 Private vertex-basis 表示；进入跨 sector linearData 时必须由 token 同时携带 sectorKey。
+   naive 路线的全部关系来自 direct pure-time seed。 *)
 
 treeTaggedIntegral[sectorKey_, integral_J, coefficient_: 1] := <|
    "sectorKey" -> sectorKey,
@@ -110,7 +110,7 @@ dsMakeTreeTaggedTimeReductionRules[records_List, data_Association] := Module[
         treeStateIndex[Rest[First[First[Cases[record["treeIntegral"], _J, {0, Infinity}]]][[vertexIndex]]]]
         ]];
      If[Length[ordered] =!= Length[states],
-      Message[makeTreeTimeReductionRules::incomplete, dsTreeTimeGroupSentence[<|"key" -> key, "expected" -> Length[states], "actual" -> Length[ordered]|>]];
+      Message[dsMakeTreeTaggedTimeReductionRules::incomplete, dsTreeTimeGroupSentence[<|"key" -> key, "expected" -> Length[states], "actual" -> Length[ordered]|>]];
       Return[]
       ];
      currentInts = First[Cases[#"treeIntegral", _J, {0, Infinity}]] & /@ ordered;
@@ -225,7 +225,7 @@ dsTreeTaggedStepProgress[source_dsTreeToken, replacement_, end_, familyContext_A
    ];
 
 
-Options[dsRepIterativeTreeLinearData] = Options[repIterativeData];
+Options[dsRepIterativeTreeLinearData] = {};
 
 
 dsRepIterativeTreeLinearData[data_Association, end_: Automatic, context_Association, OptionsPattern[]] := Module[
@@ -253,11 +253,11 @@ dsRepIterativeTreeLinearData[data_Association, end_: Automatic, context_Associat
     int = token[[2]];
     family = dsTreeFamilyBySector[sectorKey, familyContext];
     If[Head[family] === Missing,
-     Message[repIterativeData::nosector, dsTreeNoSectorSentence[<|"sectorKey" -> sectorKey, "integral" -> int|>]];
+     Message[dsRepIterativeTreeLinearData::nosector, dsTreeNoSectorSentence[<|"sectorKey" -> sectorKey, "integral" -> int|>]];
      Return[<|"status" -> "error", "reason" -> "unknownSector", "steps" -> steps|>]
      ];
     If[! treeIntegralQ[int, family] || ! And @@ (IntegerQ /@ First[int][[All, 1]]),
-     Message[repIterativeData::badindex, dsTreeBadIndexSentence[<|"sectorKey" -> sectorKey, "integral" -> int|>]];
+     Message[dsRepIterativeTreeLinearData::badindex, dsTreeBadIndexSentence[<|"sectorKey" -> sectorKey, "integral" -> int|>]];
      Return[<|"status" -> "error", "reason" -> "invalidTaggedIntegral", "steps" -> steps|>]
      ];
     endpoints = normalizeTreeEndpoints[treeSectorEndpoints[end, family, familyContext], family];
@@ -271,14 +271,14 @@ dsRepIterativeTreeLinearData[data_Association, end_: Automatic, context_Associat
     If[replacement === $Failed, Return[<|"status" -> "error", "reason" -> "taggedStepFailed", "steps" -> steps|>]];
     progressData = dsTreeTaggedStepProgress[token, replacement, end, familyContext];
     If[! TrueQ[progressData["passQ"]],
-     Message[repIterativeData::noprogress, dsTreeIssueSentence[<|"code" -> "noprogress", "integral" -> int, "steps" -> steps|>]];
+     Message[dsRepIterativeTreeLinearData::noprogress, dsTreeIssueSentence[<|"code" -> "noprogress", "integral" -> int, "steps" -> steps|>]];
      Return[<|"status" -> "error", "reason" -> "nonDecreasingRecurrence", "steps" -> steps,
        "progressData" -> progressData|>]
      ];
     result = Expand[result /. token -> replacement];
     stateHash = treeRecurrenceStateHash[result];
     If[KeyExistsQ[seenStates, stateHash],
-     Message[repIterativeData::cycle, dsTreeIssueSentence[<|"code" -> "cycle", "steps" -> steps|>]];
+     Message[dsRepIterativeTreeLinearData::cycle, dsTreeIssueSentence[<|"code" -> "cycle", "steps" -> steps|>]];
      Return[<|"status" -> "error", "reason" -> "recurrenceCycle", "steps" -> steps,
        "stateHash" -> stateHash|>]
      ];
@@ -444,7 +444,7 @@ dsTreeNaiveIBPRaw[context_Association, masters_: Automatic, OptionsPattern[DSTre
     "reason" -> If[status === "solved", None, "nonzeroSolveResidual"],
     "masters" -> resolvedMasters,
     "masterCount" -> Length[resolvedMasters],
-    "masterSource" -> If[masters === Automatic, "DSTreeDLogDE", "explicit"],
+    "masterSource" -> If[masters === Automatic, "automaticDLog", "explicit"],
     "equationCount" -> Length[equations],
     "unknownCount" -> Length[unknownTokens],
     "seedRecords" -> seedRecords,
@@ -452,8 +452,7 @@ dsTreeNaiveIBPRaw[context_Association, masters_: Automatic, OptionsPattern[DSTre
     "solveResiduals" -> solveResiduals,
     "auditLevel" -> OptionValue[AuditLevel],
     "context" -> context,
-    "equationConvention" -> "projected loop dtau == 0; non-master tagged tree integrals solved in the supplied master basis",
-    "formulaRecurrenceUsedQ" -> False
+    "equationConvention" -> "projected loop dtau == 0; non-master tagged tree integrals solved in the supplied master basis"
     |>
    ];
 

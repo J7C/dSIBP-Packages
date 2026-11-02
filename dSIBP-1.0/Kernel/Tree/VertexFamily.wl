@@ -19,21 +19,6 @@ dsTreeFamilyContext[context_Association] /; dsContextQ[context] :=
    dsTreeFamilyContextFromRootTopology[context["topology"]];
 
 
-(* raw J[vertexPacks] 的 source-aware 首步复用 sector-tagged direct seed，再仅在公开 raw
-   返回边界去掉 sector token。这样传播子动量模长与共同-theta pinched 都保持同源。 *)
-treeSourceAwareStepFromTopology[
-   int_J, vertexIndex_Integer, endpoint_Integer, data_Association
-   ] /; AssociationQ[Lookup[data, "rootTopology", Missing["NoRootTopology"]]] := Module[
-   {familyContext, token, taggedResult},
-   familyContext = dsTreeFamilyContextFromRootTopology[data["rootTopology"]];
-   If[familyContext === $Failed, Return[$Failed]];
-   token = dsTreeToken[data["sector"], int];
-   taggedResult = dsTreeTaggedSourceAwareStep[token, vertexIndex, endpoint, data, familyContext];
-   If[taggedResult === $Failed, Return[$Failed]];
-   taggedResult /. dsTreeToken[_, item_J] :> item
-   ];
-
-
 (* 公开 tree overload 统一在 PublicBoundary.wl 定义。这里仅保留 Private
    vertex-basis 内核，避免用户绕过三参数 J 的 sector 身份与表示审计。 *)
 
@@ -478,4 +463,5 @@ dsTreeMultiSectorDLog[context_Association, seedData_: Automatic, auditLevel_: "s
    ];
 
 
-(* DSTreeDLogDE 的公开定义由 PublicBoundary.wl 负责把本模块结果映射回统一 J。 *)
+(* 本模块的 dlog master 判定与 normalization 审计供 DSTreeNaiveIBP 的缺省 masters 内部使用；
+   公开结果由 PublicBoundary.wl 映射回统一 J。 *)

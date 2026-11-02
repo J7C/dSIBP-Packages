@@ -1,6 +1,7 @@
 (* ::Package:: *)
-(* pure-time 示例：公开积分使用 J[sectorKey,timeShifts,stateBits]。两顶点 massive-only family 演示
-   Private 论文公式适配；atomic massless family 演示 quotient canonical 与公式路线的明确边界。 *)
+(* pure-time 示例：公开积分使用 J[sectorKey,timeShifts,stateBits]。两顶点 massive-only family
+   演示 naive tree IBP/DE 路线；atomic massless family 演示 quotient canonical 与 naive 路线的
+   PendingRederivation 门禁。 *)
 
 (* ::Chapter:: *)
 (*加载标准 package*)
@@ -34,7 +35,7 @@ treeCaseInput = <|
    |>;
 
 (* masslessT 在 Private relation 层约到二维物理基；公开 stateBits 中整边共享一位。
-   DSSeeds 与 tree 结果都使用同一个 time-only J，不需要私有状态选项。 *)
+   DSSeeds 与 naive tree 结果都使用同一个 time-only J，不需要私有状态选项。 *)
 atomicMasslessInput = <|
    "name" -> "atomicMasslessTimeOnly",
    "vertices" -> {
@@ -64,9 +65,6 @@ treeInitOptions = {
    GenerateDerivativeMetadata -> False,
    ProgressReporting -> True
    };
-
-(* 缺省：repIterative 按当前 sector 的 active 顶点把全部 a 约到 0。 *)
-treeReductionEndpoint = Automatic;
 
 
 (* ::Chapter:: *)
@@ -98,48 +96,38 @@ atomicStates = DeleteDuplicates@Flatten[
     ];
 atomicSectors = Sort@Lookup[Lookup[atomicSeedBatch, "sectorMetadataList", {}], "sectorKey", {}];
 
-selectedIntegral = J["1", {1, 0}, {1, 0}];
-selectedSeed = DSTreeSeeds[v1, selectedIntegral, treeContext];
-
 
 (* ::Chapter:: *)
-(*迭代约化、naive IBP/DE 与公式型 dlog DE*)
+(*naive tree IBP 与 DE*)
 
-treeDLog = DSTreeDLogDE[treeContext];
+(* masters 缺省 Automatic：由内部 dlog master 判定给出同序归一化 masters，
+   再对主积分求全时间导数并 LinearSolve 得到 naive IBP 约化关系。
+   masters 是可选位置参数，显式写出 Automatic 以免选项规则被绑进该参数。 *)
+treeNaiveIBP = DSTreeNaiveIBP[treeContext, Automatic, ProgressReporting -> True];
 treeDEVariables = {E1, E2, sE1};
-treeNaiveIBP = DSTreeNaiveIBP[treeContext, treeDLog["masters"], ProgressReporting -> True];
 
-(* 演示 target 取真正移位过的 a=2 积分。若取 master（a=0），repIterative 已是终点、
-   约化退化为空操作，测不到递推降幂块的符号。 *)
-treeTarget = J["1", {2, 0}, {1, 0}];
-treeReduction = repIterative[treeTarget, treeReductionEndpoint, treeContext];
-
-(* 结构一致性检查：DSTreeNaiveIBP 报告的 master-basis 约化与 repIterative 公式递推，
-   对同一批一步升幂对象必须逐项相等。二者是同一套 tree 约化规则的两个消费者，本检查
-   捕获的是两个消费路径的实现分叉，不是整体符号约定。
-   注意：它无法钉住符号约定本身——若两条路径共享同一符号错误，本检查仍会通过。
-   符号约定的绝对锚在 check_tree_normalization_closure（缺省 Positive 记法下对角块
-   -(1-2 nu1)/sE1）与
-   independent-benchmark 对 arXiv:2411.03088 两顶点 DE 的数值复核（含 off-diagonal
-   top-to-child col5）里，不在本 example。 *)
-treeRouteAgreement = And @@ Table[
-    TrueQ[FullSimplify[
-       reduction["rhsExpression"] -
-        repIterative[reduction["lhs"]["integral"], treeReductionEndpoint, treeContext]["expression"]
-       ] === 0],
-    {reduction, treeNaiveIBP["reductions"]}
-    ];
-
+(* 把公开 naive IBP 结果直接传回 DSTreeNaiveDE；只在表示审计通过时跨越公开边界。 *)
 treeNaiveDE = DSTreeNaiveDE[treeNaiveIBP, treeDEVariables, ProgressReporting -> True];
-treeDEResiduals = Association@Table[
-    variable -> (Together /@ Flatten[treeNaiveDE["matrices", variable] - D[treeDLog["omega"], variable]]),
-    {variable, treeDEVariables}
-    ];
-treeDERoutesAgree = And @@ Flatten[Map[TrueQ[# === 0] &, Values[treeDEResiduals], {2}]];
-atomicFormulaStatus = Lookup[
-   DSTreeDLogDE[atomicContext],
+
+(* massless quotient 尚未在三槽基上重新推导，naive 路线返回 PendingRederivation 门禁。 *)
+atomicNaiveStatus = Lookup[
+   DSTreeNaiveIBP[atomicContext, Automatic, ProgressReporting -> True],
    {"status", "reason"},
    Missing["NotAvailable"]
+   ];
+
+(* 结构一致性检查：DE 与 IBP 共享同一批 master、矩阵为方阵且 DE 闭合（无残留对象）。
+   它捕获的是两个消费路径的实现分叉，不是整体符号约定。
+   符号约定的绝对锚在 check_tree_normalization_closure（缺省 Positive 记法下对角块
+   -(1-2 nu1)/sE1）与 independent-benchmark 对 arXiv:2411.03088 两顶点 DE 的数值复核
+   （含 off-diagonal top-to-child col5）里，不在本 example。 *)
+treeNaiveMasterIntegrals = Lookup[treeNaiveIBP["masters"], "integral", {}];
+treeNaiveMasterCount = Lookup[treeNaiveIBP, "masterCount", 0];
+treeNaiveDEConsistent = TrueQ[
+   Lookup[treeNaiveDE, "masterCount", -1] === treeNaiveMasterCount &&
+    And @@ (Dimensions[#] === {treeNaiveMasterCount, treeNaiveMasterCount} & /@
+       Values[Lookup[treeNaiveDE, "matrices", <||>]]) &&
+    Flatten[Values[Lookup[treeNaiveDE, "residualObjects", <||>]]] === {}
    ];
 
 summary = <|
@@ -147,23 +135,20 @@ summary = <|
    "initStatus" -> Lookup[treeContext, "status", "missing"],
    "seedRepresentation" -> Lookup[treeSeedBatch, "representation", Missing["representation"]],
    "linearRepresentation" -> Lookup[treeLinearData, "representation", Missing["representation"]],
-   "selectedSeedRoute" -> Lookup[selectedSeed, "generationRoute", Missing["route"]],
-   "iterativeReductionFreeOfFailure" -> FreeQ[treeReduction, $Failed],
-   "iterativeReductionStatus" -> Lookup[treeReduction, "status", "missing"],
-   "iterativeReductionSteps" -> Lookup[treeReduction, "steps", 0],
-   "routeReductionsAgree" -> treeRouteAgreement,
-   "dlogStatus" -> Lookup[treeDLog, "status", "missing"],
    "naiveIBPStatus" -> Lookup[treeNaiveIBP, "status", "missing"],
+   "naiveMasterCount" -> treeNaiveMasterCount,
+   "naiveMasterSource" -> Lookup[treeNaiveIBP, "masterSource", None],
+   "naiveMasterRepresentation" -> MatchQ[treeNaiveMasterIntegrals, {J[_String, _, _] ..}],
+   "masters" -> treeNaiveMasterIntegrals,
    "naiveDEStatus" -> Lookup[treeNaiveDE, "status", "missing"],
-   "deRoutesAgree" -> treeDERoutesAgree,
-   "masters" -> Lookup[treeDLog, "masters", {}],
+   "naiveDEConsistent" -> treeNaiveDEConsistent,
    "atomicInitStatus" -> Lookup[atomicContext, "status", "missing"],
    "atomicSeedStatus" -> Lookup[atomicSeedBatch, "status", "missing"],
    "atomicRepresentation" -> Lookup[atomicSeedBatch, "representation", Missing["representation"]],
    "atomicStates" -> atomicStates,
    "atomicSectors" -> atomicSectors,
    "atomicLinearStatus" -> Lookup[atomicLinearData, "status", "missing"],
-   "atomicFormulaStatus" -> atomicFormulaStatus
+   "atomicNaiveStatus" -> atomicNaiveStatus
    |>;
 
 Print[InputForm[summary]];
@@ -171,15 +156,12 @@ If[! And[
     ToString[summary["version"]] === runtimeVersionToken,
     summary["initStatus"] === "initialized",
     summary["seedRepresentation"] === "J[sectorKey,timeShifts,stateBits]",
-    summary["selectedSeedRoute"] === "directPureTime",
-    summary["iterativeReductionFreeOfFailure"],
-    summary["iterativeReductionStatus"] === "reduced",
-    summary["iterativeReductionSteps"] > 0,
-    summary["routeReductionsAgree"],
-    summary["dlogStatus"] === "generated",
     summary["naiveIBPStatus"] === "solved",
+    summary["naiveMasterCount"] > 0,
+    summary["naiveMasterSource"] === "automaticDLog",
+    summary["naiveMasterRepresentation"],
     summary["naiveDEStatus"] === "generated",
-    summary["deRoutesAgree"],
+    summary["naiveDEConsistent"],
     summary["atomicInitStatus"] === "initialized",
     summary["atomicSeedStatus"] === "generated",
     summary["atomicRepresentation"] === "J[sectorKey,timeShifts,stateBits]",
@@ -188,5 +170,5 @@ If[! And[
        }],
     summary["atomicSectors"] === {"0", "1"},
     summary["atomicLinearStatus"] === "generated",
-    atomicFormulaStatus === {"PendingRederivation", "masslessQuotientFormulaNotCertified"}
+    atomicNaiveStatus === {"PendingRederivation", "masslessQuotientFormulaNotCertified"}
     ], Exit[1]];

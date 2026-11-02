@@ -24,10 +24,10 @@
      "DSGenerateIBP", "DSLinear", "DSUserMI", "DSKiraPlan", "DSKiraExport",
      "DSKiraImport", "DSDE", "DSScaleCheck"
      },
-   (* 同一成品展示原生 time-only J、massive-only 公式适配与 massless PendingRederivation。 *)
+   (* 同一成品展示原生 time-only J、naive tree IBP/DE 与 massless PendingRederivation。 *)
    "05_tree_two_vertex_time_ibp/main.wl" -> {
-     "DSMessagesOn", "DSInit", "DSSeeds", "DSLinear", "DSTreeSeeds",
-     "repIterative", "DSTreeNaiveIBP", "DSTreeNaiveDE", "DSTreeDLogDE"
+     "DSMessagesOn", "DSInit", "DSSeeds", "DSAllSeeds", "DSGenerateIBP", "DSLinear",
+     "DSTreeNaiveIBP", "DSTreeNaiveDE"
      },
    "06_mix_bubble_tree/main.wl" -> {
      "DSKinematics", "DSMessagesOn", "DSMessagesOff", "DSMessagesQ", "DSInit",
