@@ -115,7 +115,7 @@ linearData = DSLinear[seeds,context];
 建议先运行 \path{06_mix_bubble_tree/main.wl}；它展示显式动量角色、\texttt{ssij/sEe} 初始化、参数重定义、总导数和 cycle/fixed 传播子数据。两条 cycle propagator 分别取
 \texttt{b[e]+n[e,1]+n[e,2]==0 (mod 2)} 的全偶子空间；fixed bridge 不属于圈积分，不进入 parity constraints。\path{03_single_massive_sunrise/main.wl} 使用共同外腿能量 \texttt{kE}、圈外动量 \texttt{kL}、两个在 massless 传播子交换下互换的 ISP，以及顶点/平行传播子 \texttt{symmetryRules}；它只生成全部 pinched-reachable sector 的 general IBP seeds 和 \texttt{\{ss11,kE\}} general 参数微分算符。连续指标保持符号，不进入连续撒点、\texttt{linearData}、Kira、DE 或 scaling。
 
-\path{01_mixed_bubble_workflow.wl} 只在内存中构造 pre-reduction plan；03 与 05 不运行 Kira，05 也不写初始化目录。\path{04_pure_massive_bubble_closed_loop/main.wl} 展示外部 Kira 回读、DE 与 scaling；\path{06_mix_bubble_tree/} 同时给出其 81-master 完整流程的轻量输入/结果摘要。examples 不含独立 expected，也不启动 reduction。真实输入工作树由 Windows Wolfram 写入仓库外目录，Kira 2.3 在 WSL 的对应目录运行；发布副本只保留可读输入与摘要，已删除 \texttt{init/}、\texttt{kira/}、database、save、日志、reduction table、cache 和 DE 运行目录。
+\path{01_mixed_bubble_workflow.wl} 只在内存中构造 pre-reduction plan；03 与 05 不运行 Kira，05 也不写初始化目录。\path{04_pure_massive_bubble_closed_loop/main.wl} 展示外部 Kira 回读、DE 与 scaling；\path{06_mix_bubble_tree/} 同时给出其 84-master 约化的轻量输入/结果摘要。examples 不含独立 expected，也不启动 reduction。真实输入工作树由 Windows Wolfram 写入仓库外目录，Kira 2.3 在 WSL 的对应目录运行；发布副本只保留可读输入与摘要，已删除 \texttt{init/}、\texttt{kira/}、database、save、日志、reduction table、cache 和 DE 运行目录。
 
 \subsection*{关于 AI 使用的说明}
 本 package 的 notation、功能与接口由作者设计；作者指导多种 agent 软件与大语言模型完成代码与文档的实现，并设计验证任务以确认所开发程序包的可靠性。验证任务均为计算结果的交叉验证，逐项说明其覆盖对象（IBP 关系、微分方程 DE、scaling 关系）与数据来源：
@@ -127,7 +127,6 @@ linearData = DSLinear[seeds,context];
     \href{https://arxiv.org/abs/2604.14549}{arXiv:2604.14549} 对上后再与程序包结果比较。
   \item \textbf{单圈 bubble 全流程}（IBP、DE、scaling）：外部 Kira 约化闭合（无 unreduced target），返回 19 个 master；两张 $19\times19$ DE 矩阵对 \texttt{\{ss11,P0\}} 保持符号，在记录的精确点上与文献
     \href{https://arxiv.org/abs/2604.14549}{arXiv:2604.14549} 的矩阵逐元相等（三种变量约定各 $361/361$）；scaling 恒等式符号成立（source-level $33/33$、active basis $19/19$）。
-  \item \textbf{mix bubble+tree 全流程}（IBP、DE、scaling）：81 个 master 的外部 Kira 约化闭合；六张 $81\times81$ DE 无残留符号；$81/81$ 个 source-level Euler scaling 与 IBP 恒等式严格为零，提供独立于数值约化的 scaling 证据；约化自身的 scaling 证书在记录的精确点给出。
   \item \textbf{通用公式对 naive 撒点}（IBP 与 DE）：程序包直接代入推导所得的通用公式，其输出与同一函数族 naive IBP 种子撒点的约化结果比较一致。
   \item \textbf{树图 DE 对 MadStree}（tree DE）：对 15 个 master 的 mixed 三顶点树图族，把 \texttt{dSIBP} 的参数导数送入 MadStree（\href{https://arxiv.org/abs/2610.28526}{arXiv:2610.28526}）对 $k_1,k_2,k_3,\texttt{sE}1,\texttt{sE}2$ 五个变量约化，75 个导数全部闭合，五张 $15\times15$ 矩阵与 MadStree 直接 $d\log$ 公式路线逐元相等。
 \end{itemize}
@@ -237,12 +236,10 @@ sector 的结构化 prefactor，不伪造 \texttt{b} 指标。解析 seed 不要
 
 本例对应的 formal Kira 输入与最终结果分别摘要在
 \path{06_mix_bubble_tree/kira_input_summary.wl} 和
-\path{06_mix_bubble_tree/kira_result_summary.wl}。fresh 输入含 178 个 seed templates、818217 条
-canonical relations、818297 条 formal equations、310769 个积分、81 个 active masters 和 676 个
-formal targets。WSL Kira 2.3 以 \texttt{w10*1} 在 $160.11\,\mathrm{s}$ 墙钟时间内完成，
-\texttt{unreduced=0}；六张 DE 均为 $81\times81$。reduction 的 scaling 证书只覆盖记录的 exact point，
-全符号齐次性另由 81/81 个 source-level Euler+time/q-IBP identities 提供。摘要不作为
-\texttt{DSKiraImport} 输入；完整工作树已在发布前删除。
+\path{06_mix_bubble_tree/kira_result_summary.wl}。最终 seed 范围为
+$a_{1,2}\in[0,5]$、$a_3\in[-1,1]$、$b_{1,2}\in[-4,7]$；输入含 167 个 seed templates、
+205434 条 canonical relations、85306 个积分和 903 个固定 targets，最终得到 84 个主积分。
+本例不运行 DE 或 scaling。摘要不作为 \texttt{DSKiraImport} 输入；完整工作树已在发布前删除。
 
 \subsection{方案一：保留两条外腿，把模长和选作坐标}
 

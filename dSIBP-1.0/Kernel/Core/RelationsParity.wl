@@ -125,17 +125,18 @@ applyMasslessParallelFoldCanonical[expr_, topo_Association] := Expand[
 
 
 (* 目标 sector 内两端重合的 masslessT 输出包落成 pinched 单槽：偶态 {b,0,0}
-   去掉 n 槽只留第一槽，奇态已由 applyMasslessEndpointCanonical 清零。必须放在
-   theta-fold 之后——提前改槽形会让含重合成员的 bundle 失效 masslessT 前置条件。
-   J 内自身的 pinched packs 决定目标 sector，不能读 source topology 的当前 endpoints。 *)
+   去掉 n 槽只留第一槽，奇态已由 applyMasslessEndpointCanonical 清零。timeOnly 的
+   fixedCoefficient 传播子同样适用，其第一槽是 "F"。必须放在 theta-fold 之后——提前改槽形
+   会让含重合成员的 bundle 失效 masslessT 前置条件。J 内自身的 pinched packs 决定目标 sector。 *)
 coincidentMasslessPackConvertIntegral[
    topo_Association,
    int : J[aList_, linePacks_, ispList_]
    ] := Module[
-   {repMap, newPacks = linePacks, changedQ = False, originalEndpoints, targetEndpoints, positions},
+   {repMap, newPacks = linePacks, changedQ = False, originalEndpoints, targetEndpoints, positions,
+    timeOnlyQ = Lookup[topo, "ibpMode", "full"] === "timeOnly"},
    repMap = integralTargetVertexRepresentativeMap[topo, int];
    Do[
-    If[Length[linePacks[[e]]] =!= 3 || ! lineIndexedPowerQ[topo["lines"][[e]]] ||
+    If[Length[linePacks[[e]]] =!= 3 || (! timeOnlyQ && ! lineIndexedPowerQ[topo["lines"][[e]]]) ||
       Lookup[topo["lines"][[e]], "massType", "massive"] =!= "massless",
      Continue[]
      ];
@@ -988,7 +989,8 @@ parityFoldedBundleMemberLineIndices[topo_Association] := Module[
 
 transportParityConstraint[topo_Association, constraint_Association] := Module[
    {expr, remainder, rootRules, issues = {}, line, vars, coefficients, cb, c1, c2,
-    integerShift, zeroShift, sourceZero, targetZero, delta, pinchedQ},
+    integerShift, zeroShift, sourceZero, targetZero, delta, pinchedQ,
+    timeOnlyQ = Lookup[topo, "ibpMode", "full"] === "timeOnly"},
    If[Lookup[constraint, "status", "valid"] === "invalid", Return[constraint]];
    expr = Expand[constraint["expression"]];
    remainder = constraint["remainder"];
@@ -999,11 +1001,11 @@ transportParityConstraint[topo_Association, constraint_Association] := Module[
     coefficients = Coefficient[expr, #] & /@ vars;
     {cb, c1, c2} = coefficients;
     If[And @@ (zeroQ /@ coefficients), Continue[]];
-    If[! lineIndexedPowerQ[line] && ! And @@ (zeroQ /@ coefficients),
+    If[! lineIndexedPowerQ[line] && ! timeOnlyQ && ! And @@ (zeroQ /@ coefficients),
      AppendTo[issues, <|"reason" -> "fixedLineInParity", "lineIndex" -> e, "coefficients" -> coefficients|>]
      ];
     pinchedQ = Lookup[line, "state", "full"] === "pinched" || Lookup[line, "packType", ""] === "pinched";
-    If[pinchedQ && lineIndexedPowerQ[line],
+    If[pinchedQ && (lineIndexedPowerQ[line] || timeOnlyQ),
      If[! TrueQ[Expand[c1 - c2] === 0],
       AppendTo[issues, <|"reason" -> "endpointWeightsNotTransportable", "lineIndex" -> e, "coefficients" -> coefficients|>],
       integerShift = linePinchBShift[line];
@@ -1015,9 +1017,12 @@ transportParityConstraint[topo_Association, constraint_Association] := Module[
        AppendTo[issues, <|"reason" -> "nonIntegerZeroPointRebase", "lineIndex" -> e, "delta" -> delta|>],
        expr = Expand[
          expr - cb vars[[1]] - c1 vars[[2]] - c2 vars[[3]] +
-          cb (bS[line["id"]] - integerShift + delta) + c1
+          cb (If[lineIndexedPowerQ[line], bS[line["id"]], 0] - integerShift + delta) + c1
          ]
        ]
+      ],
+     If[timeOnlyQ && ! lineIndexedPowerQ[line],
+      expr = Expand[expr - cb vars[[1]]]
       ]
      ],
     {e, topo["nE"]}

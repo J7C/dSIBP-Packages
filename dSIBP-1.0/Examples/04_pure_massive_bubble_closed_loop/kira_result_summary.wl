@@ -14,7 +14,7 @@
   "status" -> "passed",
   "case" -> "pureMassiveBubble",
   "packageVersion" -> "1.0",
-  "evidenceRelease" -> "025.0",
+  "evidenceRelease" -> "030",
   "generationOptions" -> {
     SeedEnvelopeCut -> Automatic, TotalPowerLimit -> None
   },
@@ -25,7 +25,7 @@
     "version" -> "2.3 (Git: 2.3)",
     "runtime" -> "WSL",
     "parallelConfig" -> "w10*1",
-    "wallTimeSeconds" -> 5,
+    "wallTimeSeconds" -> 7,
     "exitStatus" -> 0
   |>,
   "masterIDs" -> Range[19],
@@ -45,7 +45,7 @@
     "P0" -> {361, 361}, "ip0" -> {361, 361}, "ks" -> {361, 361}
   |>,
   "formalValidationManifestSHA256" ->
-    "8BEF56D1361F01086468A1EAF7B26B733BDFA73E3E5C4C92B8281D87021542F8",
+    "78E750B53834CE591C7820B5CB9D6E20898EA19D55D6B91584D92D758CF7A712",
   "formalValidationReductionSHA256" ->
     "57943724084180761C66FC756C0E38714624784B7877D97A2B3051188DF491FF",
   "intermediateArtifactsRetainedInRepository" -> False

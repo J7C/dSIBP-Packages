@@ -32,7 +32,7 @@
   "fixedTreeBridgeLine" -> 3,
   "fixedTreeBridgeExcludedFromParity" -> True,
   "formalEnvelope" -> {
-    {a[v1], 0, 5}, {a[v2], 0, 5}, {a[v3], 0, 0},
+    {a[v1], 0, 5}, {a[v2], 0, 5}, {a[v3], -1, 1},
     {b[1], -4, 7}, {b[2], -4, 7}
   },
   "targetRule" -> "903 fixed integrals: independent a[v3]=0, nonnegative continuous slots, total absolute power <= 5",
@@ -44,8 +44,8 @@
   },
   "symbolicCoefficientVariables" -> {beta1, beta2},
   "seedTemplateCount" -> 167,
-  "canonicalEquationCount" -> 68418,
-  "integralCount" -> 35412,
+  "canonicalEquationCount" -> 205434,
+  "integralCount" -> 85306,
   "activeMasterCount" -> 84,
   "formalTargetCount" -> 903,
   "a3TargetExtension" -> <|

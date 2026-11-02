@@ -97,17 +97,16 @@ directory is part of the package.
 | `02_function_system_hankel.wl` | Hankel / function-system input and the associated state transforms. |
 | `03_single_massive_sunrise/` | Two-loop single-massive sunrise: general seeds and the `{ss11, kE}` parameter-derivative operators. |
 | `04_pure_massive_bubble_closed_loop/` | Pure massive bubble with target envelope `a in [0,3]`, `b in [-3,5]`: formal Kira input, external reduction, readback, the 19-dimensional DE and scaling. Other parameters use exact rational values while `dsc2` and `ip0` remain symbolic during reconstruction. |
-| `05_tree_two_vertex_time_ibp/` | Two-vertex tree time IBP, the naive DE and the massless PendingRederivation gate. |
-| `06_mix_bubble_tree/` | Mixed cycle/bridge topology: momentum roles, massless convention, pinch terms, and the 84-master Kira/DE record. |
+| `05_tree_two_vertex_time_ibp/` | Two-vertex tree time IBP and the naive DE. |
+| `06_mix_bubble_tree/` | Mixed cycle/bridge topology: momentum roles, massless convention, pinch terms, and the 84-master Kira reduction record. |
 
 ```powershell
 wolframscript -file Examples/01_mixed_bubble_workflow.wl
 ```
 
 `03` deliberately stops at seeds and operators; it never enters sampled relations, Kira, DE or
-scaling. `04` requires a fresh external reduction. `06` retains its 81-master 024.0 reference
-summary; reproducing that uncut system with the current package requires both cut options set
-to `None`.
+scaling. `04` requires a fresh external reduction. `06` retains its 84-master summary with seed
+envelope `a1,a2 in [0,5]`, `a3 in [-1,1]` and `b1,b2 in [-4,7]`; it does not run DE or scaling.
 
 ## Documentation
 

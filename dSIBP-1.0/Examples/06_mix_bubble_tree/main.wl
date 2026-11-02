@@ -309,6 +309,9 @@ summary = <|
    "messagesDisabledQ" -> messagesDisabledQ,
    "contextInfoAvailable" -> AssociationQ[contextInfo],
    "kiraInputSummaryCase" -> Lookup[kiraInputSummary, "case", "missing"],
+   "kiraInputA3Range" -> Lookup[kiraInputSummary, "formalEnvelope", {}][[3]],
+   "kiraInputEquationCount" -> Lookup[kiraInputSummary, "canonicalEquationCount", Missing["NotAvailable"]],
+   "kiraInputIntegralCount" -> Lookup[kiraInputSummary, "integralCount", Missing["NotAvailable"]],
    "kiraResultSummaryStatus" -> Lookup[kiraResultSummary, "status", "missing"],
    "kiraResultMasterCount" -> Lookup[kiraResultSummary, "masterCount", Missing["NotAvailable"]]
    |>;
@@ -357,6 +360,9 @@ If[! And[
     summary["messagesDisabledQ"],
     summary["contextInfoAvailable"],
     summary["kiraInputSummaryCase"] === "mixBubbleTree",
+    summary["kiraInputA3Range"] === {a[v3], -1, 1},
+    summary["kiraInputEquationCount"] === 205434,
+    summary["kiraInputIntegralCount"] === 85306,
     summary["kiraResultSummaryStatus"] === "passed",
     summary["kiraResultMasterCount"] === 84
     ], Exit[1]];

@@ -13,7 +13,7 @@
   "schema" -> "dsibp_example_kira_input_summary_v1",
   "case" -> "pureMassiveBubble",
   "packageVersion" -> "1.0",
-  "evidenceRelease" -> "025.0",
+  "evidenceRelease" -> "030",
   "generationOptions" -> {
     SeedEnvelopeCut -> Automatic, TotalPowerLimit -> None
   },
@@ -21,7 +21,7 @@
     {a[v1], 0, 3}, {a[v2], 0, 3}, {b[1], -3, 5}, {b[2], -3, 5}
   },
   "packageSHA256" ->
-    "6B043F0B1C0BEB6687D03A5D993896EA894481A617D8251D014F325F6733EA82",
+    "7BEFE919D431A366DC275FC29733E191660F12D1209B472F39743488831AB97E",
   "executionBoundary" -> <|
     "wolframInputDirectory" -> "external workspace selected by DSIBP_KIRA_WORKSPACE",
     "kiraRuntime" -> "WSL",

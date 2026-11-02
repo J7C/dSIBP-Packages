@@ -25,8 +25,8 @@
   |>,
   "masterCount" -> 84,
   "targetCount" -> 903,
-  "canonicalEquationCount" -> 68418,
-  "integralCount" -> 35412,
+  "canonicalEquationCount" -> 205434,
+  "integralCount" -> 85306,
   "selectedEquationCount" -> 15874,
   "unreducedCount" -> 0,
   "mastersBySector" -> <|
@@ -44,7 +44,7 @@
   |>,
   "deStatus" -> "notRun",
   "scalingStatus" -> "notRun",
-  "reductionSHA256" -> "2D9DB31CF05FA483781181373BDA9DBFDC7121B0E2C2672D2917596EED823871",
+  "reductionEvidence" -> "example-test-ledger/029_example6.md",
   "mastersSHA256" -> "87B39955410DDE0A28A0A805645722A9E00E37D4B701B9378C357FCAAD60224B",
   "intermediateArtifactsRetainedInRepository" -> False
 |>

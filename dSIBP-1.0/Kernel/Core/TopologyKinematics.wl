@@ -381,8 +381,8 @@ ds016RequiredIndependentMomentumMagnitudes[case_Association, lines_List, graphAu
    loopMomenta = Lookup[routingAudit, "loopMomenta", {}];
    mode = Lookup[routingAudit, "ibpMode", "invalid"];
    zeroLoopQ[expr_] := And @@ (ds016ZeroQ[Coefficient[Expand[expr], #]] & /@ loopMomenta);
-   (* full 模式只把 graph bridge 当作独立模长；timeOnly 中所有 active line 都退出
-      loop-IBP 表示，因此它们的模长必须由用户的独立外动量列表覆盖。 *)
+   (* full 模式只把 graph bridge 当作独立模长；timeOnly 虽不为 active line 生成
+      loop-IBP，含 loopMomenta 的模长仍是积分变量，只有无圈模长才由用户列表覆盖。 *)
    candidateLines = If[
      mode === "timeOnly",
      Lookup[graphAudit, "activeLineIndices", {}],
@@ -395,7 +395,7 @@ ds016RequiredIndependentMomentumMagnitudes[case_Association, lines_List, graphAu
      ];
    DeleteDuplicates@Select[
      ds016CanonicalMomentumSign /@ Join[lineCandidates, extLegCandidates, phaseCandidates],
-     ! ds016ZeroQ[#] && (mode === "timeOnly" || zeroLoopQ[#]) &
+     ! ds016ZeroQ[#] && zeroLoopQ[#] &
      ]
    ];
 
