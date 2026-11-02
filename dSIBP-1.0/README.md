@@ -40,7 +40,7 @@ workflow, together with the default options of each high-level entry point.
 | --- | --- |
 | Initialization | `DSInit`, `DSInfo`, `DSKinematics`, `DSParameterNotation`, `DSRedefineParameters` |
 | Loop workflow | `DSSeeds`, `DSAllSeeds`, `DSSeedGroups`, `DSSeedGroupMetadata`, `DSMetaSeedRange`, `DSGenerateIBP`, `DSLinear`, `DSReorderIntegrals`, `DSUserMI`, `DSKiraPlan`, `DSKiraExport`, `DSKiraImport`, `DSDE`, `DSScaleCheck` |
-| Pure-time workflow | `DSTreeSeeds`, `repIterative`, `DSTreeNaiveIBP`, `DSTreeNaiveDE`, `DSTreeDLogDE` |
+| Pure-time workflow | `DSTreeNaiveIBP`, `DSTreeNaiveDE` |
 | Atomic operations | `dtau`, `dqq`, `dqk`, `ds`, `rep2innerform`, `rep2outform`, `rep2Integrand`, `symmetry`, `repSymmetry0` |
 | Messages | `DSMessagesOn`, `DSMessagesOff`, `DSMessagesQ` |
 | Introspection | `DSPublicAPI` |
@@ -97,7 +97,7 @@ directory is part of the package.
 | `02_function_system_hankel.wl` | Hankel / function-system input and the associated state transforms. |
 | `03_single_massive_sunrise/` | Two-loop single-massive sunrise: general seeds and the `{ss11, kE}` parameter-derivative operators. |
 | `04_pure_massive_bubble_closed_loop/` | Pure massive bubble with target envelope `a in [0,3]`, `b in [-3,5]`: formal Kira input, external reduction, readback, the 19-dimensional DE and scaling. Other parameters use exact rational values while `dsc2` and `ip0` remain symbolic during reconstruction. |
-| `05_tree_two_vertex_time_ibp/` | Two-vertex tree time IBP, the naive DE and the formula route. |
+| `05_tree_two_vertex_time_ibp/` | Two-vertex tree time IBP, the naive DE and the massless PendingRederivation gate. |
 | `06_mix_bubble_tree/` | Mixed cycle/bridge topology: momentum roles, massless convention, pinch terms, and the 84-master Kira/DE record. |
 
 ```powershell
