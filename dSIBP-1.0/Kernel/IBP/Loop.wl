@@ -15,10 +15,10 @@ Options[DSLinear] = {
    };
 
 DSSeeds::noinit = "DSSeeds 需要有效的 DSInit context。";
-DSSeeds::failed = "canonical seed 生成未通过门禁：`1`。";
+DSSeeds::failed = "完整 IBP 种子集生成未通过门禁：`1`。";
 DSSeeds::capability = "当前 context 不具备 seed 生成所需能力：`1`。";
 DSLinear::noinit = "DSLinear 需要有效的 DSInit context。";
-DSLinear::badseed = "DSLinear 需要 DSSeeds 返回的 canonical seed Association。";
+DSLinear::badseed = "DSLinear 需要 DSSeeds 返回的完整 IBP 种子集 Association。";
 DSLinear::badmode = "LinearSystemMode 只允许 \"symbolic\" 或 \"numeric\"，收到 `1`。";
 DSLinear::failed = "linearData 生成未通过门禁：`1`。";
 DSLinear::capability = "当前 context 不具备 linearData 生成所需能力：`1`。";
@@ -47,7 +47,7 @@ DSLinear[seedData_Association, context_: Automatic, opts : OptionsPattern[]] := 
     Message[DSLinear::noinit]; dsErrorPrint["请传入与 seed 同源的 DSInit context。 Pass the DSInit context from which the seeds originated."]; Return[<|"status" -> "failed", "reason" -> "missingContext"|>]
     ];
     If[! KeyExistsQ[seedData, "completeCanonicalQ"],
-     Message[DSLinear::badseed]; dsErrorPrint["输入不是 canonical seed batch。 The input is not a canonical seed batch."]; Return[<|"status" -> "failed", "reason" -> "notCanonicalSeedBatch"|>]
+     Message[DSLinear::badseed]; dsErrorPrint["输入不是完整 IBP 种子批次。 The input is not a complete set of IBP seeds."]; Return[<|"status" -> "failed", "reason" -> "notCanonicalSeedBatch"|>]
      ];
     If[Lookup[Lookup[seedData, "dSIBPContextSummary", <||>], "inputHash", Missing["seedHash"]] =!=
       Lookup[resolved, "inputHash", Missing["contextHash"]],

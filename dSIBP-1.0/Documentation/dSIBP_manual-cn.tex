@@ -48,7 +48,7 @@
 
 \section{快速开始与当前边界}
 
-本 package 生成 dS 圈图的 canonical IBP seed，并把关系转换为后端中立的 \texttt{linearData}。它支持 topology-driven 的任意圈数、任意拓扑以及 massive/massless 混合内部传播子；唯一加载入口是发布目录内的标准模块树：
+本 package 生成 dS 圈图的完整 IBP 种子集，并把关系转换为后端中立的 \texttt{linearData}。它支持 topology-driven 的任意圈数、任意拓扑以及 massive/massless 混合内部传播子；唯一加载入口是发布目录内的标准模块树：
 \begin{verbatim}
 dSIBP/
   dSIBP.m
@@ -79,7 +79,7 @@ Needs["dSIBP`"];
 \begin{enumerate}
   \item 输入顶点、内部传播子、圈/外动量基、ISP、零点和必要的数值规则；
   \item 用 \texttt{DSInit} 验证输入、ISP 坐标、函数系统与 pinched-reachable sectors；
-  \item 用 \texttt{DSSeeds} 生成普通 canonical seed batch，并从稳定字段 \texttt{"allSeeds"} 或 \texttt{DSAllSeeds} 取得全部 sector/generator 的一维 general 模板；massive 完整遍历顶点四态，masslessT 只生成 $n_2=0$ 的 $00/10$ quotient representatives，平行束随后折叠到 canonical parity 形式（\S\ref{manualThetaFold}）；
+  \item 用 \texttt{DSSeeds} 生成普通完整 IBP 种子批次，并从稳定字段 \texttt{"allSeeds"} 或 \texttt{DSAllSeeds} 取得全部 sector/generator 的一维 general 模板；massive 完整遍历顶点四态，masslessT 只生成 $n_2=0$ 的 $00/10$ quotient representatives，平行束随后折叠到 canonical parity 形式（\S\ref{manualThetaFold}）；
   \item 模板层立即执行 EOM/symmetry/canonical；再用唯一入口 \texttt{DSGenerateIBP} 显式展开连续指标；
   \item 用 \texttt{DSLinear} 把撒点后的 canonical batch 构造成后端中立 \texttt{linearData}；必要的小规模数值规则只在这一层代入；
   \item 按需调用 \texttt{DSKiraExport}；用户在 package 外运行 reduction；
@@ -1049,7 +1049,7 @@ clearIBPTopologyContext[];
 
 \section{Seed、linearData 与 serializer}
 
-canonical seed 必须满足：
+完整 IBP 种子集必须满足：
 \begin{itemize}
   \item 每个实际 sector 都有全部 active time 和 $L(L+K)$ momentum generators；
   \item massive 无 $n\ge2$；
@@ -1125,7 +1125,8 @@ ibp2 = DSGenerateIBP[allSeeds,{-1,1},SeedEnvelopeCut->{10,4,5,4}];
 \end{verbatim}
 设一个 seed 点中全部正连续槽之和为 $C_+$，全部负连续槽绝对值之和为 $C_-$，$T=C_++C_-$。
 当 $C_+\geq C_-$ 时要求 $T\leq Ex_1$ 且 $C_-\leq Ex_2$；否则要求 $T\leq Ex_3$ 且 $C_+\leq Ex_4$。
-缺省对含 $N$ 个连续槽的组使用 $\{N+3,4,4,4\}$。显式四元列表的每一项都可写整数或
+每组分别记 $a$ 类槽位数为 $N_a$，$b$ 与 $bS$ 类槽位数为 $N_b$，并取 $N=\max(N_a,N_b)$；
+缺省阈值为 $\{Ex_i\}=\{N+3,4,4,4\}$。ISP 不计入 $N$。显式四元列表的每一项都可写整数或
 \texttt{Automatic}，后者只替换对应缺省项。筛点先于 parity 和模板代入，返回的
 \texttt{seedEnvelopeCut} 字段保存解析参数、保留/跳点数和空组信息；\texttt{None} 恢复不截断的点域。
 

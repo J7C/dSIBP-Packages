@@ -3976,7 +3976,7 @@ makeTopologyData[case_Association, OptionsPattern[]] := Module[
    ];
 
 (* ::Chapter:: *)
-(*统一 canonical seed 与 Kira 导出门禁*)
+(*统一完整 IBP 种子集与 Kira 导出门禁*)
 
 (* 本章只合并已经生成的 seed，并给出 Kira 前的 readiness 判断。
    若 time/momentum seed 仍有 pending features 或 forbidden n，Kira exporter 必须返回 notReady，不写文件。 *)

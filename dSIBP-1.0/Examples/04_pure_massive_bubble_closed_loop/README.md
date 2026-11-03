@@ -4,7 +4,7 @@
 
 `reference_user_mi_basis.wl` 只保存 reference 的 19 个候选线性组合（全部 active，没有辅助关系）、`activeIndices=Range[19]`、physical `ks=ss11`、导数变量和 19 个统一 scaling degrees。`main.wl` 把这些数据直接交给 package 的 `DSUserMI`；线性秩、可逆 `J/userMI` 映射、backend ID、导数闭包和 manifest 均由 package 生成，example 不实现自己的 basis adapter。`dlog_basis.wl` 只保留 reference-readable 记号，不应单独作为 formal basis。
 
-当前 target 包络为 `a[v1],a[v2] in [0,3]`、`b[1],b[2] in [-3,5]`，直接覆盖 19 项 basis 及导数支撑；生成时使用 `SeedEnvelopeCut->Automatic` 与 `TotalPowerLimit->None`。fresh 结果为 20228 条生成 IBP、2442 条 canonical relations、2460 条 formal equations、1317 个源积分、300 targets。Kira 的 24 个全局 masters 中有 19 个 active masters 和 5 个额外全局项；验收以目标 RHS 为准，19 维 DE 无残留，post-Kira 23/23、三套 reference 矩阵各 361/361。复现旧未截断输入时须显式关闭两个截断选项。
+当前 target 包络为 `a[v1],a[v2] in [0,3]`、`b[1],b[2] in [-3,5]`，直接覆盖 19 项 basis 及导数支撑；生成时使用 `SeedEnvelopeCut->Automatic` 与 `TotalPowerLimit->None`。当前结果为 10952 条生成 IBP、2442 条 canonical relations、2460 条 formal equations、1317 个源积分、300 targets。Kira 的 100 个全局 masters 中有 19 个 active masters 和 81 个额外全局项；验收以目标 RHS 为准，19 维 DE 无残留，post-Kira 23/23、三套 reference 矩阵各 361/361。复现旧未截断输入时须显式关闭两个截断选项。
 
 本仓库没有在该 example 目录内运行 Kira。正式检验由 Windows Wolfram 在仓库外工作区生成输入，再由 WSL Kira 2.3 运行。发布副本已删除 `init/`、`kira/`、database、save、日志、reduction table、cache 和 DE 运行目录，只保留 `kira_input_summary.wl` 与 `kira_result_summary.wl` 两份轻量摘要。
 

@@ -329,8 +329,10 @@ ibp2 = DSGenerateIBP[allSeeds,{-1,1},SeedEnvelopeCut->{10,4,5,4}];
 \end{verbatim}
 Let $C_+$ be the sum of positive continuous slots, $C_-$ the absolute sum of negative
 slots, and $T=C_++C_-$. For $C_+\geq C_-$, acceptance requires $T\leq Ex_1$ and
-$C_-\leq Ex_2$; otherwise it requires $T\leq Ex_3$ and $C_+\leq Ex_4$. The default for a
-group of $N$ continuous slots is $\{N+3,4,4,4\}$. Every item of an explicit four-tuple may
+$C_-\leq Ex_2$; otherwise it requires $T\leq Ex_3$ and $C_+\leq Ex_4$. For each group,
+let $N_a$ be the number of $a$ slots and $N_b$ the number of $b$ and $bS$ slots, and set
+$N=\max(N_a,N_b)$. The default is $\{Ex_i\}=\{N+3,4,4,4\}$. ISP indices are not counted
+in $N$. Every item of an explicit four-tuple may
 be an integer or \texttt{Automatic}, in which case only that default item is substituted.
 
 The returned \texttt{seedEnvelopeCut} metadata records the resolved parameters, accepted
@@ -409,7 +411,7 @@ propagators, and equal vertex energies. Its target envelope is $a_v\in[0,3]$ and
 $b_e\in[-3,5]$, covering the 19-element basis and all derivative support. The example uses
 \texttt{SeedEnvelopeCut->Automatic} and \texttt{TotalPowerLimit->None}.
 
-A fresh run generates 20228 IBP relations before linearization, followed by 2442 canonical
+The current run generates 10952 IBP relations before linearization, followed by 2442 canonical
 relations, 2460 formal equations, and 1317 source integrals. Kira reduces all 300 requested
 targets, leaving none unreduced. The active basis has 19 masters; five additional global
 masters do not appear on the right-hand sides of the requested reductions. Import,

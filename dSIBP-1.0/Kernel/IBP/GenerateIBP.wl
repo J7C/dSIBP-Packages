@@ -717,9 +717,12 @@ dsReportDerivedSeedRanges[rangeAudits_List, setting_: Automatic] := Module[
 
 (* 主导方向截断作用在 seed 点域本身：C_+ 为全部正连续槽值之和，C_- 为全部负槽
    绝对值之和，T=C_++C_-。C_+ >= C_- 时要求 T<=Ex1 且 C_-<=Ex2；C_- > C_+ 时要求
-   T<=Ex3 且 C_+<=Ex4。Ex1 缺省为该组连续槽位数 N+3，Ex2/Ex3/Ex4 缺省 4；N 逐组
-   取 group 的连续指标个数。筛点在 parity 预筛与模板代入之前执行，快慢两条生成
+   T<=Ex3 且 C_+<=Ex4。Ex1 缺省为 N+3，Ex2/Ex3/Ex4 缺省 4；N 逐组取 a 与 b/bS
+   两类槽位数的较大者，ISP 不计入。筛点在 parity 预筛与模板代入之前执行，快慢两条生成
    路径共享同一筛点结果；与 TotalPowerLimit（canonical 支撑级盒∩总幂判定）正交。 *)
+
+dsSeedCutSlotCount[indices_List] := Max[Count[indices, _a], Count[indices, _b | _bS]];
+
 
 dsSeedCutDefaultSpec[slotCount_Integer] := {slotCount + 3, 4, 4, 4};
 
@@ -1204,8 +1207,8 @@ DSGenerateIBP[seeds_, specs__List, OptionsPattern[]] := Module[
            Thread[groupIndices -> #] & /@ Tuples[valueLists]];
          If[! seedCutActiveQ,
           keptRules = allRules,
-          cutSpecs = dsSeedCutResolve[seedCutSpec, Length[groupIndices]];
-          seedCutSpecBySlotCount[Length[groupIndices]] = cutSpecs;
+          cutSpecs = dsSeedCutResolve[seedCutSpec, dsSeedCutSlotCount[groupIndices]];
+          seedCutSpecBySlotCount[dsSeedCutSlotCount[groupIndices]] = cutSpecs;
           keptRules = Select[allRules, dsSeedPointInCutQ[Last /@ #, cutSpecs] &]];
          If[allRules =!= {} && keptRules === {},
           AppendTo[seedCutEmptyGroups, ordinal]];
