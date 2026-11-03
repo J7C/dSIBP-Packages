@@ -46,4 +46,4 @@ Thumbs.db
 *~
 
 # C++ engine build output
-FlintNDE/engine/build/
+**/engine/build/
