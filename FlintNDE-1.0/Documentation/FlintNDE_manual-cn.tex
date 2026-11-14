@@ -1336,6 +1336,22 @@ dlog 系统也可以逐 letter 装配。\texttt{letter\_partial\_fraction\_syste
 $-t^{-2}\,d\log[N/D](1/t)\,dt=d\log[N^{*}/D^{*}]-(\deg N-\deg D)\,d\log t$ 在 letter 层完成
 $x\mapsto1/t$ 拉回，不再对整矩阵做稠密反演。根隔离本身以 \texttt{isolated\_roots} 公开。
 
+在奇点中心，局部 Laurent 数据同样可以在 letter 层装配。
+\texttt{letter\_regular\_singular\_system} 把每条标量 letter 在 $\mathbb Q(i)$ 上精确展开为
+$d\log[N/D](p+z)=(\operatorname{ord}_pN-\operatorname{ord}_pD)\,z^{-1}+\sum_ma_mz^m$
+（解析部分在剥离零次幂后用标量商递推 $\tilde N'/\tilde N-\tilde D'/\tilde D$ 得到），再整块累加
+$R_0=\sum_a(\operatorname{ord}_pN_a-\operatorname{ord}_pD_a)R_a$ 与
+$A_m=\sum_aa_{a,m}R_a$，替代稠密路线的逐矩阵元通分平移。该路线既不用次数门禁也不用根隔离，
+因此覆盖任意次数的 letter；零分子 letter 不产生任何贡献，零分母 fail closed，普通点中心的
+门禁与稠密路线一致（\texttt{allow\_ordinary}）。\texttt{build\_letter\_local\_solution\_basis}
+把该系统送入同一套 Frobenius 与幂--log 机制，保持
+\texttt{regular\_singular\_power\_log} 方法串并在 manifest 中记录
+\texttt{local\_construction} 来源字段；\texttt{transport\_frobenius\_boundaries\_refined}
+通过 \texttt{fast\_letters} 接收 letter 清单：起点局部基改在 letter 层装配，普通段在次数与
+根隔离门禁通过时走极点递推快速路径，门禁不过则回退稠密解析系统（letter 局部基仍然生效）。
+\texttt{fast\_letters} 与 \texttt{numerical\_roots} 互斥，且对无穷远路径（工作变量为反演的
+$t=1/x$）直接拒绝。
+
 \subsubsection{普通点工作流}
 \label{subsec:transport-api}
 

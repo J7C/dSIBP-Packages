@@ -653,20 +653,26 @@ def run_curve(
         )
 
     # 第三步：按坐标收集采样值。被前瞻规则选为节点的用户点不在
-    # sample_results 里，其值取主链该节点快照；两来源以 40 位坐标串对齐。
-    values_by_key: dict[str, Any] = {}
+    # sample_results 里，其值取主链该节点快照。sample 坐标串的序列化位数随
+    # 请求工作精度自适应（含球半径），与固定 40 位串无法逐字对齐，故两侧统一
+    # 取中点 float 作对齐键；网格点最小间隔远大于 float 分辨率，无碰撞。
+    def _coordinate_key(coordinate: str) -> float:
+        midpoint = coordinate.strip()[1:].split(" +/- ")[0]
+        return float(midpoint)
+
+    values_by_key: dict[float, Any] = {}
     for record in curve["sample_results"]:
-        values_by_key[record["coordinate"]] = record
+        values_by_key[_coordinate_key(record["coordinate"])] = record
     for node, snapshot in zip(plan.nodes, curve["primary_snapshots"]):
         values_by_key.setdefault(
-            node.str(40),
+            float(node.real),
             {"value": snapshot, "evaluation_algorithm": "node_snapshot"},
         )
     samples = []
     max_relative_radius = 0.0
     match_relative_difference = None
     for rstar, x_float in zip(rstar_grid[1:], x_grid[1:]):
-        record = values_by_key[acb(repr(x_float)).str(40)]
+        record = values_by_key[x_float]
         u_value = record["value"][0, 0]
         x_value = acb(repr(x_float))
         t_value = x_value - 1

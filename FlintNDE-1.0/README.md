@@ -98,7 +98,12 @@ factors, certified `acb` ball isolation above that, algebraic roots carried as c
 envelopes), `letter_partial_fraction_system` assembles the `P(x) + Σ R_j/(x - p_j)` fast system
 with ball-containment pole merging, `letter_system_matches_reference` cross-checks it against the
 full rational route, and `inverted_letter_system` performs the `x → 1/t` infinity inversion on the
-letter coefficients alone.
+letter coefficients alone. When a certified letter list is available, `letter_regular_singular_system`
+and `build_letter_local_solution_basis` assemble the singular local data — residue and analytic
+coefficients — from per-letter scalar dLog Laurent expansions multiplied into the residue matrices
+instead of expanding each rational matrix entry, and `transport_frobenius_boundaries_refined(...,
+fast_letters=...)` uses that basis for boundary batches; paths whose working variable is the
+inverted infinity variable are refused fail-closed.
 
 ## Paths, save points and singularities
 

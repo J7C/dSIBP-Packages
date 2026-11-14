@@ -406,14 +406,21 @@ def series_quotient(
     denominator_zero = denominator.coefficient(0)
     if denominator_zero.is_zero:
         raise ZeroDivisionError("Taylor quotient denominator vanishes")
+    numerator_coefficients = numerator.coefficients()
+    denominator_coefficients = denominator.coefficients()
+    denominator_bound = denominator.degree
     result: list[GaussianRational] = []
     for degree in range(order):
-        right = numerator.coefficient(degree)
-        for denominator_degree in range(1, degree + 1):
-            right -= denominator.coefficient(denominator_degree) * result[
+        right = (
+            numerator_coefficients[degree]
+            if degree < len(numerator_coefficients)
+            else GaussianRational()
+        )
+        for denominator_degree in range(1, min(degree, denominator_bound) + 1):
+            right -= denominator_coefficients[denominator_degree] * result[
                 degree - denominator_degree
             ]
-        result.append(right / denominator_zero)
+        result.append(GaussianRational() if right.is_zero else right / denominator_zero)
     return result
 
 

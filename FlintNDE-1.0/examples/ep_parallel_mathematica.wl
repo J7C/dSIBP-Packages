@@ -16,13 +16,8 @@ If[! DirectoryQ[FileNameJoin[{packageRoot, "flintnde"}]],
     Print["no versions/FlintNDE-* directory beside examples/"];
     Abort[]
   ];
-  versionKey[name_] := Module[{parts},
-    parts = StringPadLeft[StringSplit[
-      StringReplace[StringDrop[name, StringLength["FlintNDE-"]],
-        StartOfString ~~ "v" -> ""], "."], 4, "0"];
-    StringRiffle[Join[parts,
-      ConstantArray["0000", Max[0, 4 - Length[parts]]]], "."]
-  ];
+  versionKey[name_] := ToExpression /@ StringSplit[
+    StringDrop[name, StringLength["FlintNDE-"]], "."];
   packageRoot = ExpandFileName[Last[SortBy[versionDirs, versionKey]]]
 ];
 versionDirectory = packageRoot;

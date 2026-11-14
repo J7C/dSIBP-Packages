@@ -44,7 +44,7 @@ dSIBP-Packages/
 | --- | --- | --- | --- |
 | dSIBP | `030.0` | `1.0` | `dSIBP-1.0/` |
 | MadStree | `v0.21` | `1.0` | `MadStree-1.0/` |
-| FlintNDE | `v1.02` | `1.0` | `FlintNDE-1.0/` |
+| FlintNDE | `0.9` | `1.0` | `FlintNDE-1.0/` |
 
 Each package is self-contained and is loaded from its own directory; nothing is read through a
 shared parent path.

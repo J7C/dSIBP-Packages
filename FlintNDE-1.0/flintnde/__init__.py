@@ -46,6 +46,7 @@ from .letters import (
     inverted_letter_system,
     isolated_roots,
     letter_partial_fraction_system,
+    letter_regular_singular_system,
     letter_system_matches_reference,
 )
 from .frobenius import (
@@ -64,6 +65,7 @@ from .fuchsian import (
 from .local_solutions import (
     LocalReductionError,
     LocalSolutionBasis,
+    build_letter_local_solution_basis,
     build_local_solution_basis,
     build_numerical_local_solution_basis,
 )
@@ -182,6 +184,7 @@ __all__ = [
     "planned_path_from_json",
     "planned_path_to_json",
     "build_frobenius_manifest",
+    "build_letter_local_solution_basis",
     "build_local_solution_basis",
     "build_numerical_local_solution_basis",
     "build_adaptive_path",
@@ -203,6 +206,7 @@ __all__ = [
     "inverted_letter_system",
     "isolated_roots",
     "letter_partial_fraction_system",
+    "letter_regular_singular_system",
     "letter_system_matches_reference",
     "analyze_singularities",
     "initialize_output_layout",

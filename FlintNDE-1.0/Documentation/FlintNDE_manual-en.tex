@@ -1683,6 +1683,27 @@ $x\mapsto1/t$ pullback letter by letter through the identity
 $-t^{-2}\,d\log[N/D](1/t)\,dt=d\log[N^{*}/D^{*}]-(\deg N-\deg D)\,d\log t$, instead of densely
 inverting the full matrix.  The root isolation itself is public as \texttt{isolated\_roots}.
 
+At a singular center the local Laurent data is likewise assembled at letter level.
+\texttt{letter\_regular\_singular\_system} expands each scalar letter exactly as
+$d\log[N/D](p+z)=(\operatorname{ord}_pN-\operatorname{ord}_pD)\,z^{-1}+\sum_ma_mz^m$
+over $\mathbb Q(i)$ (analytic part via the scalar series quotient
+$\tilde N'/\tilde N-\tilde D'/\tilde D$ after stripping vanishing orders) and accumulates
+$R_0=\sum_a(\operatorname{ord}_pN_a-\operatorname{ord}_pD_a)R_a$ and
+$A_m=\sum_a a_{a,m}R_a$, replacing the per-entry common-denominator shift of the dense
+route.  This path uses neither the degree gate nor root isolation, so it covers
+arbitrary-degree letters; zero-numerator letters contribute nothing, a zero denominator
+fails closed, and the ordinary-center gate matches the dense route
+(\texttt{allow\_ordinary}).  \texttt{build\_letter\_local\_solution\_basis} feeds this
+system into the same Frobenius and power-log machinery, keeping the
+\texttt{regular\_singular\_power\_log} method string with a \texttt{local\_construction}
+manifest provenance field, and \texttt{transport\_frobenius\_boundaries\_refined} accepts
+the letter list through \texttt{fast\_letters}: the start basis is then assembled at
+letter level while ordinary segments take the pole-recurrence fast path whenever the
+degree and root-isolation gates pass, falling back to the dense analytic system otherwise
+with the letter basis still in force.  \texttt{fast\_letters} is mutually exclusive with
+\texttt{numerical\_roots} and is rejected on infinity paths, whose working variable is the
+inverted $t=1/x$.
+
 \subsubsection{Ordinary-point workflow}
 \label{subsec:transport-api}
 

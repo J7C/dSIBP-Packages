@@ -4,7 +4,9 @@ letter 记录 ``{"numerator": [...], "denominator": [...], "residue": [[...]]}``
 ``d Log[N(x)/D(x)]·R`` 的 dlog 贡献。实现思路：先在 letter 层完成根隔离（代数根
 一律取认证小数包络，不进符号层）与整块留数装配，输出可作输运快速系统的
 ``PartialFractionSystem``；``x→1/t`` 反演同样只对 letter 系数做倒数多项式替换并
-补一条 ``dlog t`` letter 吸收幂次差留数，不对整矩阵做变量代换。
+补一条 ``dlog t`` letter 吸收幂次差留数，不对整矩阵做变量代换。奇点局部的
+``R0/A_m`` 装配同样停留在 letter 层：标量 dLog Laurent 展开直接乘留数矩阵，
+不进入矩阵元通分路线。
 """
 
 from __future__ import annotations
@@ -14,7 +16,13 @@ from typing import Any, Sequence
 from flint import acb, acb_mat, acb_poly, arb, ctx
 
 from .core import require_exact_keys
-from .exact_gaussian import GaussianRational, gaussian_rational
+from .exact_gaussian import (
+    GaussianPolynomial,
+    GaussianRational,
+    gaussian_rational,
+    series_quotient,
+)
+from .frobenius import RegularSingularSystem
 from .systems import PartialFractionSystem
 
 
@@ -94,6 +102,15 @@ def _letter_matrix(record: dict[str, Any], dimension: int, label: str) -> list[l
 
 def _zero_matrix(dimension: int) -> list[list[GaussianRational]]:
     return [[GaussianRational() for _ in range(dimension)] for _ in range(dimension)]
+
+
+def _leading_order(polynomial: GaussianPolynomial) -> int | None:
+    """返回首个非零系数的幂次；零多项式返回 ``None``。"""
+
+    for degree, coefficient in enumerate(polynomial.coefficients()):
+        if not coefficient.is_zero:
+            return degree
+    return None
 
 
 def letter_partial_fraction_system(
@@ -187,6 +204,93 @@ def letter_system_matches_reference(
                 if not difference < tolerance * scale:
                     return False
     return True
+
+
+def letter_regular_singular_system(
+    letters: Sequence[dict[str, Any]],
+    dimension: int,
+    point: Any,
+    series_order: int,
+    *,
+    allow_ordinary: bool = False,
+    name: str = "letter-regular-singular-system",
+) -> RegularSingularSystem:
+    """在 letter 层装配 ``Y'=(R0/z+Sum_m A_m z^m)Y`` 的 exact 局部数据。
+
+    每条 letter 先在标量层取局部 Laurent 展开
+    ``dLog[N/D](p+z) = (ord_p N - ord_p D)/z + Sum_m a_m z^m``，
+    解析部分用 ``N~/N~ - D~/D~`` 的标量 ``series_quotient`` 精确递推；随后乘
+    留数矩阵整块累加 ``R0=Σ r_a R_a``、``A_m=Σ a_m R_a``。多项式平移与商递推
+    都只作用于单条 letter 的标量系数，dlog 结构保证极点至多一阶，无需矩阵元
+    通分与降阶判定。
+    """
+
+    if dimension <= 0:
+        raise ValueError("dimension must be positive")
+    if series_order <= 0:
+        raise ValueError("series_order must be positive")
+    center = gaussian_rational(point)
+    residue_records = _zero_matrix(dimension)
+    regular_records = [
+        _zero_matrix(dimension) for _ in range(series_order)
+    ]
+    for index, record in enumerate(letters):
+        label = f"letter {index}"
+        require_exact_keys(record, {"numerator", "denominator", "residue"}, label)
+        numerator, denominator = _letter_coefficients(record, label)
+        residue = _letter_matrix(record, dimension, label)
+        shifted_numerator = GaussianPolynomial.from_coefficients(numerator).shifted(
+            center
+        )
+        shifted_denominator = GaussianPolynomial.from_coefficients(
+            denominator
+        ).shifted(center)
+        numerator_order = _leading_order(shifted_numerator)
+        denominator_order = _leading_order(shifted_denominator)
+        if denominator_order is None:
+            # 零分母 letter 无论留数如何都必须 fail closed，先于零留数跳过。
+            raise ZeroDivisionError(f"{label} denominator is the zero polynomial")
+        if all(value.is_zero for row in residue for value in row):
+            continue
+        if numerator_order is None:
+            # 零分子 letter 与部分分式装配一致：不产生任何极点，整条跳过。
+            continue
+        local_numerator = GaussianPolynomial.from_coefficients(
+            shifted_numerator.coefficients()[numerator_order:]
+        )
+        local_denominator = GaussianPolynomial.from_coefficients(
+            shifted_denominator.coefficients()[denominator_order:]
+        )
+        numerator_series = series_quotient(
+            local_numerator.derivative(), local_numerator, series_order
+        )
+        denominator_series = series_quotient(
+            local_denominator.derivative(), local_denominator, series_order
+        )
+        net_power = GaussianRational(numerator_order - denominator_order)
+        for row in range(dimension):
+            for column in range(dimension):
+                value = residue[row][column]
+                if value.is_zero:
+                    continue
+                if not net_power.is_zero:
+                    residue_records[row][column] += net_power * value
+                for degree in range(series_order):
+                    coefficient = numerator_series[degree] - denominator_series[degree]
+                    if not coefficient.is_zero:
+                        regular_records[degree][row][column] += coefficient * value
+    if all(value.is_zero for row in residue_records for value in row) and (
+        not allow_ordinary
+    ):
+        raise ValueError(
+            f"{name}: point {center} is not a regular singular point "
+            f"(matrix pole order 0)"
+        )
+    return RegularSingularSystem(
+        residue_records,
+        tuple([list(row) for row in matrix] for matrix in regular_records),
+        name=f"{name}-at-{center}",
+    )
 
 
 def inverted_letter_system(

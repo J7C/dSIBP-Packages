@@ -47,13 +47,11 @@ def _exact_polynomial(coefficients: Iterable[Any], field_name: str) -> GaussianP
     )
 
 
-def _reduced_pair(
-    numerator_coefficients: Iterable[Any], denominator_coefficients: Iterable[Any]
+def _reduced_polynomial_pair(
+    numerator: GaussianPolynomial, denominator: GaussianPolynomial
 ) -> tuple[GaussianPolynomial, GaussianPolynomial]:
-    """约分一个有理函数，并把分母归一化为首一多项式。"""
+    """约分一对 exact 多项式，并把分母归一化为首一多项式。"""
 
-    numerator = _exact_polynomial(numerator_coefficients, "numerator")
-    denominator = _exact_polynomial(denominator_coefficients, "denominator")
     if denominator.is_zero:
         raise ZeroDivisionError("rational-function denominator must not be zero")
     if numerator.is_zero:
@@ -70,6 +68,17 @@ def _reduced_pair(
     numerator = numerator / leading
     denominator = denominator / leading
     return numerator, denominator
+
+
+def _reduced_pair(
+    numerator_coefficients: Iterable[Any], denominator_coefficients: Iterable[Any]
+) -> tuple[GaussianPolynomial, GaussianPolynomial]:
+    """约分一个有理函数，并把分母归一化为首一多项式。"""
+
+    return _reduced_polynomial_pair(
+        _exact_polynomial(numerator_coefficients, "numerator"),
+        _exact_polynomial(denominator_coefficients, "denominator"),
+    )
 
 
 def _polynomial_records(polynomial: GaussianPolynomial) -> tuple[str, ...]:
@@ -123,6 +132,22 @@ class RationalFunction:
             _reduced_pair(self.numerator, self.denominator),
         )
 
+    @classmethod
+    def from_polynomials(
+        cls, numerator: GaussianPolynomial, denominator: GaussianPolynomial
+    ) -> RationalFunction:
+        """由 exact 多项式直接构造；约分语义与字符串构造完全一致。"""
+
+        instance = cls.__new__(cls)
+        object.__setattr__(instance, "numerator", _polynomial_records(numerator))
+        object.__setattr__(instance, "denominator", _polynomial_records(denominator))
+        object.__setattr__(
+            instance,
+            "_exact_pair",
+            _reduced_polynomial_pair(numerator, denominator),
+        )
+        return instance
+
     def exact_polynomials(self) -> tuple[GaussianPolynomial, GaussianPolynomial]:
         """返回约分后的精确分子和首一分母。"""
 
@@ -145,7 +170,7 @@ class RationalFunction:
         right_numerator, right_denominator = right.exact_polynomials()
         numerator = left_numerator * right_denominator + right_numerator * left_denominator
         denominator = left_denominator * right_denominator
-        return RationalFunction(_polynomial_records(numerator), _polynomial_records(denominator))
+        return RationalFunction.from_polynomials(numerator, denominator)
 
     def __radd__(self, other: RationalFunction | Any) -> RationalFunction:
         """支持 ``sum`` 以及标量加有理函数的输入写法。"""
@@ -162,7 +187,7 @@ class RationalFunction:
         """返回 exact 相反数。"""
 
         numerator, denominator = self.exact_polynomials()
-        return RationalFunction(_polynomial_records(-numerator), _polynomial_records(denominator))
+        return RationalFunction.from_polynomials(-numerator, denominator)
 
     def __sub__(self, other: RationalFunction | Any) -> RationalFunction:
         """相减两个有理函数并立即约分。"""
@@ -180,9 +205,9 @@ class RationalFunction:
         right = _coerce_entry(other)
         left_numerator, left_denominator = self.exact_polynomials()
         right_numerator, right_denominator = right.exact_polynomials()
-        return RationalFunction(
-            _polynomial_records(left_numerator * right_numerator),
-            _polynomial_records(left_denominator * right_denominator),
+        return RationalFunction.from_polynomials(
+            left_numerator * right_numerator,
+            left_denominator * right_denominator,
         )
 
     __rmul__ = __mul__
@@ -195,9 +220,9 @@ class RationalFunction:
         if right_numerator.is_zero:
             raise ZeroDivisionError("rational-function division by zero")
         left_numerator, left_denominator = self.exact_polynomials()
-        return RationalFunction(
-            _polynomial_records(left_numerator * right_denominator),
-            _polynomial_records(left_denominator * right_numerator),
+        return RationalFunction.from_polynomials(
+            left_numerator * right_denominator,
+            left_denominator * right_numerator,
         )
 
     def __rtruediv__(self, other: RationalFunction | Any) -> RationalFunction:
@@ -525,10 +550,19 @@ class RationalMatrixSystem:
     def singularity_inventory(self, *, root_tolerance: float | None = None) -> SingularityInventory:
         """逐元约分、square-free 分解分母、隔离根并分类无穷远。"""
 
+        from flint import ctx
+
         if root_tolerance is None:
             root_tolerance = precision_scaled_tolerance(30)
         if root_tolerance <= 0:
             raise ValueError("root_tolerance must be positive")
+        cache_key = (root_tolerance, ctx.prec)
+        cache = getattr(self, "_inventory_cache", None)
+        if cache is None:
+            cache = {}
+            object.__setattr__(self, "_inventory_cache", cache)
+        if cache_key in cache:
+            return cache[cache_key]
         factors: dict[
             tuple[str, ...], dict[str, Any]
         ] = {}
@@ -668,7 +702,9 @@ class RationalMatrixSystem:
                 if entry.pole_order_at_infinity() == infinity_order and infinity_order > 0
             ),
         )
-        return SingularityInventory(self.name, self.variable_name, finite, infinity)
+        inventory = SingularityInventory(self.name, self.variable_name, finite, infinity)
+        cache[cache_key] = inventory
+        return inventory
     def specialize_polynomial_simple_poles(
         self,
         inventory: SingularityInventory | None = None,
@@ -678,11 +714,29 @@ class RationalMatrixSystem:
         认证先使用 exact Q(i)[x] 约分后的奇点阶数；只要任一有限极点高于一阶，
         就返回通用路线。通过结构门禁后，多项式商用 exact 除法得到，留数用
         N(p)/D'(p) 的 Acb 球值构造，并在固定普通探针上验证候选矩阵包含原矩阵。
+        结果是系统的纯函数；同一清单对象上的重复调用共享首次计算。
         """
+
+        resolved = inventory or self.singularity_inventory()
+        cache = getattr(self, "_specialization_cache", None)
+        if cache is None:
+            cache = []
+            object.__setattr__(self, "_specialization_cache", cache)
+        for cached_inventory, cached in cache:
+            if cached_inventory is resolved:
+                return cached
+        outcome = self._compute_polynomial_simple_poles(resolved)
+        cache.append((resolved, outcome))
+        return outcome
+
+    def _compute_polynomial_simple_poles(
+        self,
+        resolved: SingularityInventory,
+    ) -> tuple[Any | None, dict[str, Any]]:
+        """按结构门禁构造公式快速系统；无门禁路径返回 ``None``。"""
 
         from .systems import PartialFractionSystem
 
-        resolved = inventory or self.singularity_inventory()
         report: dict[str, Any] = {
             "schema": "flintnde_polynomial_simple_pole_specialization_v1",
             "system_name": self.name,
@@ -714,7 +768,9 @@ class RationalMatrixSystem:
                 quotient, _remainder = divmod(numerator, denominator)
                 quotient_row.append(quotient)
                 maximum_degree = max(maximum_degree, max(0, quotient.degree))
-                reconstruction = RationalFunction(quotient.records())
+                reconstruction = RationalFunction.from_polynomials(
+                    quotient, GaussianPolynomial.from_coefficients([1])
+                )
                 for pole_index, record in enumerate(resolved.finite):
                     if record.location_exact is None:
                         report["reason"] = (
@@ -729,8 +785,9 @@ class RationalMatrixSystem:
                     exact_residue_rows[row_index][column_index][pole_index] = (
                         exact_residue
                     )
-                    reconstruction += RationalFunction(
-                        (exact_residue,), (-exact_pole, GaussianRational(1))
+                    reconstruction += RationalFunction.from_polynomials(
+                        GaussianPolynomial.from_coefficients([exact_residue]),
+                        GaussianPolynomial.from_coefficients([-exact_pole, GaussianRational(1)]),
                     )
                 if not (entry - reconstruction).is_zero:
                     report["reason"] = (
@@ -832,9 +889,15 @@ class RationalMatrixSystem:
         if series_order <= 0:
             raise ValueError("series_order must be positive")
         center = _exact_scalar(point, "singular point")
-        residue_records = [["0" for _ in range(self.dimension)] for _ in range(self.dimension)]
+        residue_records = [
+            [GaussianRational() for _ in range(self.dimension)]
+            for _ in range(self.dimension)
+        ]
         regular_records = [
-            [["0" for _ in range(self.dimension)] for _ in range(self.dimension)]
+            [
+                [GaussianRational() for _ in range(self.dimension)]
+                for _ in range(self.dimension)
+            ]
             for _ in range(series_order)
         ]
         maximum_pole_order = 0
@@ -874,9 +937,11 @@ class RationalMatrixSystem:
                         denominator_local,
                         series_order + 1,
                     )
-                    residue_records[row_index][column_index] = str(quotient[0])
+                    residue_records[row_index][column_index] = quotient[0]
                     for degree in range(series_order):
-                        regular_records[degree][row_index][column_index] = str(quotient[degree + 1])
+                        regular_records[degree][row_index][column_index] = quotient[
+                            degree + 1
+                        ]
                 else:
                     quotient = _series_quotient(
                         shifted_numerator,
@@ -884,7 +949,7 @@ class RationalMatrixSystem:
                         series_order,
                     )
                     for degree in range(series_order):
-                        regular_records[degree][row_index][column_index] = str(quotient[degree])
+                        regular_records[degree][row_index][column_index] = quotient[degree]
         if maximum_pole_order > 1 or (maximum_pole_order != 1 and not allow_ordinary):
             raise ValueError(
                 f"{self.name}: point {center} is not a regular singular point "

@@ -26,7 +26,9 @@ from .core import (
     relative_difference_inf,
     retained_serialization_digits,
 )
+from .letters import letter_partial_fraction_system
 from .local_solutions import (
+    build_letter_local_solution_basis,
     build_local_solution_basis,
     build_numerical_local_solution_basis,
 )
@@ -904,11 +906,14 @@ def _resolve_frobenius_boundary_batch(
     target_relative_error: arb | None,
     numerical_roots: Sequence[Any] | None = None,
     numerical_precision_digits: int | None = None,
+    fast_letters: Sequence[dict[str, Any]] | None = None,
 ) -> tuple[acb_mat, list[dict[str, Any]]]:
     """一次构造局部基，并把多个 Frobenius 边界变成同一匹配点的解列。
 
     ``numerical_roots`` 提供小数化证书谱时改走数值 Frobenius 路线：局部矩阵
     仍从精确有理系统提取，谱判定与 ``{a,b,C}`` 匹配按斩杀线执行。
+    ``fast_letters`` 提供与 ``system`` 同系统的 letter 清单时，起点局部基在
+    letter 层装配（标量 dLog 展开后乘留数矩阵）。
     """
 
     start = getattr(path, "start_classification", None)
@@ -928,6 +933,13 @@ def _resolve_frobenius_boundary_batch(
             order,
             known_roots=numerical_roots,
             input_precision_digits=numerical_precision_digits,
+        )
+    elif fast_letters is not None:
+        basis = build_letter_local_solution_basis(
+            fast_letters,
+            system.dimension,
+            record.location_exact,
+            order,
         )
     else:
         basis = build_local_solution_basis(working_system, record.location_exact, order)
@@ -970,6 +982,7 @@ def _transport_frobenius_boundary_batch(
     numerical_roots: Sequence[Any] | None = None,
     numerical_precision_digits: int | None = None,
     fast_system: PartialFractionSystem | None = None,
+    fast_letters: Sequence[dict[str, Any]] | None = None,
 ) -> tuple[
     list[acb_mat], list[dict[str, Any]], list[dict[str, Any]], float,
     list[dict[str, Any]] | None,
@@ -978,8 +991,9 @@ def _transport_frobenius_boundary_batch(
 
     ``collect_patches=True`` 时额外返回逐段解系数补丁，供嵌入式截断认证的
     前缀求值复用。``fast_system`` 提供已认证极点的 letter 部分分式系统时，
-    普通段直接走极点递推；局部基构造仍使用精确有理系统。``numerical_roots``
-    提供小数化证书谱时，起点局部基走数值 Frobenius 路线。
+    普通段直接走极点递推；``fast_letters`` 提供同系统 letter 清单时，起点
+    局部基在 letter 层装配。``numerical_roots`` 提供小数化证书谱时，起点
+    局部基走数值 Frobenius 路线。
     """
 
     path, save_requests = _transport_points_and_save_requests(path)
@@ -999,6 +1013,13 @@ def _transport_frobenius_boundary_batch(
     working_system = getattr(path, "_working_system", None)
     if not isinstance(working_system, RationalMatrixSystem):
         raise TypeError("Frobenius batch path lacks its exact working RationalMatrixSystem")
+    if fast_letters is not None and working_system is not system:
+        # letter 清单定义在原变量上；无穷远路径的工作系统是反演后的
+        # t=1/x 系统，直接代入会得到错误的矩阵，必须 fail closed。
+        raise ValueError(
+            "fast_letters supports the original variable only; the inverted "
+            "working variable of an infinity path is not implemented"
+        )
     inventory = working_system.singularity_inventory()
     analytic_system = (
         fast_system if fast_system is not None
@@ -1013,6 +1034,7 @@ def _transport_frobenius_boundary_batch(
         target_relative_error,
         numerical_roots,
         numerical_precision_digits,
+        fast_letters,
     )
     snapshots = [acb_mat(vectors)]
     reports: list[dict[str, Any]] = []
@@ -1124,7 +1146,7 @@ def transport_frobenius_boundaries_refined(
     certification_mode: str = "certified",
     numerical_roots: Sequence[Any] | None = None,
     numerical_precision_digits: int | None = None,
-    fast_system: PartialFractionSystem | None = None,
+    fast_letters: Sequence[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """对同一系统的多个 Frobenius 初值共享构造，并逐列报告 refinement。
 
@@ -1132,8 +1154,10 @@ def transport_frobenius_boundaries_refined(
     结果取解系数前缀；``"certified"``（缺省）保留独立双链完整重算用于论文级认证。
     ``numerical_roots`` 提供小数化证书谱（含重复）且 ``numerical_precision_digits``
     给出其可靠十进制位数时，起点局部基改走数值 Frobenius 路线；谱门禁仍先由
-    exact 路线抛错后由调用方显式选择。``fast_system`` 提供探针认证过的 letter
-    部分分式系统时，两条链的普通段都走极点递推快速路径。
+    exact 路线抛错后由调用方显式选择。``fast_letters`` 提供探针认证过的同系统
+    letter 清单时，起点局部基在 letter 层装配，且普通段在 letter 次数与根隔离
+    都通过门禁时走极点递推快速路径；两者与 ``numerical_roots`` 互斥。``fast_letters``
+    只支持原变量路径，无穷远反演（``sinv`` 工作变量）路径直接拒绝。
     """
 
     if not boundaries:
@@ -1145,6 +1169,16 @@ def transport_frobenius_boundaries_refined(
     if (numerical_roots is None) != (numerical_precision_digits is None):
         raise ValueError(
             "numerical_roots and numerical_precision_digits must be supplied together"
+        )
+    fast_system = None
+    if fast_letters is not None:
+        if numerical_roots is not None:
+            raise ValueError(
+                "fast_letters supports the exact Frobenius route only; "
+                "numerical_roots requires the dense rational system"
+            )
+        fast_system = letter_partial_fraction_system(
+            fast_letters, system.dimension
         )
     requested_certification_mode = certification_mode
     singular_boundary_forced_certified = certification_mode == "embedded"
@@ -1169,6 +1203,7 @@ def transport_frobenius_boundaries_refined(
             numerical_roots=numerical_roots,
             numerical_precision_digits=numerical_precision_digits,
             fast_system=fast_system,
+            fast_letters=fast_letters,
         )
         primary_snapshots, truncations = _embedded_prefix_snapshots(
             chain[0], chain[4], primary_order
@@ -1212,6 +1247,7 @@ def transport_frobenius_boundaries_refined(
             numerical_roots=numerical_roots,
             numerical_precision_digits=numerical_precision_digits,
             fast_system=fast_system,
+            fast_letters=fast_letters,
         )
         reference = _transport_frobenius_boundary_batch(
             system,
@@ -1223,6 +1259,7 @@ def transport_frobenius_boundaries_refined(
             numerical_roots=numerical_roots,
             numerical_precision_digits=numerical_precision_digits,
             fast_system=fast_system,
+            fast_letters=fast_letters,
         )
         differences = [
             relative_difference_inf(

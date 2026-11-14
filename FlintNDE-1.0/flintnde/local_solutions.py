@@ -43,6 +43,7 @@ from .fuchsian import (
     MoserBalanceTransformation,
     attempt_fuchsian_reduction,
 )
+from .letters import letter_regular_singular_system
 from .numeric_structure import (
     NumericalRegularSingularSystem,
     acb_from_numeric_record,
@@ -1158,6 +1159,57 @@ def build_local_solution_basis(
             ) from formal_error
     basis.manifest["fuchsian_reduction_attempt"] = reduction.to_json()
     return basis
+
+
+def build_letter_local_solution_basis(
+    letters: Sequence[Any],
+    dimension: int,
+    point: Any,
+    series_order: int,
+) -> LocalSolutionBasis:
+    """letter 级正则奇点局部基：标量 dLog 展开后乘留数矩阵。
+
+    dlog 结构保证局部极点至多一阶，无需 Fuchsian 降阶判定；局部矩阵由
+    ``letter_regular_singular_system`` 在 letter 层装配，谱门禁、共振/log 判定
+    与边界匹配复用与稠密路线完全相同的 exact Frobenius 引擎。
+    """
+
+    if series_order <= 0:
+        raise ValueError("local solution series order must be positive")
+    center = gaussian_rational(point)
+    local_system = letter_regular_singular_system(
+        letters, dimension, center, series_order
+    )
+    frobenius_manifest = build_frobenius_manifest(local_system)
+    basis = build_power_log_basis(
+        local_system,
+        frobenius_manifest,
+        series_order=series_order,
+    )
+
+    def resolve(value: Any) -> tuple[GaussianMatrix, dict[str, Any]]:
+        _parsed, constants, report = resolve_frobenius_boundary(
+            local_system,
+            frobenius_manifest,
+            value,
+        )
+        return constants, report
+
+    manifest = {
+        "schema": "flintnde_local_solution_basis_v1",
+        "method": "regular_singular_power_log",
+        "center_exact": str(center),
+        "frobenius": basis.manifest,
+        "local_construction": "letter_level_scalar_dlog_expansion",
+    }
+    return LocalSolutionBasis(
+        dimension,
+        "regular_singular_power_log",
+        basis.maximum_log_degree,
+        manifest,
+        basis.evaluate,
+        resolve,
+    )
 
 
 def _cross_check_claimed_roots(
