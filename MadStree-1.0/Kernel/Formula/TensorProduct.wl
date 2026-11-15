@@ -188,12 +188,6 @@ msTensorApplyUTransposeFromData[data_Association, vector_List] := msTensorEmbedT
     msTensorProjectTransposeVector[data, vector]]
 ];
 
-msTensorApplyUInverseTransposeFromData[data_Association, vector_List] := msTensorEmbedTransposeVector[
-  data,
-  msTensorApplyLocalChain[Transpose /@ data["localsInverse"],
-    msTensorProjectTransposeVector[data, vector]]
-];
-
 
 (* M0_raw 在 raw 张量上逐 slot 相加；最后按 P(...S) 映回 master 基。 *)
 msTensorRawM0Apply[data_Association, componentPosition_Integer, rawVector_List] := Module[
@@ -496,16 +490,6 @@ msTensorApplyUInverse[sector_Association, vector_List] := Module[
   If[Head[data] === Failure, data, msTensorApplyUInverseFromData[data, vector]]
 ];
 
-msTensorApplyUTranspose[sector_Association, vector_List] := Module[
-  {data = msTensorDataOf[sector]},
-  If[Head[data] === Failure, data, msTensorApplyUTransposeFromData[data, vector]]
-];
-
-msTensorApplyUInverseTranspose[sector_Association, vector_List] := Module[
-  {data = msTensorDataOf[sector]},
-  If[Head[data] === Failure, data, msTensorApplyUInverseTransposeFromData[data, vector]]
-];
-
 msTensorApplyM0[sector_Association, componentPosition_Integer, vector_List] := Module[
   {data = msTensorDataOf[sector]},
   If[Head[data] === Failure, data, msTensorM0ApplyFromData[data, componentPosition, vector]]
@@ -527,11 +511,6 @@ msM1SingularSurfaces[sector_Association, componentPosition_Integer, integerShift
   {diagonal = msM1DiagonalVector[sector, componentPosition, integerShift]},
   If[Head[diagonal] === Failure, diagonal,
     DeleteDuplicates[Simplify[diagonal]]]
-];
-
-msTensorDenseLocalsProduct[sector_Association] := Module[
-  {data = msTensorDataOf[sector]},
-  If[Head[data] === Failure, data, msTensorKroneckerAll[data["locals"]]]
 ];
 
 msSectorDiagonalizer[sector_Association] := Module[

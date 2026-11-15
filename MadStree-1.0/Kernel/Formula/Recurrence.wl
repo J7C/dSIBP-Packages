@@ -184,9 +184,15 @@ MSContactMaps[context_?MSContextQ, All] := AssociationThread[
   context["sectorOrder"] -> (msContactMapsForSector[#, context] & /@ context["sectors"])
 ];
 
-MSContactMaps[context_?MSContextQ, key_String] := Module[{sector = msSectorByKey[context, key]},
+Options[MSContactMaps] = {MessageLanguage -> "EN"};
+
+MSContactMaps[context_?MSContextQ, key_String, OptionsPattern[]] := Module[
+  {sector = msSectorByKey[context, key], messageLanguage},
+  messageLanguage = msMessageLanguage[OptionValue[MessageLanguage]];
+  If[Head[messageLanguage] === Failure, Return[messageLanguage]];
   If[Head[sector] === Missing,
-    Message[MSContactMaps::nosector, key];
+    With[{messageTag = If[messageLanguage === "CN", "nosectorCN", "nosector"]},
+      Message[MessageName[MSContactMaps, messageTag], key]];
     msFailure["UnknownSector", <|"sectorKey" -> key|>],
     msContactMapsForSector[sector, context]
   ]

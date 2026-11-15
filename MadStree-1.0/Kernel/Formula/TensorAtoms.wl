@@ -161,9 +161,15 @@ MSFormulaMatrices[context_?MSContextQ, All] := AssociationThread[
   context["sectorOrder"] -> (msFormulaMatricesForSector /@ context["sectors"])
 ];
 
-MSFormulaMatrices[context_?MSContextQ, key_String] := Module[{sector = msSectorByKey[context, key]},
+Options[MSFormulaMatrices] = {MessageLanguage -> "EN"};
+
+MSFormulaMatrices[context_?MSContextQ, key_String, OptionsPattern[]] := Module[
+  {sector = msSectorByKey[context, key], messageLanguage},
+  messageLanguage = msMessageLanguage[OptionValue[MessageLanguage]];
+  If[Head[messageLanguage] === Failure, Return[messageLanguage]];
   If[Head[sector] === Missing,
-    Message[MSFormulaMatrices::nosector, key];
+    With[{messageTag = If[messageLanguage === "CN", "nosectorCN", "nosector"]},
+      Message[MessageName[MSFormulaMatrices, messageTag], key]];
     msFailure["UnknownSector", <|"sectorKey" -> key|>],
     msFormulaMatricesForSector[sector]
   ]

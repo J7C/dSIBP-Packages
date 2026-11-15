@@ -8,13 +8,14 @@
 from __future__ import annotations
 
 import math
+import warnings
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from flint import acb, acb_mat
+from flint import acb, acb_mat, arb
 
-from .core import identity_matrix
+from .core import current_working_digits, identity_matrix
 from .exact_gaussian import (
     GaussianMatrix,
     GaussianRational,
@@ -525,6 +526,20 @@ class PowerLogBasis:
     maximum_log_degree: int
     manifest: dict[str, Any]
     _evaluator: Callable[[acb], acb_mat]
+    prefix_factory: Callable[[int], "PowerLogBasis"] | None = None
+
+    def prefix_view(self, order: int) -> "PowerLogBasis | None":
+        """返回低阶前缀求值视图；不支持前缀共享的构造返回 ``None``。
+
+        前缀性质来自逐阶递推的局部性：低阶运行与高阶运行共享逐位相同的
+        解系数前缀，因此前缀视图的 Horner 求值与独立低阶构造逐位一致。
+        """
+
+        if self.prefix_factory is None:
+            return None
+        if order < 0:
+            raise ValueError("prefix order must be nonnegative")
+        return self.prefix_factory(order)
 
     def evaluate(self, point: acb) -> acb_mat:
         """在非零局部变量处计算 fundamental matrix。"""
@@ -959,6 +974,129 @@ def _build_single_root_basis(
     )
 
 
+def _no_log_history_certified(history: list[acb_mat]) -> bool:
+    """系数球宽启发式自检：任一阶矩阵的最大球半径超过 10^-(位数/2)×该阶尺度即判不通过。
+
+    本判据只看递推系数自身的球宽，是启发式而非最终物理相对误差的证明：
+    物理权重与 x^λ 因子在下游仍可再缩放各列。量级比较全程用 FLINT 球对象
+    原生完成（rad()/mid() 返回 arb，任意指数可表示），不做 float 转换——
+    float 在 1e±308 之外溢出/下溢（inf>floor*inf 恒假会放行劣化球），且
+    max(0.0,nan) 会吞掉 NaN 中值；故任一非有限元素直接判不通过。判据按
+    绝对球宽对该阶系数矩阵自身尺度（最大中值）计量：精确值远小于矩阵尺度
+    的列（如生产谱实测 1e-92 量级列）经由 O(1) 量级中间量相消得到，任何
+    路线（含逐解稠密谱逆基线）的球半径都下不到 1e-90，逐列相对判据对两
+    条路线同样不可满足；而该列绝对球宽约 1e-92，对下游边界匹配完全可忽略。
+    本征基批量递推把谱相消从一次装配摊到逐阶 V/V^-1 定常矩阵乘；强相消谱
+    （投影子单项远大于和值）下该路线球半径先于中值劣化并逐阶放大，独立包
+    同族投影子直乘路线实测可发散，实测劣化案例的绝对球宽达 1e16–∞ 量级，
+    仍被本判据截获。半位数可靠性下限沿用数值路线的既有口径；阈值随请求
+    工作位数派生，不设精度上限。
+    """
+
+    floor = arb(10) ** -(current_working_digits() // 2)
+    zero = arb(0)
+    for coefficients in history:
+        matrix_scale = zero
+        matrix_radius = zero
+        for row in range(coefficients.nrows()):
+            for column in range(coefficients.ncols()):
+                entry = coefficients[row, column]
+                if not entry.is_finite():
+                    return False
+                real_magnitude = abs(entry.real.mid())
+                imaginary_magnitude = abs(entry.imag.mid())
+                if real_magnitude > matrix_scale:
+                    matrix_scale = real_magnitude
+                if imaginary_magnitude > matrix_scale:
+                    matrix_scale = imaginary_magnitude
+                real_radius = entry.real.rad()
+                imaginary_radius = entry.imag.rad()
+                if real_radius > matrix_radius:
+                    matrix_radius = real_radius
+                if imaginary_radius > matrix_radius:
+                    matrix_radius = imaginary_radius
+        if matrix_radius > floor * matrix_scale:
+            return False
+    return True
+
+
+def _build_diagonalizable_no_log_batch(
+    regular: list[acb_mat],
+    dimension: int,
+    roots_exact: list[GaussianRational],
+    solution_roots_exact: list[GaussianRational],
+    solution_roots: list[acb],
+    initial_vectors: list[acb_mat],
+    manifest: dict[str, Any],
+    series_order: int,
+) -> PowerLogBasis | None:
+    """全零共振 gate 时用本征基移位逆一次构造整批无 log 级数。
+
+    ``(a_j+n-R)⁻¹`` 在 residue 本征基坐标系中是对角作用：第 ``i`` 轴除以
+    ``a_j+n-root_i``，gate 已判零的精确共振轴取零分量（等价于 reduced
+    inverse 截去该轴）。全部解列共享一次相似变换与同一组正则卷积矩阵乘，
+    逐列 Python 循环只剩逐轴除法。构造后做认证球宽自检，强相消谱下球半径
+    超过半位数可靠性下限时返回 ``None``，调用方回退逐解稠密谱逆路线。
+    """
+
+    count = len(initial_vectors)
+    similarity = acb_mat(
+        [[initial_vectors[column][row, 0] for column in range(count)]
+         for row in range(dimension)]
+    )
+    inverse_similarity = similarity.inv()
+    history: list[acb_mat] = [similarity]
+    for degree in range(1, series_order + 1):
+        right = acb_mat(dimension, count)
+        for regular_degree in range(min(degree, len(regular))):
+            right += regular[regular_degree] * history[degree - 1 - regular_degree]
+        transformed = inverse_similarity * right
+        scaled = acb_mat(dimension, count)
+        for column, solution_root in enumerate(solution_roots_exact):
+            shifted = solution_root + degree
+            for axis, spectral_root in enumerate(roots_exact):
+                if shifted == spectral_root:
+                    continue
+                scaled[axis, column] = (
+                    transformed[axis, column] / (shifted - spectral_root).to_acb()
+                )
+        history.append(similarity * scaled)
+
+    if not _no_log_history_certified(history):
+        warnings.warn(
+            "no-log eigenbasis batch recursion failed its certified-ball "
+            "self-check (a ball radius exceeded 10^-(digits/2) of the "
+            "coefficient-matrix scale under strong spectral cancellation); "
+            "falling back to the per-solution dense spectral inverse"
+        )
+        return None
+
+    def make_evaluator(coefficients_history: list[acb_mat]) -> Callable[[acb], acb_mat]:
+        def evaluate(point: acb) -> acb_mat:
+            value = acb_mat(dimension, count)
+            for coefficients in reversed(coefficients_history):
+                value = value * point + coefficients
+            powers = acb_mat(count, count)
+            for column, root in enumerate(solution_roots):
+                powers[column, column] = point**root
+            return value * powers
+
+        return evaluate
+
+    def make_prefix(order: int) -> PowerLogBasis:
+        return PowerLogBasis(
+            dimension,
+            0,
+            manifest,
+            make_evaluator(history[: order + 1]),
+            lambda inner: make_prefix(inner),
+        )
+
+    return PowerLogBasis(
+        dimension, 0, manifest, make_evaluator(history), make_prefix
+    )
+
+
 def _build_diagonalizable_basis(
     system: RegularSingularSystem,
     manifest: dict[str, Any],
@@ -982,6 +1120,26 @@ def _build_diagonalizable_basis(
         for records in manifest["initial_vectors_exact"]
     ]
     gates = {str(key): bool(value) for key, value in manifest["resonance_gates"].items()}
+    if (
+        dimension > 0
+        and len(initial_vectors) == dimension
+        and not any(gates.values())
+    ):
+        try:
+            basis = _build_diagonalizable_no_log_batch(
+                regular,
+                dimension,
+                roots_exact,
+                solution_roots_exact,
+                solution_roots,
+                initial_vectors,
+                manifest,
+                series_order,
+            )
+        except ZeroDivisionError:
+            basis = None
+        if basis is not None:
+            return basis
     series_by_solution: list[list[list[acb_mat]]] = []
     actual_maximum_log_degree = 0
     for solution_index, (root_exact, initial) in enumerate(

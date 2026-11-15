@@ -405,17 +405,24 @@ def as_gaussian_polynomial(value: Any) -> GaussianPolynomial:
 def series_quotient(
     numerator: GaussianPolynomial, denominator: GaussianPolynomial, order: int
 ) -> list[GaussianRational]:
-    """递推常数项非零的 ``Q(i)`` Taylor 商。"""
+    """递推常数项非零的 ``Q(i)`` Taylor 商。
+
+    内层卷积上限取 ``min(n, 分母次数)``：高于分母次数的系数恒为零，不必逐阶
+    访问；分子恒零时商级数精确为零，直接生成。
+    """
 
     if order < 0:
         raise ValueError("series order must be nonnegative")
     denominator_zero = denominator.coefficient(0)
     if denominator_zero.is_zero:
         raise ZeroDivisionError("Taylor quotient denominator vanishes")
+    if numerator.is_zero:
+        return [GaussianRational() for _ in range(order)]
+    denominator_top = denominator.degree
     result: list[GaussianRational] = []
     for degree in range(order):
         right = numerator.coefficient(degree)
-        for denominator_degree in range(1, degree + 1):
+        for denominator_degree in range(1, min(degree, denominator_top) + 1):
             right -= denominator.coefficient(denominator_degree) * result[
                 degree - denominator_degree
             ]

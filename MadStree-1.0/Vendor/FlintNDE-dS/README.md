@@ -2,23 +2,17 @@
 
 发布名使用 `FlintNDE`，Python 导入名使用 `flintnde`。
 
-`engine/` 是 C++ 认证双链引擎（本目录随 v0.21 一次性引入）：基线取独立程序包
+`engine/` 是 C++ 认证双链引擎：基线取独立程序包
 package-FlintNDE `v1.02` 引擎（schema `flintnde_engine_*`、十进制 letter 支持），此后按
 MadStree 请求合同独立扩展（`tensorSectors` 结构化 letters、embedded 认证模式等），不与独立
 程序包保持同步。构建产物 `engine/build/flintnde_engine.exe` 不随源码分发，由适配器在运行时
 探测使用；缺失时适配器回退 Python 认证双链。构建与契约详见「C++ 引擎」一节。
 
-每个 Python 进程首次 `import flintnde` 时在 stderr 显示一次简洁引用提醒：
-`FlintNDE package paper, arXiv identifier pending.`。该提醒不列出其它程序包或论文。
-
 ## 版本更新说明
 
-每次修改 `pyproject.toml` 中的 FlintNDE 版本号，都必须在独立 FlintNDE 项目包根的
-`更新日志.md` 顶部追加该版本增量。更新说明至少包含基线版本、新增与
-修复内容、公开接口或数值 convention 变化、迁移要求、已执行验证和已知限制；条目中的版本
-必须与 `pyproject.toml` 一致。Vendor 交付不复制该日志。当前 `0.1.0.dev0` 及此前已有资产
-豁免，不追溯补建。建议在独立版本 branch 中完成开发和验证，但是否创建或合并 branch
-完全由用户决定。
+本目录是 MadStree 的内置后端组件，不设独立版本号，也不维护独立的更新日志。
+`pyproject.toml` 中的
+`version = "1.0"` 仅为打包字段，随 MadStree 发布身份书写，不作为本组件的独立版本标识。
 
 ## 当前路径与多点求值合同
 
@@ -802,9 +796,8 @@ dimension * 10^(-precision_digits)
 python -m unittest discover -s tests -v
 ```
 
-2026-11-03 fresh 结果为 `unittest discover 195/195`（v0.21 引擎接入＋精度自适应
-清扫移植后）；Wolfram `Needs["FlintNDE`"]` 端到端检查为 `26/26`（2026-08-25 口径，
-此后 vendor Wolfram 侧零改动）。验证覆盖一般有理矩阵、任意次数
+Fresh 结果为 `unittest discover 201/201`（含系数球宽 gate 回归 6 例）；
+Wolfram `Needs["FlintNDE`"]` 端到端检查为 `26/26`。验证覆盖一般有理矩阵、任意次数
 多项式加简单极点的内部特化、缺省避开奇点、显式奇点折跃、严格消息语言、计划序列化
 精度、执行期不重规划、浅层目录和 Python 前置路径/写入门禁，并覆盖 fast multipoint、
 严格用户节点、符号最低阶证书门禁、增量扩阶与缓存复用。本目录 Python 侧以独立程序包

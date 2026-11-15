@@ -2,8 +2,6 @@
 
 English version: [README-en.md](README-en.md)。
 
-各版本增量更新见包根 `更新日志.md`（发展仓）；发布版不带更新日志。
-
 `MadStree` 是一个直接使用 time-integral tensor formula 的 Wolfram Language 程序包。输入可以是有序 dS 树拓扑，也可以是不积分 loop momentum 的纯 time-only incidence graph；输出包括 contact-reachable sectors、同序主积分、逐步或完整迭代约化、block-triangular dlog connection 和自动边界证书。主算法不生成一般 IBP 方程组，也不调用 Kira。
 
 当前缺省 convention 为
@@ -20,34 +18,32 @@ NuConvention: "Positive"
 
 `NuConvention` 只在 `MSInitTree` 初始化时选择。context 建立后，公式矩阵、递推与 dlog 都固定读取该值，不提供逐调用修改 convention 的入口。
 
+## 奇异边界首项向量与边界启动
+
+- `MSBoundaryData` 的首项向量不再逐分支解 `(αI−R)C=0`：整请求判一次解析结构证书（残数对角元与各 master 的 Hankel 指数按 globalIndex 恒等、sector 对角块纯对角、列支撑限于本 sector 对角位与祖先闭包、contact transitions 与 sectorOrder 同向），成立时按商公式 `C[j]=R[j,P]C[P]/(α_root−α_j)` 自 subsector 向上直接构造，归一化 `C[root]=1` 不变；同根多方向（祖先或同 sector 兄弟与根同指数）等退化情形按登记标签 fail-closed 回退既有受限求解，`leadingVectorRoute` 记录实际路线。推导见 `Documentation/首项C解析构造推导.md`。生产请求 25/25 分支走解析路线，解析与受限求解两条路线的结果精确一致，序列化载荷逐字符不变。
+- 内嵌后端整入五项实测有效优化：精确有理级数商内层循环上限 `min(n,分母次数)`＋零分子短路（exact 系数不变）；exact 对象直传免 `str` 往返；可对角谱的本征基无 log 批量递推（后接绝对口径认证球宽自检，任一阶最大球半径超过 10^-(位数/2)×该阶矩阵尺度即告警并回退逐解稠密谱逆路线）；物理权重在匹配点收缩为单列输运（改求和顺序，一致性为球舍入级，80 位下按 max|C_1| 归一 ±6.6e-97，不主张逐位）；主/参照链共享 preparation 且参照链先行。所有保留位数随请求工作精度派生。
+
 ## C++ 引擎车道与精度自适应
 
-本版本（发布版重记 `1.0`）相对 `v0.20` 的变化集中两项：内嵌后端接入 C++ 认证双链引擎，以及 vendor 序列化位数与容差全面改为随请求工作精度派生。公开入口、master 定义、normalization 与数值结果定义与 `v0.20` 一致。
+vendor 序列化位数与容差全部随请求工作精度派生；车道选择不影响公开入口、master 定义、normalization 与数值结果定义。
 
 - `Vendor/FlintNDE-dS/engine/` 为一次性冻结复制的 package-FlintNDE `v1.02` C++ 引擎（认证双链输运、`auto`/`sparse`/`dense` 留数内核、批量流式解析），并按本系统请求合同扩展：结构化 letters 的 C++ 精确张量重建（`tensorSectors`＋每条 letter 的 `{alpha,beta,contributions}`，免传稠密留数矩阵）、`certificationMode "embedded"`（段点数为一时单参考链＋前缀快照，否则强制升 certified）、段响应上报实际生效认证模式。
 - 适配器引擎车道：请求满足 `pathPlanning=False`＋`SingularityMode "Avoid"`＋有限边界＋段起点与用户点不落 letter 极点时整请求交引擎执行；引擎缺失或环境变量 `MADSTREE_FLINTNDE_ENGINE=python` 时回退 Python 池，运行期错误 fail-closed 上抛；`FLINTNDE_ENGINE_LIBPATH` 指定 libflint 运行库目录；每段 `planReport.engine` 如实报告所走车道。正则奇点边界与开启自动规划的请求按合同始终走 Python 车道。
-- 对表验证：真实张量请求上引擎结构化 letters 与稠密形式逐位一致、引擎与 Python 车道容差级一致；引擎车道专项 11/11、适配器 23/23、内嵌后端 195/195、check_core 54/54、版本资产 23/23。
-- 三顶点 zd n100 单轮复测：生产口径 128.71 s（对 `v0.20` pre-C7 207.28 s 为 0.62×，增益来自 C7 边界 letter 快速路径首次在 n100 生效），本例生产几何按合同不走引擎车道；登记于仓库 `bench/eff_bench.md` Step 7。
+- 对表验证：真实张量请求上引擎结构化 letters 与稠密形式逐位一致、引擎与 Python 车道容差级一致。
 
 ## 整块输运与已知 roots 边界证书
 
-整块 DE 直积输运已完成 2/5 顶点实测：在实际 master 基中精确抽取 sector/source 矩形块的单位因子，将完整解向量按 active 行 ×（spectator × 解列）打包，使用 FLINT 整块矩阵乘法；不分解物理解，不删除任何 subsector 耦合。相同极点和输出布局的贡献先合并，递推每阶复用输入打包，单贡献行直接引用、多贡献行一次 C 层小矩阵求和，不逐 2×2 slot 调度。
+普通段输运按整块 DE 直积执行：在实际 master 基中精确抽取 sector/source 矩形块的单位因子，将完整解向量按 active 行 ×（spectator × 解列）打包，使用 FLINT 整块矩阵乘法；不分解物理解，不删除任何 subsector 耦合。相同极点和输出布局的贡献先合并，递推每阶复用输入打包，单贡献行直接引用、多贡献行一次 C 层小矩阵求和，不逐 2×2 slot 调度。
 
-普通仿射段直接使用编译块；边界普通段在 exact rational 系统可认证为多项式加 Q(i) 简单极点时使用相同递推，其余仍用一般解析路线。Frobenius/已知 roots 初始化保持原算法；显式矩阵接口及奇点处理按需重建留数。
+普通仿射段直接使用编译块；边界普通段在 exact rational 系统可认证为多项式加 Q(i) 简单极点时使用相同递推，其余仍用一般解析路线。Frobenius/已知 roots 初始化按结构证书解析构造首项向量并对可对角谱批量无 log 递推（见首节）；显式矩阵接口及奇点处理按需重建留数。
 
-主段实测（同一请求、有限初值、3 轮中位数，对 v0.19 稠密后端）：2 顶点 0.02326 s vs 0.03275 s（0.710×）；5 顶点 16.154 s vs 64.773 s（0.2494×，快 4.01 倍），主链 6.797 s vs 26.691 s、参考链 9.243 s vs 37.770 s；6/162 个输出分量中值全一致，节点数与 refinement 差相同。三顶点按 zd 目标点（N=1/10）隔离目标段：主链 2.315/2.628 s vs 2.371/2.726 s，参考链 2.754/3.149 s vs 3.092/3.534 s，四分支主链 new/old 0.90–1.03，逐分量最大相对差 0；16–25 维非 tiled 布局下整块打包/装配开销抵消收益。完整链（含精确边界）：2 顶点 0.6408 s vs 0.6441 s；5 顶点 931.9 s vs 968.7 s（0.962×），162 分量一致。5 顶点 84% 墙钟花在共享边界上：149 个极点均为一阶，但存在非 Q(i) 精确根（finite_001），simple-pole 认证拒绝，边界保持一般 Cauchy 路线，所以整块优化的收益只在主段体现。适配器 17/17、内嵌后端 191 项 Python 测试通过。基准脚本见本版本 `test/bench_03_block_transport.wls/.py` 与 `test/bench_04_three_vertex_zd.*`。
+整块路线在 2/5 顶点生产请求上逐分量对表通过（含完整精确边界链，162 分量一致）。共享边界若含非 Q(i) 精确根（如 finite_001 型一阶极点），simple-pole 认证拒绝，边界保持一般 Cauchy 路线，整块收益只在主段体现；16–25 维非 tiled 布局下打包/装配开销会抵消收益。
 
-`v0.20` 相对 `v0.19` 只修改本目录及其内嵌 `Vendor/FlintNDE-dS`，收录两项实测有效的 MadStree 优化：边界曲线与低层用户路径逐 letter 代入、求导和取留数；k0=∞ 边界非共振首项向量按 sector DAG 逆序直接回代，零分母或残差非零时回退完整 constrained solve。
-
-普通仿射段和奇异边界普通段曾试改为 Python 分块张量留数算子，但同请求实测总墙钟由 10.857 s 增到 16.521 s（慢 52.2%），主链由 4.304 s 增到 6.799 s（慢 58.0%），已按“无效即回退”恢复 `v0.19` 的稠密 FLINT 路径。旧实现在 C 层做稠密矩阵乘法，Python 逐 contribution 调度的成本超过节省的标量运算；相应 `residue_actions`、`TensorResidueOperator`、`TensorBoundarySystem` 和专项测试已移出本版本。
-
-保留的边界优化在同请求 3 轮中位数下由 6.405 s 降到 4.511 s，快 29.6%。5 顶点 81 个边界分支中 17 个直接回代、64 个共振回退，全部与原结果一致；60/200 位输出的 81 个终点分量中值逐项相同。手册保留逐 letter 边界留数与 sector 回代公式，不再把已回退的普通段张量递推写成当前实现。
-
-`MSBoundaryData` 的奇异边界现在附带 power-log 证书：每个 indicial root 的精确值、代数/几何重数、Jordan 缺陷与正整数根差，全部由既有首项向量数据和必要的精确 nullspace/秩分析给出，不解特征多项式。证书随求值请求下发，内嵌后端据此走验证式 manifest——只用升幂零空间链核验每个宣称 root 的广义本征子空间维数等于宣称重数、重数总和等于系统维数（二者合起来唯一钉死特征多项式），不再调用 `charpoly()` 或求根。出现 log 或 mixed-defective Jordan 时在已知谱内继续 power-log 递推（谱投影子加共振块方程，log 首现阶由不相容加预算自然给出），不回退到重新求谱的入口。5 顶点同请求实测：后端 manifest 构造 3.344 s→1.464 s（−56%），power-log 基构造两路线相同，Wolfram 侧边界构造因证书 +0.103 s（+2.8%）。
+`MSBoundaryData` 的奇异边界现在附带 power-log 证书：每个 indicial root 的精确值、代数/几何重数、Jordan 缺陷与正整数根差，全部由既有首项向量数据和必要的精确 nullspace/秩分析给出，不解特征多项式。证书随求值请求下发，内嵌后端据此走验证式 manifest——只用升幂零空间链核验每个宣称 root 的广义本征子空间维数等于宣称重数、重数总和等于系统维数（二者合起来唯一钉死特征多项式），不再调用 `charpoly()` 或求根。出现 log 或 mixed-defective Jordan 时在已知谱内继续 power-log 递推（谱投影子加共振块方程，log 首现阶由不相容加预算自然给出），不回退到重新求谱的入口。
 
 ## 张量积引擎
 
-本版本把约化、dlog 组装与 NDE 输入全部保留为 2x2 局部矩阵的张量积，不再把 2^n 阶矩阵乘出来。公式、公开接口、边界算法与数值结果都与 `v0.18` 相同；改变的是计算与传输所用的表示。
+约化、dlog 组装与 NDE 输入全部以 2x2 局部矩阵的张量积形式保存与传输，不把 2^n 阶矩阵乘出来；公开接口与数值结果不依赖这一内部表示。
 
 ### 保留形式
 
@@ -63,30 +59,30 @@ NuConvention: "Positive"
 
 - 约化：一次递推只做张量作用。向零 raising 为 `M1^{-1} M0`，向零 lowering 为 `U^{-1} diag(1/κ) U M1`。M1 在主积分上严格对角，只读取代表 raw 行；M0 按 slot 轴逐次作用局部矩阵，复杂度 O(n 2^n)，不做 2^n 阶矩阵向量乘。
 - dlog：每个 letter 只保存贡献记录，而不是残数矩阵。记录分两类：`diagonal`（state 对角向量，用于 Ω_ex 与 normalization 规范项）和 `conjugated`（`preVector`、0/1 指示符 `letterIndicator`、稀疏中矩阵与 `postFactor`，用于 `U^{-1} diag(Log λ) U` 与 contact block）。
-- 公开查询：`MSDLogDE`、`MSFormulaMatrices` 仍返回与 `v0.18` 同形的密集矩阵，但它们由结构化数据按需 materialize；数值输运路径不经过这些密集矩阵。
+- 公开查询：`MSDLogDE`、`MSFormulaMatrices` 返回完整密集矩阵，由结构化数据按需 materialize；数值输运路径不经过这些密集矩阵。`MSFormulaMatrices[context, sectorKey]` 与 `MSContactMaps[context, sectorKey]` 另支持 `MessageLanguage -> "EN"|"CN"` 选择 sectorKey 无效时的提示语言，缺省英文，非法值按 `MessageLanguage` Failure 关闭。
 - 构造期认证：逐 component 验证 `U M0_c U^{-1} = diag(I κ_c)` 时，每列只做一次 `U^{-1} e_c` 与一次 M0 作用，再用 U 的转置访问器取行，一次合成矩阵判零；不把 `U^{-1} e_c` 再送进 U 的全列展开，否则叶子数按 4^n 增长。
 - letter list 化简后代入：代入后的贡献条目已是规范 Q(i) 字面量（整数、有理数、有理复数），直接取实虚分量出字符串，不再逐项 `Simplify[Together[...]]`；只有其余值才走 RootReduce 归一。同时把 Q(i) 门禁谓词换成真正可求值的 `MatchQ[_, _Integer | _Rational]`（原 `RationalQ` 写法无定义、门禁一直空转），非 Q(i) 值现在真正 `$Failed` 关闭。
 
 ### 线格式 v2
 
-写往 FlintNDE 的请求 schema 为 `madstree_flintnde_evaluate_v2`，新增 `tensorSectors` 字段；每条 letter 只写 `{alpha, beta, contributions}`，`contributions` 里是上面的结构化记录。后端 `Vendor/FlintNDE-dS/flintnde/tensor_dlog.py` 按 slot 轴依次作用局部 2x2 矩阵重建 U 与 U^{-1}，再求 `U^{-1} diag(indicator) U`，每个 sector 的代价为 O(n 2^n)。请求因此不含任何 2^n 阶留数矩阵。
+写往 FlintNDE 的请求 schema 为 `madstree_flintnde_evaluate_v2`，携带 `tensorSectors` 字段；每条 letter 只写 `{alpha, beta, contributions}`，`contributions` 里是上面的结构化记录。后端 `Vendor/FlintNDE-dS/flintnde/tensor_dlog.py` 按 slot 轴依次作用局部 2x2 矩阵重建 U 与 U^{-1}，再求 `U^{-1} diag(indicator) U`，每个 sector 的代价为 O(n 2^n)。请求因此不含任何 2^n 阶留数矩阵。
 
-### 集成位置
+### 结构分布
 
-| 文件 | 改动 |
+| 文件 | 职责 |
 | --- | --- |
-| `Kernel/Formula/TensorProduct.wl`（新增） | 局部基与逆、slot 元数据、U/U^{-1}/U^T/M0/M1 的张量作用、sector 张量记录与认证 |
-| `Kernel/Formula/Recurrence.wl` | 单步递推改为上述三次张量作用 |
-| `Kernel/DE/DLog.wl` | Ω 与 dlog block 改为结构化贡献表；输出 `tensorSectors`；密集矩阵只在公开查询处 materialize |
+| `Kernel/Formula/TensorProduct.wl` | 局部基与逆、slot 元数据、U/U^{-1}/U^T/M0/M1 的张量作用、sector 张量记录与认证 |
+| `Kernel/Formula/Recurrence.wl` | 单步递推只做张量作用 |
+| `Kernel/DE/DLog.wl` | Ω 与 dlog block 为结构化贡献表；输出 `tensorSectors`；密集矩阵只在公开查询处 materialize |
 | `Kernel/Formula/TensorAtoms.wl` | `MSFormulaMatrices` 由已认证的局部对角化子 materialize |
-| `Kernel/Numerics/FlintNDE.wl` | letter 序列化为 `{alpha, beta, contributions}`；letter list 化简后代入与真正生效的 Q(i) 门禁 |
-| `Kernel/Numerics/PathEvaluation.wl` | 请求 schema 升为 v2 并携带 `tensorSectors` |
+| `Kernel/Numerics/FlintNDE.wl` | letter 序列化为 `{alpha, beta, contributions}`；letter list 化简后代入与 Q(i) 门禁 |
+| `Kernel/Numerics/PathEvaluation.wl` | 请求 schema v2 并携带 `tensorSectors` |
 | `Backend/flintnde_transport.py` | v2 请求校验与 tensor 留数入口 |
-| `Vendor/FlintNDE-dS/flintnde/tensor_dlog.py`（新增） | 后端按 slot 轴重建 U/U^{-1}，以精确 Q(i) 累加留数 |
+| `Vendor/FlintNDE-dS/flintnde/tensor_dlog.py` | 后端按 slot 轴重建 U/U^{-1}，以精确 Q(i) 累加留数 |
 
 ### 一致性与效率
 
-用论文的 5 顶点 massless 链（81 个 master、41 个 letter）与 `v0.18` 对表：两者非零留数都是 5313 项，逐项精确差为 0；终点值最差相对差 1.242e-210。逐 letter 序列化耗时由 50.40 s 降到 0.05 s（取 100 个 `ep` 的中位数，范围 0.047--0.080 s）；letter 载荷由 12.5 MB 降到 221--227 KB；完整 v2 请求为 298.8 KB，对应 `v0.18` 的 16.84 MB。后端输运墙钟由 11.23 s 变为 10.76 s，主链由 4.377 s 变为 4.285 s。初始化与 DE 组装在两版间同量级（1.09 s / 1.86 s 对 1.18 s / 1.99 s）；这两步的开销主要落在局部基与认证上，本图的差异在测量噪声内，收益集中在 letter 组装与传输。
+用论文的 5 顶点 massless 链（81 个 master、41 个 letter）核对：结构化留数与逐项密集构造的非零项都是 5313 项，逐项精确差为 0；终点值最差相对差 1.242e-210。逐 letter 序列化耗时中位 0.05 s（取 100 个 `ep` 的中位数，范围 0.047--0.080 s）；letter 载荷 221--227 KB；完整 v2 请求 298.8 KB，不含任何 2^n 阶留数矩阵。
 
 ## 奇点用户点输出
 
@@ -460,13 +456,14 @@ Example 06 自适应检查为 `17/17`，使用 4 个生产点、2 个独立验�
 
 - 已支持共同-theta odd-subset simultaneous contact、coincident massless/massive quotient、event-reachable sector BFS 与纯 time-only 圈图；这不等于支持 loop-momentum integration。
 - 生产边界不按图名或 master 数分派。单顶点 massiveExternal 也走同一通用路线（2411.03088 Sec.3.3 显式级数仅保留为测试对照基准）；已闭合的 tree/time-only context 统一由 sector DAG、component/slot metadata、normalization 和 strict time rank 生成 nested curve、完整 dlog pullback residue 与 ancestor-sector leading system。公式/dlog/chart 未闭合、late-time 指数不衰减或拉回系统不是 exact regular singular 时结构化 fail closed；有限点定义积分只用于独立验证。
-- FlintNDE 输运要求拉回 connection 属于 exact `Q(i)(s)` 或 `Q(i)(t)`。本轮 fresh 开发检查
-  覆盖单顶点、pure massless、massive (anti-)time-ordered 和 mixed 三顶点，并统一使用当前 generic boundary producer。
+- FlintNDE 输运要求拉回 connection 属于 exact `Q(i)(s)` 或 `Q(i)(t)`。当前检查覆盖单顶点、
+  pure massless、massive (anti-)time-ordered 和 mixed 三顶点系统，统一使用 generic boundary producer。
 - FlintNDE 保留 exact Lee--Moser、高阶 pole 与奇点折跃能力，并增加按节点覆盖桶的 fast multipoint evaluation 和公开严格用户节点入口。未认证 high-pole、需要 ramification、代数扩域或一般 Stokes connection 的内部点与终点继续 fail closed。
 
-当前 fresh 回归的 25 个 Wolfram 开发脚本全部 `EXIT=0`：core `54/54`、公式 artifact `23/23`、
+25 个 Wolfram 开发脚本回归全部 `EXIT=0`：core `54/54`、公式 artifact `23/23`、
 点序列/规划 `29/29`、integral 定义 `20/20`、propagator 分类 `52/52`、boundary 五组
 `41/41`、`14/14`、`10/10`、`6/6`、`6/6`、二维 900 点复平面分组 `8/8`、单顶点 NDE `13/13`、
 mixed 三顶点 `8/8`、runtime/export `10/10`、辅助外腿 `6/6`、time-IBP 域 `15/15`、
-simultaneous chart `22/22`、vertex-family 约化 `19/19`，以及 Examples 01--07 `7/7`；
-Python adapter `17/17`、内置 FlintNDE-dS 的 191 项 Python 测试与 `26/26` Wolfram 接口检查也通过。
+simultaneous chart `22/22`、vertex-family 约化 `19/19`，以及 Examples 01--07 `7/7`、版本资产 `23/23`；
+Python 侧内嵌后端 `201/201`（含系数球宽 gate 回归 6 例）、适配器 `23/23`、引擎车道专项 `11/11`，
+Vendor Wolfram 接口检查 `26/26` 也通过。

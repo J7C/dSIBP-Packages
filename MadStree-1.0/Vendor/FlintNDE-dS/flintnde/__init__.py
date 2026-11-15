@@ -4,24 +4,6 @@
 拆分。所有数值矩阵均使用 python-flint 的 ``acb``/``acb_mat``。
 """
 
-import os
-import sys
-
-
-FLINTNDE_CITATION_NOTICE = "FlintNDE package paper, arXiv identifier pending."
-
-# 普通 import 每个进程只提醒一次；文件协议适配器可显式静默并自行保存引用 metadata。
-if (
-    not globals().get("_FLINTNDE_CITATION_REMINDER_SHOWN", False)
-    and os.environ.get("FLINTNDE_SUPPRESS_CITATION_NOTICE") != "1"
-):
-    print(
-        "To support FlintNDE, please acknowledge our work when you use FlintNDE "
-        "in your research. Please cite: " + FLINTNDE_CITATION_NOTICE,
-        file=sys.stderr,
-    )
-    _FLINTNDE_CITATION_REMINDER_SHOWN = True
-
 from .core import (
     DEFAULT_WORKING_PRECISION_DIGITS,
     acb_midpoint_matrix,

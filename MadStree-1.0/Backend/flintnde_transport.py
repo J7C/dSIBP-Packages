@@ -916,6 +916,7 @@ def _initial_vectors(
             for _ in range(multiplicity)
         ]
     numerical_digits = max(1, digits // 2)
+    weights = [acb(item["real"], item["imag"]) for item in boundary["weights"]]
 
     def _launch(numerical: bool):
         """按 exact 或小数化数值路线建立边界路径、letter 快速系统并完成输运。"""
@@ -938,6 +939,8 @@ def _initial_vectors(
                           for index in (0, len(launch_path) - 2)]
                 if not _boundary_letters_match(launch_fast, system, probes):
                     launch_fast = None
+        # 物理权重在首个匹配点先行合成（U(Yw)=(UY)w），普通段只输运该向量；
+        # 权重合成次序改变会使结果在球算术舍入级别偏离全列输运后合成。
         launch_result = transport_frobenius_boundaries_refined(
             system, branches, launch_path,
             primary_order=data["primaryOrder"], reference_order=data["referenceOrder"],
@@ -947,6 +950,7 @@ def _initial_vectors(
             fast_system=launch_fast,
             numerical_roots=known_roots if numerical else None,
             numerical_precision_digits=numerical_digits if numerical else None,
+            column_weights=weights,
         )
         return launch_path, launch_fast, launch_result
 
@@ -965,22 +969,8 @@ def _initial_vectors(
             frobenius_route = "numerical"
             caught.clear()
             path, fast_system, result = _launch(True)
-    weights = [acb(item["real"], item["imag"]) for item in boundary["weights"]]
 
-    def weighted_vector(matrix: Any) -> Any:
-        """按同一物理边界权重合并一条输运链的基解矩阵。"""
-
-        vector = acb_mat(dimension, 1)
-        for row in range(dimension):
-            vector[row, 0] = sum(
-                (weights[column] * matrix[row, column] for column in range(len(weights))),
-                acb(0),
-            )
-        return vector
-
-    primary_vector = weighted_vector(result["primary_snapshots"][-1])
-    reference_vector = weighted_vector(result["reference_snapshots"][-1])
-    return primary_vector, reference_vector, {
+    return result["primary_snapshots"][-1], result["reference_snapshots"][-1], {
         "kind": "regular_singular",
         "frobeniusRoute": frobenius_route,
         "path": [_point_record(point, digits) for point in path],
@@ -989,6 +979,7 @@ def _initial_vectors(
         "warnings": [str(item.message) for item in caught],
         "letterFastPath": fast_system is not None,
         "letterPoleCount": len(fast_system.poles) if fast_system is not None else 0,
+        "boundaryColumnWeights": True,
     }
 
 
@@ -1764,8 +1755,7 @@ def main() -> int:
         return 0
     if len(sys.argv) != 3:
         raise SystemExit("usage: flintnde_transport.py INPUT.json OUTPUT.json")
-    # 文件协议把 MadStree 引用写入响应 metadata，且不让依赖包的 import 提示进入日志。
-    os.environ["FLINTNDE_SUPPRESS_CITATION_NOTICE"] = "1"
+    # 文件协议把 MadStree 引用写入响应 metadata。
     input_path = Path(sys.argv[1])
     output_path = Path(sys.argv[2])
     try:

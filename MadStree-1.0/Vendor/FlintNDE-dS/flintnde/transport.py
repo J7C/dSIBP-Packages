@@ -905,11 +905,18 @@ def _resolve_frobenius_boundary_batch(
     known_roots: Sequence[Any] | None = None,
     numerical_roots: Sequence[Any] | None = None,
     numerical_precision_digits: int | None = None,
+    column_weights: Sequence[Any] | None = None,
+    preparation: dict[str, Any] | None = None,
 ) -> tuple[acb_mat, list[dict[str, Any]]]:
     """一次构造局部基，并把多个 Frobenius 边界变成同一匹配点的解列。
 
     ``numerical_roots`` 提供小数化证书谱时改走数值 Frobenius 路线：局部矩阵
     仍从精确有理系统提取，谱判定与 ``{a,b,C}`` 匹配按斩杀线执行。
+    ``column_weights`` 提供与 ``boundaries`` 等长的权重时，在匹配点先按
+    ``Y w`` 合成物理向量列，后续普通段只输运该向量（``U(Yw)=(UY)w``）。
+    ``preparation`` 是调用方持有的跨链准备缓存：高阶链存入的 exact 局部基
+    按前缀性质复用给低阶链（逐位一致，与独立低阶构造等价），不支持前缀
+    视图的构造或数值路线则独立重建。
     """
 
     start = getattr(path, "start_classification", None)
@@ -931,9 +938,20 @@ def _resolve_frobenius_boundary_batch(
             input_precision_digits=numerical_precision_digits,
         )
     else:
-        basis = build_local_solution_basis(
-            working_system, record.location_exact, order, known_roots=known_roots
-        )
+        basis = None
+        cached = preparation.get("local_basis") if preparation is not None else None
+        if cached is not None and cached[1] >= order:
+            basis = cached[0] if cached[1] == order else cached[0].prefix_view(order)
+            if basis is None:
+                basis = build_local_solution_basis(
+                    working_system, record.location_exact, order, known_roots=known_roots
+                )
+        else:
+            basis = build_local_solution_basis(
+                working_system, record.location_exact, order, known_roots=known_roots
+            )
+            if preparation is not None:
+                preparation["local_basis"] = (basis, order)
     local_point = path[0] - record.location
     evaluated_basis = basis.evaluate(local_point)
     vectors = acb_mat(system.dimension, len(boundaries))
@@ -958,6 +976,9 @@ def _resolve_frobenius_boundary_batch(
             target_relative_error,
         )
         reports.append(report)
+    if column_weights is not None:
+        weight_column = acb_mat([[acb(weight)] for weight in column_weights])
+        vectors = vectors * weight_column
     return vectors, reports
 
 
@@ -974,6 +995,8 @@ def _transport_frobenius_boundary_batch(
     fast_system: PartialFractionSystem | None = None,
     numerical_roots: Sequence[Any] | None = None,
     numerical_precision_digits: int | None = None,
+    column_weights: Sequence[Any] | None = None,
+    preparation: dict[str, Any] | None = None,
 ) -> tuple[
     list[acb_mat], list[dict[str, Any]], list[dict[str, Any]], float,
     list[dict[str, Any]] | None,
@@ -983,7 +1006,10 @@ def _transport_frobenius_boundary_batch(
     ``collect_patches=True`` 时额外返回逐段解系数补丁，供嵌入式截断认证的
     前缀求值复用。``fast_system`` 提供已认证极点的 letter 部分分式系统时，
     普通段直接走极点递推；局部基构造仍使用精确有理系统。``numerical_roots``
-    提供小数化证书谱时，起点局部基走数值 Frobenius 路线。
+    提供小数化证书谱时，起点局部基走数值 Frobenius 路线。``column_weights``
+    提供物理权重时，匹配点先合成单个加权向量列，普通段只输运该列。
+    ``preparation`` 是调用方持有的跨链准备缓存（奇点清单、解析系统、exact
+    局部基前缀）；同一物理准备在主/参考链间只计算一次。
     """
 
     path, save_requests = _transport_points_and_save_requests(path)
@@ -1003,9 +1029,16 @@ def _transport_frobenius_boundary_batch(
     working_system = getattr(path, "_working_system", None)
     if not isinstance(working_system, RationalMatrixSystem):
         raise TypeError("Frobenius batch path lacks its exact working RationalMatrixSystem")
-    inventory = working_system.singularity_inventory()
+    if preparation is not None and "inventory" in preparation:
+        inventory = preparation["inventory"]
+    else:
+        inventory = working_system.singularity_inventory()
+        if preparation is not None:
+            preparation["inventory"] = inventory
     if fast_system is not None:
         analytic_system = fast_system
+    elif preparation is not None and "analytic_system" in preparation:
+        analytic_system = preparation["analytic_system"]
     else:
         specialized = None
         if working_system.block_partition:
@@ -1014,6 +1047,8 @@ def _transport_frobenius_boundary_batch(
             specialized if specialized is not None
             else working_system.to_analytic_system(inventory)
         )
+        if preparation is not None:
+            preparation["analytic_system"] = analytic_system
     total_clock = time.perf_counter()
     vectors, boundary_reports = _resolve_frobenius_boundary_batch(
         system,
@@ -1024,7 +1059,10 @@ def _transport_frobenius_boundary_batch(
         known_roots,
         numerical_roots,
         numerical_precision_digits,
+        column_weights,
+        preparation,
     )
+    column_count = 1 if column_weights is not None else len(boundaries)
     snapshots = [acb_mat(vectors)]
     reports: list[dict[str, Any]] = []
     patches: list[dict[str, Any]] | None = [] if collect_patches else None
@@ -1040,7 +1078,7 @@ def _transport_frobenius_boundary_batch(
             sample_count=None,
             method_label="ordinary_taylor_batch",
             extra_report={
-                "column_count": len(boundaries),
+                "column_count": column_count,
                 "letter_fast_path": fast_system is not None,
             },
         )
@@ -1137,6 +1175,7 @@ def transport_frobenius_boundaries_refined(
     fast_system: PartialFractionSystem | None = None,
     numerical_roots: Sequence[Any] | None = None,
     numerical_precision_digits: int | None = None,
+    column_weights: Sequence[Any] | None = None,
 ) -> dict[str, Any]:
     """对同一系统的多个 Frobenius 初值共享构造，并逐列报告 refinement。
 
@@ -1147,7 +1186,12 @@ def transport_frobenius_boundaries_refined(
     已在探针点对表通过的 letter 部分分式系统，用于普通段极点递推。
     ``numerical_roots`` 提供小数化证书谱（含重复）且 ``numerical_precision_digits``
     给出其可靠十进制位数时，起点局部基改走数值 Frobenius 路线；谱门禁仍先由
-    exact 路线抛错后由调用方显式选择。
+    exact 路线抛错后由调用方显式选择。``column_weights`` 提供与
+    ``boundaries`` 等长的物理权重时，两条链都在匹配点先合成单个加权向量，
+    refinement 差值也只按该加权向量报告（舍入次序改变，不逐位等同全列合成）。
+    certified 双链共享奇点清单、解析系统与 exact 局部基系数前缀（前缀性质与
+    embedded 认证所依据的逐阶局部递推相同，低阶前缀与独立低阶构造逐位一致）；
+    两条链的普通段输运与阶数截断仍独立运行，refinement 差值继续度量阶数差。
     """
 
     if not boundaries:
@@ -1160,6 +1204,10 @@ def transport_frobenius_boundaries_refined(
         raise ValueError(
             "numerical_roots and numerical_precision_digits must be supplied together"
         )
+    if column_weights is not None and len(column_weights) != len(boundaries):
+        raise ValueError(
+            "column_weights length must equal the Frobenius boundary count"
+        )
     requested_certification_mode = certification_mode
     singular_boundary_forced_certified = certification_mode == "embedded"
     if singular_boundary_forced_certified:
@@ -1171,6 +1219,7 @@ def transport_frobenius_boundaries_refined(
         )
         certification_mode = "certified"
     accuracy_target = _accuracy_target(target_relative_error)
+    difference_columns = 1 if column_weights is not None else len(boundaries)
     if certification_mode == "embedded":
         chain = _transport_frobenius_boundary_batch(
             system,
@@ -1184,6 +1233,7 @@ def transport_frobenius_boundaries_refined(
             fast_system=fast_system,
             numerical_roots=numerical_roots,
             numerical_precision_digits=numerical_precision_digits,
+            column_weights=column_weights,
         )
         primary_snapshots, truncations = _embedded_prefix_snapshots(
             chain[0], chain[4], primary_order
@@ -1199,7 +1249,7 @@ def transport_frobenius_boundaries_refined(
                 _matrix_column(primary_snapshots[-1], column),
                 _matrix_column(chain[0][-1], column),
             )
-            for column in range(len(boundaries))
+            for column in range(difference_columns)
         ]
         result = {
             "certification_mode": "embedded",
@@ -1217,18 +1267,9 @@ def transport_frobenius_boundaries_refined(
             ],
         }
     else:
-        primary = _transport_frobenius_boundary_batch(
-            system,
-            boundaries,
-            path,
-            order=primary_order,
-            radius_fraction=radius_fraction,
-            target_relative_error=accuracy_target,
-            known_roots=known_roots,
-            fast_system=fast_system,
-            numerical_roots=numerical_roots,
-            numerical_precision_digits=numerical_precision_digits,
-        )
+        # 高阶链先行填充准备缓存，主链复用 exact 局部基前缀（与独立低阶构造
+        # 逐位一致）与同一奇点清单/解析系统；两条链的输运与阶数截断保持独立。
+        preparation: dict[str, Any] = {}
         reference = _transport_frobenius_boundary_batch(
             system,
             boundaries,
@@ -1240,13 +1281,29 @@ def transport_frobenius_boundaries_refined(
             fast_system=fast_system,
             numerical_roots=numerical_roots,
             numerical_precision_digits=numerical_precision_digits,
+            column_weights=column_weights,
+            preparation=preparation,
+        )
+        primary = _transport_frobenius_boundary_batch(
+            system,
+            boundaries,
+            path,
+            order=primary_order,
+            radius_fraction=radius_fraction,
+            target_relative_error=accuracy_target,
+            known_roots=known_roots,
+            fast_system=fast_system,
+            numerical_roots=numerical_roots,
+            numerical_precision_digits=numerical_precision_digits,
+            column_weights=column_weights,
+            preparation=preparation,
         )
         differences = [
             relative_difference_inf(
                 _matrix_column(primary[0][-1], column),
                 _matrix_column(reference[0][-1], column),
             )
-            for column in range(len(boundaries))
+            for column in range(difference_columns)
         ]
         result = {
             "certification_mode": "certified",

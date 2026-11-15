@@ -798,6 +798,118 @@ msBoundaryGeneralizedLeadingVector[context_, residue_, exponent_, sectorKey_, ro
 ];
 
 
+(* ::Section::Closed:: *)
+(*F1 解析直接构造完整首项 C*)
+
+(* 解析结构证书：整请求只判一次，确立商公式恒等式的全部前提——
+   (i) Diagonal[residue] 与各 master 的 Hankel 指数（按 globalIndex 次序）结构相同；
+   (ii) 各 sector 对角块无非对角元；
+   (iii) 任一 sector 各列的非零元只出现在本 sector 对角位与祖先闭包行块内；
+   (iv) contact transitions 与 sectorOrder 同向（超 sector 在前）。
+   任一条不成立返回 Failure，调用方回退既有 (αI−R)C=0 精确路径。 *)
+msBoundaryAnalyticStructureCertificate[
+  context_?MSContextQ,
+  residue_?MatrixQ,
+  exponentVector_List
+] := Module[
+  {dimension, sectorOrder, indicesBySector, allowedRows, ownRows, columns, forbiddenRows,
+   nonzeroRows, column, position},
+  dimension = Length[residue];
+  If[Length[exponentVector] =!= dimension || ! SameQ[Diagonal[residue], exponentVector],
+    Return[msFailure["AnalyticDiagonalIdentityFailed", <|"dimension" -> dimension|>]]
+  ];
+  sectorOrder = context["sectorOrder"];
+  If[! AllTrue[
+      context["contactTransitions"],
+      First[FirstPosition[sectorOrder, #["sourceSector"]]] <
+        First[FirstPosition[sectorOrder, #["targetSector"]]] &],
+    Return[msFailure["AnalyticSectorOrderNotTopological", <||>]]
+  ];
+  indicesBySector = Association[Table[
+      key -> Lookup[Select[context["masters"], #["sectorKey"] === key &], "globalIndex"],
+      {key, sectorOrder}]];
+  Catch[
+    Do[
+      ownRows = indicesBySector[sectorOrder[[position]]];
+      allowedRows = Union[
+        ownRows,
+        Join @@ Lookup[
+          indicesBySector, msBoundaryAncestorSectorKeys[context, sectorOrder[[position]]], {}]];
+      Do[
+        nonzeroRows = Flatten[
+          Position[residue[[All, column]], Except[0], {1}, Heads -> False]];
+        forbiddenRows = Select[nonzeroRows,
+          (! MemberQ[allowedRows, #1] || (MemberQ[ownRows, #1] && #1 =!= column) &)];
+        If[forbiddenRows =!= {},
+          Throw[msFailure[
+            "AnalyticColumnSupportViolation",
+            <|"sectorKey" -> sectorOrder[[position]], "column" -> column,
+              "rows" -> forbiddenRows|>
+          ]]
+        ],
+        {column, ownRows}
+      ],
+      {position, Length[sectorOrder]}
+    ];
+    True
+  ]
+];
+
+
+(* 解析首项向量：结构证书成立时，分支 (sectorKey, rootIndex) 的完整 C 为
+   C[root]=1、同 sector 兄弟=0、祖先闭包外=0，祖先行自 subsector 向上按商公式
+   C[j] = R[j, 已定列].C[列]/(α_root − α_j) 直接给出，不再解 (αI−R)C=0。
+   高 sector 中受低 sector source 诱导的分量即 R 的 contact 块（quotient 映射），
+   归一化与现行路径同为 C[root]=1。祖先行出现同根指数（分母为零；同根多方向、
+   退化与 log 情形由此进入）时 fail-closed 返回 Failure，由调用方回退既有路径。 *)
+msBoundaryAnalyticLeadingVector[
+  context_?MSContextQ,
+  residue_?MatrixQ,
+  exponentVector_List,
+  sectorKey_String,
+  rootIndex_Integer
+] := Module[
+  {dimension, indicesBySector, ancestorSectorKeys, ancestorRows, vector, previous, rows,
+   denominators},
+  dimension = Length[residue];
+  indicesBySector = Association[Table[
+      key -> Lookup[Select[context["masters"], #["sectorKey"] === key &], "globalIndex"],
+      {key, context["sectorOrder"]}]];
+  ancestorSectorKeys = Complement[msBoundaryAncestorSectorKeys[context, sectorKey], {sectorKey}];
+  ancestorRows = Join @@ Lookup[indicesBySector, ancestorSectorKeys, {}];
+  If[AnyTrue[ancestorRows, exponentVector[[#1]] === exponentVector[[rootIndex]] &],
+    Return[msFailure[
+      "AnalyticSameRootAncestor",
+      <|"sectorKey" -> sectorKey, "rootIndex" -> rootIndex|>
+    ]]
+  ];
+  (* 同 sector 兄弟与根同指数时本征空间退化，rooted 受限解不唯一，
+     与商公式取兄弟=0 的选择不保证一致，按同根多方向情形 fail-closed。 *)
+  If[AnyTrue[
+    Select[indicesBySector[sectorKey], #1 =!= rootIndex &],
+    exponentVector[[#1]] === exponentVector[[rootIndex]] &],
+    Return[msFailure[
+      "AnalyticSameRootSector",
+      <|"sectorKey" -> sectorKey, "rootIndex" -> rootIndex|>
+    ]]
+  ];
+  (* 祖先闭包外的行按构造恒为零：列支撑证书保证这些行的方程平凡成立
+     （闭包外 sector 既不是本 sector 的祖先，也不是任一严格祖先的祖先），
+     不得进入商公式除法——闭包外行与根同指数时分母为零，会得到无意义的 0/0。 *)
+  vector = ConstantArray[0, dimension];
+  vector[[rootIndex]] = 1;
+  previous = {rootIndex};
+  Do[
+    rows = indicesBySector[key];
+    denominators = exponentVector[[rootIndex]] - exponentVector[[rows]];
+    vector[[rows]] = (residue[[rows, previous]] . vector[[previous]]) / denominators;
+    previous = Join[previous, rows],
+    {key, Select[Reverse[context["sectorOrder"]], MemberQ[ancestorSectorKeys, #1] &]}
+  ];
+  vector
+];
+
+
 (* Leading coefficient of the defining integral of a single sector master; all data come from sector slots/components. *)
 msBoundaryGammaPoleQ[value_] := msProvablyNonPositiveIntegerQ[value];
 
@@ -921,7 +1033,7 @@ msGenericSectorFrobeniusData[
   workingPrecision_Integer
 ] := Module[
   {curveData, sectorByKey, localRecords, failure, branchAttempts, certificate, branches,
-   generalized, thetaFixing},
+   generalized, thetaFixing, exponentVector, structureCertificate},
   curveData = msGenericBoundaryCurveData[
     context, de, targetRules, scale, rankOrder, workingPrecision
   ];
@@ -943,20 +1055,43 @@ msGenericSectorFrobeniusData[
   ];
   failure = FirstCase[localRecords, _Failure, Missing["NoFailure"]];
   If[Head[failure] === Failure, Return[failure]];
-  (* 全部 master 都构造首项向量；求解失败者交由证书做 Jordan 链分析，不在此终止。 *)
+  (* F1：先按解析商公式直接构造完整 C；结构证书或同根触发失败时逐分支回退
+     既有 (αI−R)C=0 精确路径（含 constrained solve 与 Jordan/log 分支）。 *)
+  exponentVector = ConstantArray[0, Length[localRecords]];
+  Scan[
+    Function[record,
+      exponentVector[[record["rootGlobalIndex"]]] = record["frobeniusExponent"]],
+    localRecords
+  ];
+  structureCertificate = msBoundaryAnalyticStructureCertificate[
+    context, curveData["residue"], exponentVector];
   branchAttempts = Map[
     Function[record,
-      With[
-        {vector = msBoundaryRootedIndicialVector[
-          context,
-          curveData["residue"],
-          record["frobeniusExponent"],
-          record["sectorKey"],
-          record["rootGlobalIndex"]
-        ]},
+      Module[{vector, route},
+        vector = If[TrueQ[structureCertificate],
+          msBoundaryAnalyticLeadingVector[
+            context, curveData["residue"], exponentVector,
+            record["sectorKey"], record["rootGlobalIndex"]],
+          structureCertificate
+        ];
+        route = "analyticQuotient";
         If[Head[vector] === Failure,
-          Join[record, <|"normalizedLeadingVector" -> Missing["IndicialVectorFailed"]|>],
-          Join[record, <|"normalizedLeadingVector" -> vector|>]
+          vector = msBoundaryRootedIndicialVector[
+            context,
+            curveData["residue"],
+            record["frobeniusExponent"],
+            record["sectorKey"],
+            record["rootGlobalIndex"]
+          ];
+          route = "rootedIndicialSolve"
+        ];
+        If[Head[vector] === Failure,
+          Join[record, <|
+            "normalizedLeadingVector" -> Missing["IndicialVectorFailed"],
+            "leadingVectorRoute" -> route|>],
+          Join[record, <|
+            "normalizedLeadingVector" -> vector,
+            "leadingVectorRoute" -> route|>]
         ]
       ]
     ],

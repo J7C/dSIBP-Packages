@@ -218,6 +218,31 @@ msFailureDefaultText[tag_String] := Switch[tag,
       "The solved Frobenius leading vector of the attached sector left a nonzero residual, so this boundary solution is not certified. Review the sector residue matrix and the requested exponent, or choose another boundary target point",
       "所附区段求解出的 Frobenius 领头向量残差不为零，因此该边界解未通过认证。请检查该区段的残差矩阵与所请求的指数，或改选其它边界目标点"
     },
+  "AnalyticDiagonalIdentityFailed",
+    {
+      "The analytic leading-vector construction requires the residue diagonal to equal the master Hankel exponents in global-index order, but the attached residue does not satisfy this identity. The boundary falls back to the exact constrained solve and no action is needed",
+      "解析首项向量构造要求残数对角元与各 master 的 Hankel 指数按 globalIndex 次序恒等，但所附残数不满足该恒等式。边界将回退到精确受限求解，无需处理"
+    },
+  "AnalyticSectorOrderNotTopological",
+    {
+      "The analytic leading-vector construction requires every contact transition to point from an earlier sector to a later sector in sectorOrder, but the attached context violates this. The boundary falls back to the exact constrained solve and no action is needed",
+      "解析首项向量构造要求每条 contact transition 在 sectorOrder 中由前 sector 指向后 sector，但所附 context 违反该方向。边界将回退到精确受限求解，无需处理"
+    },
+  "AnalyticColumnSupportViolation",
+    {
+      "The analytic leading-vector construction requires each column's nonzero entries to stay in its own sector's diagonal slot and its ancestor-closure rows, but the attached rows violate this. The boundary falls back to the exact constrained solve and no action is needed",
+      "解析首项向量构造要求每列的非零元只落在本 sector 对角位与祖先闭包行内，但所列行违反该支撑条件。边界将回退到精确受限求解，无需处理"
+    },
+  "AnalyticSameRootAncestor",
+    {
+      "The analytic leading-vector construction fails closed because an ancestor row shares the root exponent, so the quotient denominator vanishes; this is the same-root multi-direction case. The branch falls back to the exact constrained solve and no action is needed",
+      "解析首项向量构造因祖先行与根指数相同而 fail-closed，商公式分母为零；这是同根多方向情形。该分支回退到精确受限求解，无需处理"
+    },
+  "AnalyticSameRootSector",
+    {
+      "The analytic leading-vector construction fails closed because a sibling master in the same sector shares the root exponent, so the leading eigenspace is degenerate and the two routes need not agree; this is the same-root multi-direction case. The branch falls back to the exact constrained solve and no action is needed",
+      "解析首项向量构造因同 sector 兄弟 master 与根指数相同而 fail-closed，领头本征空间退化，两条路线不必一致；这是同根多方向情形。该分支回退到精确受限求解，无需处理"
+    },
   "FlintNDEExactPathRequired",
     {
       "FlintNDE transport requires the dlog letters and path parameters along each complex-affine segment to be exact affine Q(i) data, but the attached letter or point parameters are not. Use exact rational or Gaussian-rational coordinate values along the path and evaluate again",

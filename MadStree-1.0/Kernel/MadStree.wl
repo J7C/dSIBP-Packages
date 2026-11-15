@@ -21,10 +21,10 @@ MSIntegral::usage = "MSIntegral[sectorKey,aShifts,stateBits] is the normalized n
 MSBareIntegral::usage = "MSBareIntegral[sectorKey,aShifts,stateBits] is the inert bare integral I_s(n;a) defined in the manual with exactly the same sector, shift and two-state indices as MSIntegral.";
 MSIntegralDefinition::usage = "MSIntegralDefinition[integral,context] returns the exact sector normalization and the inert normalized-to-bare relation J_s(n;a)=normalization I_s(n;a) for one valid MSIntegral.";
 MSMasterIntegrals::usage = "MSMasterIntegrals[context] returns master-integral records in the exact matrix order, including the bare integral, exact sector normalization and inert normalized-to-bare definition.";
-MSFormulaMatrices::usage = "MSFormulaMatrices[context,sector] returns M1, M0, U and the energy letters.";
+MSFormulaMatrices::usage = "MSFormulaMatrices[context,sector] returns M1, M0, U and the energy letters; MessageLanguage selects the notice language, defaulting to \"EN\".";
 MSFormulaData::usage = "MSFormulaData[context] aggregates all-sector masters, recurrence metadata and the full analytic dlog DE. TimePowerRules may specialize recurrence metadata, but never substitutes the analytic dlog DE.";
 MSWriteFormulaArtifacts::usage = "MSWriteFormulaArtifacts[context] writes all-sector masters, recurrence metadata, the analytic dlog DE and a manifest under results/madstree_formula/run-UUID by default, and returns every actual output path.";
-MSContactMaps::usage = "MSContactMaps[context,sector] returns the exact supersector-to-subsector contact matrices.";
+MSContactMaps::usage = "MSContactMaps[context,sector] returns the exact supersector-to-subsector contact matrices; MessageLanguage selects the notice language, defaulting to \"EN\".";
 MSRecurrenceStep::usage = "MSRecurrenceStep[integral,component,context] reduces one nonzero time shift toward zero.";
 MSReduce::usage = "MSReduce[expr,context,MasterBasis->basis] iteratively reduces a finite linear combination, List, or nested Table of valid MSIntegral objects. Scalar input returns one ordered coefficient vector; list input preserves its shape and reports per-element coefficients, residuals, remaining shifts, singular layers, and failure positions.";
 MSDLogDE::usage = "MSDLogDE[context] returns the ordered master integrals and the block-triangular dlog connection.";
@@ -70,8 +70,10 @@ MSReconstructEpSeries::usage = "MSReconstructEpSeries[context,ep,pointSequence,M
 
 MSInitTree::badinput = "Invalid tree topology input: `1`.";
 MSInitVertexFamily::badinput = "Invalid single-vertex function family input: `1`.";
-MSFormulaMatrices::nosector = "找不到区段 `1`；请使用 MSSectors[context] 返回的 sectorKey。 Sector `1` not found; use a sectorKey returned by MSSectors[context].";
-MSContactMaps::nosector = "找不到区段 `1`；请使用 MSSectors[context] 返回的 sectorKey。 Sector `1` not found; use a sectorKey returned by MSSectors[context].";
+MSFormulaMatrices::nosector = "Sector `1` not found; use a sectorKey returned by MSSectors[context].";
+MSFormulaMatrices::nosectorCN = "找不到区段 `1`；请使用 MSSectors[context] 返回的 sectorKey。";
+MSContactMaps::nosector = "Sector `1` not found; use a sectorKey returned by MSSectors[context].";
+MSContactMaps::nosectorCN = "找不到区段 `1`；请使用 MSSectors[context] 返回的 sectorKey。";
 MSRecurrenceStep::badint = "Integral does not match the context: `1`.";
 MSReduce::cycle = "Iterative reduction detected a repeated state: `1`.";
 MSEvaluatePath::backendLaunchFailed = "FlintNDE backend could not be launched under Python command `1`. Captured backend output tail: `2`.";

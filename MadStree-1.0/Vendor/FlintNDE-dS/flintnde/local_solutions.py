@@ -79,6 +79,24 @@ class LocalSolutionBasis:
         repr=False,
         compare=False,
     )
+    _prefix_view: Callable[[int], "LocalSolutionBasis | None"] | None = field(
+        default=None,
+        repr=False,
+        compare=False,
+    )
+
+    def prefix_view(self, order: int) -> "LocalSolutionBasis | None":
+        """返回低阶前缀求值视图；不支持前缀共享的构造返回 ``None``。
+
+        前缀视图的 ``resolve_boundary`` 与本基完全一致（exact manifest 与阶数
+        无关），``evaluate`` 只做低阶截断 Horner，与独立低阶构造逐位相同。
+        """
+
+        if self._prefix_view is None:
+            return None
+        if order < 0:
+            raise ValueError("prefix order must be nonnegative")
+        return self._prefix_view(order)
 
     def evaluate(self, local_point: acb) -> acb_mat:
         """在非零局部点计算原始积分基中的 fundamental matrix。"""
@@ -221,6 +239,21 @@ def _power_log_local_basis(
     }
     if extra_manifest:
         manifest.update(extra_manifest)
+
+    def prefix(order: int) -> LocalSolutionBasis | None:
+        sub_basis = basis.prefix_view(order)
+        if sub_basis is None:
+            return None
+        return LocalSolutionBasis(
+            system.dimension,
+            method,
+            sub_basis.maximum_log_degree,
+            manifest,
+            sub_basis.evaluate,
+            resolve,
+            _prefix_view=prefix,
+        )
+
     return LocalSolutionBasis(
         system.dimension,
         method,
@@ -228,6 +261,7 @@ def _power_log_local_basis(
         manifest,
         basis.evaluate,
         resolve,
+        _prefix_view=prefix,
     )
 
 

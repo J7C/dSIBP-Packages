@@ -2,9 +2,6 @@
 
 Chinese version: [README-cn.md](README-cn.md)。
 
-Changelog: per-version incremental updates live in `更新日志.md` at the package root
-(development repository); the release carries no changelog.
-
 `MadStree` is a Wolfram Language package that works directly with the time-integral tensor formula. The input can be an ordered dS tree topology or a pure time-only incidence graph that does not integrate loop momenta; the output includes contact-reachable sectors, ordered master integrals, stepwise or full iterative reduction, a block-triangular dlog connection and automatic boundary certificates. The main algorithm does not generate general IBP systems and does not call Kira.
 
 The default conventions are
@@ -21,34 +18,32 @@ Only the function name `h` is used, with `h(nu,0;z)=z^(sNu nu) H_nu(z)`: the inp
 
 `NuConvention` is chosen only at `MSInitTree` initialization. Once a context is built, the formula matrices, recurrence and dlog read this value fixed; there is no per-call convention override.
 
+## Singular-boundary leading vectors and boundary startup
+
+- The leading vector of `MSBoundaryData` no longer solves `(alpha I - R) C = 0` per branch. An analytic structure certificate is checked once per request (the residue diagonal equals the master Hankel exponents in global-index order, sector diagonal blocks are purely diagonal, column support stays inside the sector's own diagonal slot and its ancestor-closure rows, and contact transitions agree with sectorOrder); when it holds, each branch is constructed directly by the quotient formula `C[j] = R[j,P] C[P] / (alpha_root - alpha_j)` walking up from the subsectors, with the normalization `C[root] = 1` unchanged. Same-root multi-direction cases (an ancestor or a same-sector sibling sharing the root exponent) and certificate violations fail closed to the existing constrained solve with registered tags, and `leadingVectorRoute` records the route taken. The derivation lives in `Documentation/首项C解析构造推导.md`. On the production request all 25 branches take the analytic route; the analytic and constrained-solve routes agree exactly and their serialized payloads are identical character for character.
+- The bundled backend carries five measured optimizations: the exact rational series-quotient inner loop is capped at `min(n, denominator degree)` with a zero-numerator shortcut (exact coefficients unchanged); exact objects pass through without `str` round-trips; diagonalizable spectra use the batched no-log eigenbasis recursion followed by an absolute certified-ball self-check (any degree whose largest ball radius exceeds 10^-(digits/2) of that degree's coefficient-matrix scale warns and falls back to the per-solution dense spectral inverse); physical weights are contracted to a single transported column at the match point (this changes the summation order; agreement is at ball-arithmetic rounding level, scaled by max|C_1| within +/-6.6e-97 at 80 digits, not bitwise); primary and reference chains share preparation with the reference chain first. All retained digits derive from the requested working digits.
+
 ## C++ engine lane and precision-adaptive serialization
 
-This version (release re-numbered `1.0`) differs from `v0.20` in two areas: connecting the C++ certified dual-chain engine inside the bundled backend, and deriving all vendor serialization widths and tolerances from the requested working digits. Public entry points, master definitions, normalizations and numerical-result definitions are unchanged from `v0.20`.
+All vendor serialization widths and tolerances derive from the requested working digits; the lane choice never touches the public entry points, master definitions, normalizations or numerical-result definitions.
 
 - `Vendor/FlintNDE-dS/engine/` is a one-time frozen copy of the C++ engine from package-FlintNDE `v1.02` (certified dual-chain transport, `auto`/`sparse`/`dense` residue kernels, streaming batch parsing), extended to this system's request contract: exact C++ tensor reconstruction from structured letters (`tensorSectors` plus per-letter `{alpha,beta,contributions}`, no dense residue matrices shipped), `certificationMode "embedded"` (a single reference chain with prefix snapshots when a segment has exactly one point, otherwise forced back to certified), and per-segment reporting of the effective certification mode.
 - Adapter engine lane: a request runs entirely in the engine when it satisfies `pathPlanning=False`, `SingularityMode "Avoid"`, a finite boundary, and no segment anchor or user point on a letter pole; a missing engine or the environment variable `MADSTREE_FLINTNDE_ENGINE=python` falls back to the Python pool, runtime errors are surfaced fail-closed; `FLINTNDE_ENGINE_LIBPATH` locates the libflint runtime directory; each segment reports the lane actually taken in `planReport.engine`. Requests with a regular-singular boundary or automatic planning enabled always use the Python lane by contract.
-- Cross-validation: on real tensor requests the engine's structured letters agree digit-for-digit with the dense form and the engine lane agrees with the Python lane at tolerance level; engine-lane suite 11/11, adapter 23/23, bundled backend 195/195, check_core 54/54, version assets 23/23.
-- Three-vertex zd n100 single-round retest: production 128.71 s (0.62x versus the `v0.20` pre-C7 207.28 s, the gain coming from the C7 boundary letter fast path taking effect at n100 for the first time); this production geometry does not use the engine lane by contract; registered as Step 7 in `bench/eff_bench.md`.
+- Cross-validation: on real tensor requests the engine's structured letters agree digit-for-digit with the dense form and the engine lane agrees with the Python lane at tolerance level.
 
 ## Coarse-block transport and known-roots boundary certificate
 
-The coarse-block DE tensor transport has been measured on the two- and five-vertex cases. Identity factors are extracted exactly from sector/source rectangles in the actual master basis, and the complete solution is packed as active rows by (spectator indices times solution columns) for FLINT matrix multiplication. No solution factorization or removal of subsector couplings is required. Contributions with the same pole and output layout are merged; each recurrence order shares input packing, single-contribution rows are referenced directly and multi-contribution rows use one small C-level matrix sum, without per-2x2-slot scheduling.
+Ordinary-segment transport runs as a coarse-block DE tensor product. Identity factors are extracted exactly from sector/source rectangles in the actual master basis, and the complete solution is packed as active rows by (spectator indices times solution columns) for FLINT matrix multiplication. No solution factorization or removal of subsector couplings is required. Contributions with the same pole and output layout are merged; each recurrence order shares input packing, single-contribution rows are referenced directly and multi-contribution rows use one small C-level matrix sum, without per-2x2-slot scheduling.
 
-Ordinary affine segments use compiled blocks directly. Ordinary boundary segments use the same recurrence when the exact rational system is certified as a polynomial plus simple Q(i) poles; other systems retain the general analytic route. Frobenius/known-root initialization keeps its existing algorithm, and explicit-matrix interfaces and singular-point operations materialize residues on demand.
+Ordinary affine segments use compiled blocks directly. Ordinary boundary segments use the same recurrence when the exact rational system is certified as a polynomial plus simple Q(i) poles; other systems retain the general analytic route. The Frobenius/known-root initialization constructs leading vectors analytically under the structure certificate and runs the batched no-log recursion for diagonalizable spectra (see the first section); explicit-matrix interfaces and singular-point operations materialize residues on demand.
 
-Measured on the ordinary affine segment with a finite initial vector (same request, median of 3 rounds, against the v0.19 dense backend): two vertices 0.02326 s vs 0.03275 s (0.710x); five vertices 16.154 s vs 64.773 s (0.2494x, 4.01x faster), primary chain 6.797 s vs 26.691 s and reference chain 9.243 s vs 37.770 s. All 6/162 output component midpoints agree, with identical node counts and refinement differences. For the three-vertex case at the zd target points (N=1/10), isolating the target segment gives primary 2.315/2.628 s vs 2.371/2.726 s and reference 2.754/3.149 s vs 3.092/3.534 s; per-branch primary new/old is 0.90--1.03 and all components agree (maximum relative difference 0). At dimensions 16--25 with a non-tiled layout, block packing and assembly offset the savings. Full chain including the exact boundary: two vertices 0.6408 s vs 0.6441 s; five vertices 931.9 s vs 968.7 s (0.962x) with all 162 components agreeing. About 84% of the five-vertex wall time is the shared boundary: all 149 poles are simple, but a non-Q(i) exact root (finite_001) makes simple-pole certification fail, so the boundary keeps the general Cauchy route; the block gain therefore appears only in the ordinary segment. The adapter suite passes 17/17 and the bundled backend passes 191 Python tests. Benchmark scripts are `test/bench_03_block_transport.wls/.py` and `test/bench_04_three_vertex_zd.*` in this version.
+The coarse-block route is verified component by component on the two- and five-vertex production requests, including the full chain with the exact boundary (162 components agreeing). When the shared boundary contains a non-Q(i) exact root (a simple pole of the finite_001 type), simple-pole certification fails, the boundary keeps the general Cauchy route, and the block gain appears only in the ordinary segment; at dimensions 16--25 with a non-tiled layout, packing and assembly overhead offsets the savings.
 
-Relative to `v0.19`, `v0.20` changed only this directory and its bundled `Vendor/FlintNDE-dS`, carrying two MadStree optimizations with measured gains: per-letter substitution, differentiation and residue extraction in the boundary curve and low-level user path, and direct back substitution of nonresonant leading vectors in reverse sector-DAG order, with the full constrained solve retained for zero denominators or nonzero residuals.
-
-The ordinary affine segment and the ordinary boundary segment were also prototyped with Python block tensor-residue operators. Same-request measurement showed a slowdown from 10.857 s to 16.521 s (52.2%) in total wall time and from 4.304 s to 6.799 s (58.0%) in the primary chain, so they have been reverted to the dense FLINT route of `v0.19`. The old implementation multiplies dense matrices in C, while per-contribution Python scheduling cost exceeds the saved scalar arithmetic. The associated `residue_actions`, `TensorResidueOperator`, `TensorBoundarySystem` and dedicated tests have been removed from this version.
-
-The retained boundary optimization reduces the three-run median from 6.405 s to 4.511 s, a 29.6% speedup. Of the 81 five-vertex boundary branches, 17 use direct substitution and 64 use the constrained fallback, all agreeing with the original result; all 81 final components have identical serialized midpoints at 60 and 200 digits. The handbook keeps the per-letter boundary-residue and sector back-substitution formulas, but no longer presents the reverted ordinary tensor recurrence as the current implementation.
-
-The singular boundary of `MSBoundaryData` now carries a power-log certificate: the exact value, algebraic and geometric multiplicity, Jordan defect and positive-integer differences of every indicial root, all derived from the existing leading-vector data plus exact nullspace/rank analysis where needed, without solving a characteristic polynomial. The certificate travels with the evaluation request, and the bundled backend builds a verification-only manifest from it: ascending kernel chains check that each claimed root has generalized-eigenspace dimension equal to its claimed multiplicity and that the multiplicities sum to the system dimension (together these pin down the characteristic polynomial uniquely), so `charpoly()` and root finding are no longer called. When logs or mixed-defective Jordan structure appear, the power-log recurrence continues inside the known spectrum (spectral projectors plus resonant block systems; the first log order emerges naturally from incompatibility-driven budget raises) instead of falling back to a spectrum-recomputing entry point. Measured on the same five-vertex request: backend manifest construction drops from 3.344 s to 1.464 s (−56%), power-log basis construction is unchanged between routes, and Wolfram-side boundary construction pays +0.103 s (+2.8%) for the certificate.
+The singular boundary of `MSBoundaryData` now carries a power-log certificate: the exact value, algebraic and geometric multiplicity, Jordan defect and positive-integer differences of every indicial root, all derived from the existing leading-vector data plus exact nullspace/rank analysis where needed, without solving a characteristic polynomial. The certificate travels with the evaluation request, and the bundled backend builds a verification-only manifest from it: ascending kernel chains check that each claimed root has generalized-eigenspace dimension equal to its claimed multiplicity and that the multiplicities sum to the system dimension (together these pin down the characteristic polynomial uniquely), so `charpoly()` and root finding are no longer called. When logs or mixed-defective Jordan structure appear, the power-log recurrence continues inside the known spectrum (spectral projectors plus resonant block systems; the first log order emerges naturally from incompatibility-driven budget raises) instead of falling back to a spectrum-recomputing entry point.
 
 ## Tensor-product engine
 
-This version keeps reduction, dlog assembly and the NDE input in tensor-product form over local 2x2 matrices, and never multiplies out 2^n matrices. Formulas, public interface, boundary algorithms and numerical results are the same as `v0.18`; only the representation used for computation and transmission changes.
+Reduction, dlog assembly and the NDE input are kept in tensor-product form over local 2x2 matrices; 2^n matrices are never multiplied out. The public interface and numerical results do not depend on this internal representation.
 
 ### What is stored
 
@@ -64,30 +59,30 @@ Hence `U = P (⊗ 2x2) S` and `U^{-1} = P (⊗ inverse 2x2) S`, where P and S ar
 
 - Reduction: one recurrence step is pure tensor action. Raising toward zero is `M1^{-1} M0`; lowering toward zero is `U^{-1} diag(1/kappa) U M1`. M1 is exactly diagonal on masters and is read from the representative raw row; M0 acts slot by slot, costing O(n 2^n) and never a 2^n matrix-vector product.
 - dlog: each letter carries contribution records instead of a residue matrix. A record is either `diagonal` (a state-diagonal vector, used by Omega_ex and the normalization gauge) or `conjugated` (a `preVector`, a 0/1 `letterIndicator`, a sparse middle matrix and a `postFactor`, used by `U^{-1} diag(Log lambda) U` and by contact blocks).
-- Public queries: `MSDLogDE` and `MSFormulaMatrices` still return dense matrices of the same shape as `v0.18`, but materialize them from the structured data on demand; the numerical transport path never touches those dense matrices.
+- Public queries: `MSDLogDE` and `MSFormulaMatrices` return full dense matrices, materialized from the structured data on demand; the numerical transport path never touches those dense matrices. `MSFormulaMatrices[context, sectorKey]` and `MSContactMaps[context, sectorKey]` additionally accept `MessageLanguage -> "EN"|"CN"` to select the language of the invalid-sectorKey notice, defaulting to English; invalid values fail closed with a `MessageLanguage` failure.
 - Construction certificates: checking `U M0_c U^{-1} = diag(I kappa_c)` per component costs one `U^{-1} e_c` and one M0 action per column, after which the U rows come from the transpose accessor and the whole matrix is tested once; sending `U^{-1} e_c` back through all U columns would grow the leaf count like 4^n.
 - Letter-list simplify-then-substitute: substituted contribution entries are already canonical Q(i) literals (integers, rationals, rational complex numbers), so real and imaginary parts are stringified directly instead of running `Simplify[Together[...]]` per entry; only other values go through RootReduce normalization. The Q(i) gate predicate is also replaced by an evaluable `MatchQ[_, _Integer | _Rational]` (the previous `RationalQ` spelling is undefined and the gate never fired), so non-Q(i) values now genuinely fail closed with `$Failed`.
 
 ### Wire format v2
 
-Requests to FlintNDE use the schema `madstree_flintnde_evaluate_v2` and carry a new `tensorSectors` field; each letter is written as `{alpha, beta, contributions}` with the structured records above. The backend `Vendor/FlintNDE-dS/flintnde/tensor_dlog.py` rebuilds U and U^{-1} by applying local 2x2 matrices along each slot axis and then forms `U^{-1} diag(indicator) U` at cost O(n 2^n) per sector, so no 2^n residue matrix ever enters the request.
+Requests to FlintNDE use the schema `madstree_flintnde_evaluate_v2` and carry a `tensorSectors` field; each letter is written as `{alpha, beta, contributions}` with the structured records above. The backend `Vendor/FlintNDE-dS/flintnde/tensor_dlog.py` rebuilds U and U^{-1} by applying local 2x2 matrices along each slot axis and then forms `U^{-1} diag(indicator) U` at cost O(n 2^n) per sector, so no 2^n residue matrix ever enters the request.
 
-### Where the optimization lives
+### Layout
 
-| File | Change |
+| File | Responsibility |
 | --- | --- |
-| `Kernel/Formula/TensorProduct.wl` (new) | local bases and inverses, slot metadata, tensor actions of U/U^{-1}/U^T/M0/M1, sector tensor records and certificates |
+| `Kernel/Formula/TensorProduct.wl` | local bases and inverses, slot metadata, tensor actions of U/U^{-1}/U^T/M0/M1, sector tensor records and certificates |
 | `Kernel/Formula/Recurrence.wl` | one recurrence step uses the tensor actions above |
-| `Kernel/DE/DLog.wl` | Omega and dlog blocks become structured contribution lists; emits `tensorSectors`; dense matrices only at public queries |
+| `Kernel/DE/DLog.wl` | Omega and dlog blocks as structured contribution lists; `tensorSectors` output; dense matrices only at public queries |
 | `Kernel/Formula/TensorAtoms.wl` | `MSFormulaMatrices` materializes from the certified local diagonalizers |
-| `Kernel/Numerics/FlintNDE.wl` | letters are serialized as `{alpha, beta, contributions}`; letter-list simplify-then-substitute and a Q(i) gate that actually evaluates |
-| `Kernel/Numerics/PathEvaluation.wl` | request schema becomes v2 and carries `tensorSectors` |
+| `Kernel/Numerics/FlintNDE.wl` | letters are serialized as `{alpha, beta, contributions}`; letter-list simplify-then-substitute and the Q(i) gate |
+| `Kernel/Numerics/PathEvaluation.wl` | request schema v2 carrying `tensorSectors` |
 | `Backend/flintnde_transport.py` | v2 request validation and tensor residue entry points |
-| `Vendor/FlintNDE-dS/flintnde/tensor_dlog.py` (new) | slot-wise U/U^{-1} reconstruction and exact Q(i) residue accumulation |
+| `Vendor/FlintNDE-dS/flintnde/tensor_dlog.py` | slot-wise U/U^{-1} reconstruction and exact Q(i) residue accumulation |
 
 ### Agreement and efficiency
 
-On the paper's 5-vertex massless chain (81 masters, 41 letters) the two builds have the same 5313 nonzero residues with maximum exact difference 0, and final values agree to a worst relative difference of 1.242e-210. Per-letter serialization drops from 50.40 s to 0.05 s (the median over 100 `ep` values, range 0.047--0.080 s); the letter payload drops from 12.5 MB to 221--227 KB; the complete v2 request is 298.8 KB against 16.84 MB for `v0.18`. Backend transport wall time goes from 11.23 s to 10.76 s, and the primary chain from 4.377 s to 4.285 s. Initialization and DE assembly stay in the same range (1.09 s / 1.86 s versus 1.18 s / 1.99 s); both stages spend their time in local bases and certificates, so the difference on this graph is measurement noise and the gain is concentrated in letter assembly and transmission.
+On the paper's 5-vertex massless chain (81 masters, 41 letters) the structured residues match the item-by-item dense construction exactly: both have 5313 nonzero residues with maximum exact difference 0, and final values agree to a worst relative difference of 1.242e-210. Per-letter serialization costs a median of 0.05 s (over 100 `ep` values, range 0.047--0.080 s); the letter payload is 221--227 KB; the complete v2 request is 298.8 KB and carries no 2^n residue matrix.
 
 ## User points at finite singularities
 
@@ -453,15 +448,16 @@ listed here, together with the source of the reference data in each case.
 - Common-theta odd-subset simultaneous contacts, coincident massless/massive quotients, event-reachable sector BFS and pure time-only cycles are supported; this does not mean loop-momentum integration is supported.
 - Production boundaries never dispatch on graph names or master counts. The single-vertex massiveExternal case follows the same general route (the explicit 2411.03088 Sec.3.3 series is kept only as a test reference baseline); closed tree/time-only contexts build the nested curve, complete dlog pullback residue and ancestor-sector leading system from the sector DAG, component/slot metadata, normalization and strict time rank. When the formula/dlog/chart is not closed, the late-time exponents do not decay, or the pullback system is not an exact regular singularity, the package fails closed and never falls back to finite-point defining integrals.
 - FlintNDE transport requires the pulled-back connection to be in exact `Q(i)(s)` or `Q(i)(t)`.
-  This fresh development run covers single-vertex, pure-massless, massive (anti-)time-ordered, and mixed
-  three-vertex systems through the current generic boundary producer.
+  The current checks cover single-vertex, pure-massless, massive (anti-)time-ordered, and mixed
+  three-vertex systems through the generic boundary producer.
 - FlintNDE retains exact Lee--Moser, high-pole, and singularity-jump capabilities, and adds node-bucket fast multipoint evaluation plus the public strict user-node route. Uncertified high poles and internal/final points requiring ramification, algebraic extensions, or general Stokes connections continue to fail closed.
 
-The current fresh regression ran 25 Wolfram development scripts, all exiting with code `0`:
+The Wolfram regression comprises 25 development scripts, all exiting with code `0`:
 core `54/54`, formula artifacts `23/23`, point sequences/planning `29/29`, integral
 definitions `20/20`, propagator classes `52/52`, the five boundary suites `41/41`, `14/14`,
 `10/10`, `6/6` and `6/6`, 900-point complex-plane grouping `8/8`, single-vertex NDE `13/13`,
 mixed three-vertex `8/8`, runtime/export `10/10`, auxiliary external-leg energy `6/6`,
 time-IBP domain `15/15`, simultaneous chart `22/22`, vertex-family reduction `19/19`, and
-Examples 01--07 `7/7`. The Python adapter `17/17`, the bundled FlintNDE-dS's 191 Python tests
-and its `26/26` Wolfram interface checks also pass.
+Examples 01--07 `7/7`, plus version assets `23/23`. On the Python side the bundled backend passes
+`201/201` (including six coefficient-ball-width gate regressions), the adapter `23/23` and the
+engine-lane suite `11/11`; the vendor Wolfram interface checks pass `26/26`.

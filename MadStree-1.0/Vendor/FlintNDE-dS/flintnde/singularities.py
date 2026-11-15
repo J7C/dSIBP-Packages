@@ -853,9 +853,10 @@ class RationalMatrixSystem:
         if series_order <= 0:
             raise ValueError("series_order must be positive")
         center = _exact_scalar(point, "singular point")
-        residue_records = [["0" for _ in range(self.dimension)] for _ in range(self.dimension)]
+        zero = GaussianRational()
+        residue_records = [[zero for _ in range(self.dimension)] for _ in range(self.dimension)]
         regular_records = [
-            [["0" for _ in range(self.dimension)] for _ in range(self.dimension)]
+            [[zero for _ in range(self.dimension)] for _ in range(self.dimension)]
             for _ in range(series_order)
         ]
         maximum_pole_order = 0
@@ -895,9 +896,9 @@ class RationalMatrixSystem:
                         denominator_local,
                         series_order + 1,
                     )
-                    residue_records[row_index][column_index] = str(quotient[0])
+                    residue_records[row_index][column_index] = quotient[0]
                     for degree in range(series_order):
-                        regular_records[degree][row_index][column_index] = str(quotient[degree + 1])
+                        regular_records[degree][row_index][column_index] = quotient[degree + 1]
                 else:
                     quotient = _series_quotient(
                         shifted_numerator,
@@ -905,7 +906,7 @@ class RationalMatrixSystem:
                         series_order,
                     )
                     for degree in range(series_order):
-                        regular_records[degree][row_index][column_index] = str(quotient[degree])
+                        regular_records[degree][row_index][column_index] = quotient[degree]
         if maximum_pole_order > 1 or (maximum_pole_order != 1 and not allow_ordinary):
             raise ValueError(
                 f"{self.name}: point {center} is not a regular singular point "
